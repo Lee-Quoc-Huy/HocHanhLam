@@ -1,0 +1,172 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  LinguaVerse AI — design tokens
+  Palette rationale: cool "paper" neutrals (not the cliché warm cream)
+  paired with a deep ink-indigo primary, evoking notebooks/ink rather than
+  a generic SaaS look. Each target language keeps a fixed accent hue used
+  consistently across tags, progress rings, and per-language states:
+    English  -> teal      (#0EA5A0)
+    Korean   -> vermilion  (#FF6551)
+    Chinese  -> ochre/gold (#D99A1B)
+*/
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 224 30% 12%;
+
+    --surface: 0 0% 100%;
+    --surface-raised: 0 0% 100%;
+
+    --primary: 243 65% 46%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 16% 92%;
+    --secondary-foreground: 224 30% 16%;
+
+    --muted: 220 16% 93%;
+    --muted-foreground: 222 12% 42%;
+
+    --accent: 243 65% 96%;
+    --accent-foreground: 243 65% 30%;
+
+    --destructive: 4 78% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 55% 38%;
+    --warning: 38 92% 50%;
+
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 243 65% 46%;
+
+    --lang-en: 177 85% 33%;
+    --lang-kr: 8 100% 66%;
+    --lang-zh: 40 76% 47%;
+
+    --radius: 0.625rem;
+
+    --font-display: "Sora", var(--font-sans);
+    --font-sans: "Inter", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+
+  .dark {
+    --background: 226 28% 8%;
+    --foreground: 220 18% 94%;
+
+    --surface: 226 24% 11%;
+    --surface-raised: 226 22% 14%;
+
+    --primary: 243 75% 68%;
+    --primary-foreground: 226 28% 8%;
+
+    --secondary: 226 18% 16%;
+    --secondary-foreground: 220 18% 92%;
+
+    --muted: 226 18% 15%;
+    --muted-foreground: 220 10% 65%;
+
+    --accent: 243 40% 20%;
+    --accent-foreground: 243 75% 82%;
+
+    --destructive: 4 72% 58%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 45% 48%;
+    --warning: 38 85% 58%;
+
+    --border: 226 16% 20%;
+    --input: 226 16% 20%;
+    --ring: 243 75% 68%;
+
+    --lang-en: 177 65% 48%;
+    --lang-kr: 8 90% 68%;
+    --lang-zh: 40 70% 58%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Respect reduced-motion preference platform-wide */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Visible keyboard focus ring everywhere, not just form controls */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+/*
+  Dashboard glassmorphism utilities.
+  Kept additive/scoped (no changes to existing tokens or components) so the
+  rest of the app is unaffected. Built on the existing --surface/--border
+  tokens rather than hardcoded colors, so it still respects dark mode.
+*/
+@layer components {
+  .glass-panel {
+    @apply relative overflow-hidden rounded-2xl border border-border/60 bg-surface/70 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_32px_-16px_rgba(16,24,40,0.18)] backdrop-blur-xl;
+  }
+
+  .glass-panel::before {
+    content: "";
+    @apply pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/40 via-white/0 to-white/0 opacity-60 dark:from-white/[0.06] dark:via-transparent dark:to-transparent;
+  }
+
+  .glass-panel-hover {
+    @apply transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_1px_2px_rgba(16,24,40,0.04),0_20px_40px_-16px_rgba(79,70,229,0.28)];
+  }
+
+  .glass-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-surface/80 px-2.5 py-1 text-xs font-medium backdrop-blur-md;
+  }
+}
+
+@layer utilities {
+  .animate-in-up {
+    animation: dash-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-border;
+  }
+}
+
+@keyframes dash-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

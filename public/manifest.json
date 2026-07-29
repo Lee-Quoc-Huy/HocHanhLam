@@ -1,0 +1,15 @@
+{
+  "name": "Học Hành Lắm 🍃 - Nền Tảng Học Ngôn Ngữ AI",
+  "short_name": "Học Hành Lắm",
+  "description": "Nền tảng học ngôn ngữ thông minh tích hợp Trợ lý AI, Flashcards SRS, Game hóa và Thư viện Tri thức.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#10b981",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

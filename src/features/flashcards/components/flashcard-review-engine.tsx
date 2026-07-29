@@ -1,0 +1,279 @@
+"use client";
+
+import { useState } from "react";
+import { Volume2, Star, RotateCw, Sparkles, CheckCircle2, ArrowLeft, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { motion, useMotionValue, useTransform } from "framer-motion";
+import { Flashcard } from "../types";
+import { getSRSPreview, SRSRating } from "../lib/srs-algorithm";
+import { useSpeech } from "@/features/vocabulary/hooks/use-speech";
+import { useKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
+
+interface FlashcardReviewEngineProps {
+  queue: Flashcard[];
+  currentIndex: number;
+  isFlipped: boolean;
+  onFlip: () => void;
+  onRate: (rating: SRSRating) => Promise<void>;
+  onToggleFavorite: (id: string) => void;
+}
+
+export function FlashcardReviewEngine({
+  queue,
+  currentIndex,
+  isFlipped,
+  onFlip,
+  onRate,
+  onToggleFavorite,
+}: FlashcardReviewEngineProps) {
+  const { speak } = useSpeech();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Framer motion drag gesture values for mobile swipe
+  const x = useMotionValue(0);
+  const rotate = useTransform(x, [-200, 200], [-15, 15]);
+  const swipeLeftOpacity = useTransform(x, [-150, -20], [1, 0]);
+  const swipeRightOpacity = useTransform(x, [20, 150], [0, 1]);
+
+  const currentCard = queue[currentIndex];
+
+  // Bind desktop keyboard shortcuts
+  useKeyboardShortcuts({
+    enabled: !!currentCard,
+    isFlipped,
+    onFlip,
+    onRate: async (rating) => {
+      if (isSubmitting) return;
+      setIsSubmitting(true);
+      await onRate(rating);
+      setIsSubmitting(false);
+    },
+  });
+
+  if (queue.length === 0 || !currentCard) {
+    return (
+      <div className="mx-auto max-w-md rounded-2xl border border-dashed border-border p-12 text-center bg-surface/40">
+        <div className="flex size-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mx-auto mb-3">
+          <CheckCircle2 className="size-8" />
+        </div>
+        <h3 className="font-display text-xl font-bold text-foreground">
+          Đã Hoàn Thành Ôn Tập Hôm Nay! 🎉
+        </h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Hiện tại không còn thẻ nào đến hạn ôn. Bạn đang duy trì phong độ rất xuất sắc!
+        </p>
+      </div>
+    );
+  }
+
+  // Pre-calculate SM-2 rating interval previews
+  const previews = getSRSPreview(
+    currentCard.repetition,
+    currentCard.interval,
+    currentCard.ease_factor
+  );
+
+  const handleDragEnd = (_: any, info: any) => {
+    if (info.offset.x < -100) {
+      handleRatingClick("again");
+    } else if (info.offset.x > 100) {
+      handleRatingClick("good");
+    }
+  };
+
+  const handleRatingClick = async (rating: SRSRating) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    await onRate(rating);
+    setIsSubmitting(false);
+  };
+
+  const progressPercentage = Math.round(((currentIndex + 1) / queue.length) * 100);
+
+  return (
+    <div className="mx-auto max-w-xl space-y-6">
+      {/* Progress & Deck Name */}
+      <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <Sparkles className="size-3.5 text-amber-500" />
+          <span>Thẻ {currentIndex + 1} / {queue.length}</span>
+        </span>
+        <span className="rounded-full bg-muted px-2.5 py-0.5 uppercase tracking-wider">
+          {currentCard.status === "mastered" ? "Đã Thuộc" : currentCard.status === "learning" ? "Đang Học" : "Mới"}
+        </span>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-300"
+          style={{ width: `${progressPercentage}%` }}
+        />
+      </div>
+
+      {/* 3D Motion Card Container */}
+      <motion.div
+        style={{ x, rotate }}
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        onDragEnd={handleDragEnd}
+        onClick={onFlip}
+        className="group relative min-h-[380px] w-full cursor-pointer rounded-2xl border border-border/80 bg-surface/90 p-8 shadow-xl backdrop-blur-md transition-all duration-300 hover:border-emerald-500/50 hover:shadow-2xl flex flex-col justify-between overflow-hidden"
+      >
+        {/* Visual Swipe Indicators */}
+        <motion.div
+          style={{ opacity: swipeLeftOpacity }}
+          className="pointer-events-none absolute left-4 top-4 z-20 rounded-xl bg-rose-500/90 px-3 py-1.5 text-xs font-bold text-white shadow-md flex items-center gap-1"
+        >
+          <ArrowLeft className="size-4" /> ÔN LẠI (Vuốt Trái)
+        </motion.div>
+
+        <motion.div
+          style={{ opacity: swipeRightOpacity }}
+          className="pointer-events-none absolute right-4 top-4 z-20 rounded-xl bg-emerald-500/90 px-3 py-1.5 text-xs font-bold text-white shadow-md flex items-center gap-1"
+        >
+          TỐT (Vuốt Phải) <ArrowRight className="size-4" />
+        </motion.div>
+
+        {/* Card Header */}
+        <div className="flex items-center justify-between">
+          <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
+            {currentCard.language === "en"
+              ? "🇬🇧 Tiếng Anh"
+              : currentCard.language === "ko"
+              ? "🇰🇷 Tiếng Hàn"
+              : "🇨🇳 Tiếng Trung"}
+          </span>
+
+          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => speak(currentCard.front_text, currentCard.language, currentCard.audio_url)}
+              className="rounded-full bg-background border border-border p-2 text-muted-foreground hover:text-emerald-600 transition-colors"
+              title="Phát âm"
+            >
+              <Volume2 className="size-4" />
+            </button>
+            <button
+              onClick={() => onToggleFavorite(currentCard.id)}
+              className="rounded-full bg-background border border-border p-2 text-muted-foreground hover:text-amber-500 transition-colors"
+            >
+              <Star
+                className={`size-4 ${
+                  currentCard.is_favorite ? "fill-amber-400 text-amber-400" : ""
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* Card Body: Front or Back */}
+        <div className="my-auto text-center py-6">
+          {!isFlipped ? (
+            /* FRONT */
+            <div className="space-y-3 animate-in fade-in">
+              <h2 className="font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+                {currentCard.front_text}
+              </h2>
+              {currentCard.front_subtext && (
+                <p className="font-mono text-lg text-emerald-600 dark:text-emerald-400 font-medium">
+                  [{currentCard.front_subtext}]
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground pt-4 flex items-center justify-center gap-1">
+                <RotateCw className="size-3" /> Nhấp vào đây hoặc bấm Space để lật đáp án
+              </p>
+            </div>
+          ) : (
+            /* BACK */
+            <div className="space-y-4 animate-in fade-in">
+              <div>
+                <h3 className="font-display text-2xl font-bold text-foreground">
+                  {currentCard.back_text}
+                </h3>
+                {currentCard.back_explanation && (
+                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed font-mono">
+                    {currentCard.back_explanation}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Card Footer tags */}
+        <div className="flex items-center justify-between border-t border-border/40 pt-3 text-[11px] text-muted-foreground">
+          <div className="flex flex-wrap gap-1">
+            {currentCard.tags?.map((t) => (
+              <span key={t} className="rounded bg-muted px-1.5 py-0.5 font-medium">
+                #{t}
+              </span>
+            ))}
+          </div>
+          <span>Hệ số EF: {currentCard.ease_factor}</span>
+        </div>
+      </motion.div>
+
+      {/* SRS Rating Buttons (Visible when card is flipped) */}
+      {isFlipped ? (
+        <div className="grid grid-cols-4 gap-2 animate-in fade-in">
+          {/* Again */}
+          <Button
+            onClick={() => handleRatingClick("again")}
+            disabled={isSubmitting}
+            className="flex flex-col items-center py-6 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm"
+          >
+            <span className="font-bold text-sm">Ôn Lại (1)</span>
+            <span className="text-[10px] opacity-80">{previews.again.formattedInterval}</span>
+          </Button>
+
+          {/* Hard */}
+          <Button
+            onClick={() => handleRatingClick("hard")}
+            disabled={isSubmitting}
+            className="flex flex-col items-center py-6 bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-sm"
+          >
+            <span className="font-bold text-sm">Khó (2)</span>
+            <span className="text-[10px] opacity-80">{previews.hard.formattedInterval}</span>
+          </Button>
+
+          {/* Good */}
+          <Button
+            onClick={() => handleRatingClick("good")}
+            disabled={isSubmitting}
+            className="flex flex-col items-center py-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm"
+          >
+            <span className="font-bold text-sm">Tốt (3)</span>
+            <span className="text-[10px] opacity-80">{previews.good.formattedInterval}</span>
+          </Button>
+
+          {/* Easy */}
+          <Button
+            onClick={() => handleRatingClick("easy")}
+            disabled={isSubmitting}
+            className="flex flex-col items-center py-6 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm"
+          >
+            <span className="font-bold text-sm">Dễ (4)</span>
+            <span className="text-[10px] opacity-80">{previews.easy.formattedInterval}</span>
+          </Button>
+        </div>
+      ) : (
+        <Button
+          onClick={onFlip}
+          size="lg"
+          className="w-full py-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 font-medium text-white shadow-md"
+        >
+          Hiện Đáp Án (Phím Space)
+        </Button>
+      )}
+
+      {/* Desktop Keyboard Hints Guide */}
+      <div className="hidden sm:flex items-center justify-center gap-4 text-[11px] text-muted-foreground border-t border-border/40 pt-3">
+        <span><kbd className="rounded border bg-muted px-1.5 py-0.5 text-[10px]">Space</kbd> Lật Thẻ</span>
+        <span><kbd className="rounded border bg-muted px-1.5 py-0.5 text-[10px]">1</kbd> Ôn Lại</span>
+        <span><kbd className="rounded border bg-muted px-1.5 py-0.5 text-[10px]">2</kbd> Khó</span>
+        <span><kbd className="rounded border bg-muted px-1.5 py-0.5 text-[10px]">3</kbd> Tốt</span>
+        <span><kbd className="rounded border bg-muted px-1.5 py-0.5 text-[10px]">4</kbd> Dễ</span>
+      </div>
+    </div>
+  );
+}

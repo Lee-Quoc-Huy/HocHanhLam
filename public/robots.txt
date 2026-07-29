@@ -1,0 +1,7 @@
+# Robots.txt for Học Hành Lắm 🍃
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /callback
+
+Sitemap: https://hochanhlam.vercel.app/sitemap.xml
