@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, FileCode, Image as ImageIcon, BookOpen, Download, Trash2, Sparkles, Eye } from "lucide-react";
+import { FileText, FileCode, Image as ImageIcon, BookOpen, Download, Trash2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DocumentItem, DocFileType } from "../types";
 

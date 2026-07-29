@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createChatCompletion, type ChatMessage } from "@/lib/ai/openrouter-client";
-import { SearchDomain, SearchResultItem } from "@/features/search/types";
+import { SearchResultItem } from "@/features/search/types";
 
 const requestSchema = z.object({
   query: z.string().min(1),

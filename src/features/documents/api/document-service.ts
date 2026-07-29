@@ -3,7 +3,6 @@ import type {
   DocumentItem,
   DocumentQuiz,
   CreateDocumentInput,
-  DocFileType,
   DocLanguage,
   QuizQuestion,
 } from "../types";

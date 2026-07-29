@@ -8,7 +8,7 @@ import { LibraryDetailModal } from "@/features/library/components/library-detail
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, RotateCcw, X, Plus } from "lucide-react";
+import { Search, RotateCcw, X } from "lucide-react";
 import { useState, useRef } from "react";
 
 export default function LibraryPage() {

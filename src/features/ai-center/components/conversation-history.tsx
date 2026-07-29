@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, MessageSquare, History, Plus, Bot } from "lucide-react";
+import { X, History, Plus, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AiConversation } from "../types";
 import { AGENT_TEMPLATES } from "../lib/prompt-templates";

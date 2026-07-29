@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createChatStream, type ChatMessage } from "@/lib/ai/openrouter-client";
 import { AGENT_TEMPLATES } from "@/features/ai-center/lib/prompt-templates";
-import { AgentType, TargetLanguage } from "@/features/ai-center/types";
+import { AgentType } from "@/features/ai-center/types";
 
 const requestSchema = z.object({
   agentType: z.enum([

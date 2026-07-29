@@ -1,8 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Upload, FileText, Image as ImageIcon, Sparkles, Clipboard } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Upload, Clipboard } from "lucide-react";
 
 interface DocumentUploadDropzoneProps {
   onUpload: (files: FileList | File[]) => Promise<void>;

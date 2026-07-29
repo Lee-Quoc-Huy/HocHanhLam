@@ -4,7 +4,7 @@ import { useAiCenter } from "@/features/ai-center/hooks/use-ai-center";
 import { AgentSelector } from "@/features/ai-center/components/agent-selector";
 import { ChatInterface } from "@/features/ai-center/components/chat-interface";
 import { ConversationHistory } from "@/features/ai-center/components/conversation-history";
-import { Sparkles, Bot } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 export default function AiTutorPage() {
   const {
