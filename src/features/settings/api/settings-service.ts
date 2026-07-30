@@ -7,7 +7,6 @@ import type {
 } from "../types";
 
 const STORAGE_SETTINGS_KEY = "linguaverse_user_settings";
-const STORAGE_ACHIEVEMENTS_KEY = "linguaverse_user_achievements";
 
 export const DEFAULT_SETTINGS: UserSettings = {
   id: "user-set-1",

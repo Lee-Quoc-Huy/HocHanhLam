@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Keyboard, Clock, Zap, CheckCircle2, ArrowRight } from "lucide-react";
+import { Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GameResult } from "../types";
 import { SAMPLE_TYPING_TARGETS } from "../api/learning-service";

@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { Trophy, Flame, Zap, Award, X } from "lucide-react";
+import { Trophy, Flame, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LeaderboardEntry } from "../types";
 

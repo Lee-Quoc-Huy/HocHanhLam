@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Layers, CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GameResult } from "../types";
 import { SAMPLE_MATCHING_PAIRS } from "../api/learning-service";

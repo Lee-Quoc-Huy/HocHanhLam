@@ -5,7 +5,6 @@ import {
   SearchResultItem,
   SearchHistoryItem,
   SearchFilter,
-  SearchDomain,
   KnowledgeGraphNode,
   KnowledgeGraphEdge,
 } from "../types";

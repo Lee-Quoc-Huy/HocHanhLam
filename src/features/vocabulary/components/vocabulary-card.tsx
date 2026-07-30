@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { Volume2, VolumeX, Star, MoreVertical, Edit, Trash2, Eye, Tag, Sparkles } from "lucide-react";
+import { Volume2, Star, MoreVertical, Edit, Trash2, Eye, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { VocabularyItem } from "../types";

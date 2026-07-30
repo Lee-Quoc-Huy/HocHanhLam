@@ -1,5 +1,3 @@
-import { SRSRating } from "../lib/srs-algorithm";
-
 export type FlashcardLanguage = "en" | "ko" | "zh";
 
 export interface FlashcardFolder {

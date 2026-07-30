@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderKanban, Upload, FileText, Music, Video, Image as ImageIcon, StickyNote, Trash2, Plus, Star } from "lucide-react";
+import { FolderKanban, Upload, FileText, Music, StickyNote, Trash2, Plus, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LibraryItem } from "../types";
 

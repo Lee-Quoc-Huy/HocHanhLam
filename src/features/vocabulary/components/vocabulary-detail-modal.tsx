@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Volume2, Star, Edit, Trash2, Tag, BookOpen, Layers } from "lucide-react";
+import { X, Volume2, Star, Edit, Trash2, BookOpen, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VocabularyItem } from "../types";
 import { useSpeech } from "../hooks/use-speech";

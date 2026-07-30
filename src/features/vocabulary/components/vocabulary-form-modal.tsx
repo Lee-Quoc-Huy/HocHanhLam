@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Volume2, Sparkles, Image as ImageIcon, Plus } from "lucide-react";
+import { X, Volume2, Sparkles, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

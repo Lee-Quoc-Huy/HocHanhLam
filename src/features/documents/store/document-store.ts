@@ -1,5 +1,3 @@
-"use client";
-
 import { create } from "zustand";
 import {
   DocumentItem,
@@ -7,7 +5,6 @@ import {
   CreateDocumentInput,
   DocumentStats,
   DocumentQuiz,
-  DocFileType,
 } from "../types";
 import { documentService } from "../api/document-service";
 
@@ -54,7 +51,7 @@ const initialFilter: DocumentFilter = {
   language: "all",
 };
 
-export const useDocumentStore = create<DocumentState>((set, get) => ({
+export const useDocumentStore = create<DocumentState>((set) => ({
   documents: [],
   activeDocument: null,
   selectedDocumentForDelete: null,

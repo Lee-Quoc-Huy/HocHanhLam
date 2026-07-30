@@ -6,7 +6,6 @@ import type {
   ItemVersion,
   CreateItemInput,
   UpdateItemInput,
-  LibraryItemType,
 } from "../types";
 
 const STORAGE_LIBRARY_ITEMS_KEY = "linguaverse_library_items";

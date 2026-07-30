@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Star, Edit, Trash2, Sparkles, BookMarked, AlertTriangle, Layers, ArrowRight } from "lucide-react";
+import { X, Star, Edit, Trash2, Sparkles, BookMarked, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GrammarItem } from "../types";
 

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Puzzle, ArrowRight, RotateCcw, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowRight, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SentenceBuilderQuestion, GameResult } from "../types";
+import { GameResult } from "../types";
 import { SAMPLE_SENTENCE_BUILDER } from "../api/learning-service";
 
 interface SentenceBuilderGameProps {

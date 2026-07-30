@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Sparkles, ArrowRight, BookOpenText, BookMarked, MessagesSquare, FileText, Layers, HelpCircle, Network } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SearchResultItem, SearchDomain } from "../types";
+import { SearchResultItem } from "../types";
 
 interface SearchResultsListProps {
   results: SearchResultItem[];

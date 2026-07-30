@@ -9,7 +9,6 @@ import {
   LibraryFilter,
   CreateItemInput,
   UpdateItemInput,
-  LibraryItemType,
 } from "../types";
 import { libraryService } from "../api/library-service";
 

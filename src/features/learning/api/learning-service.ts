@@ -8,7 +8,6 @@ import type {
   SentenceBuilderQuestion,
   MatchingPair,
   TypingTarget,
-  GameMode,
 } from "../types";
 
 const STORAGE_GAMIFICATION_KEY = "linguaverse_user_gamification";

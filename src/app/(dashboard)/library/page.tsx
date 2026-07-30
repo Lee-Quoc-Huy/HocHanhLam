@@ -21,8 +21,6 @@ export default function LibraryPage() {
     activeItem,
     activeVersions,
     isCreateNoteOpen,
-    isCreateFolderOpen,
-    fetchLibraryData,
     updateItem,
     trashItem,
     restoreItem,

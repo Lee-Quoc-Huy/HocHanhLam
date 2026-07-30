@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Clock, BookOpen, Layers, Gamepad2, Bot, Sparkles } from "lucide-react";
+import { BarChart3, Clock, BookOpen, Layers, Bot } from "lucide-react";
 import { StudyAnalytics } from "../types";
 
 interface AnalyticsDashboardProps {

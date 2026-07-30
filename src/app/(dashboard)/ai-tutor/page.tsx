@@ -17,7 +17,6 @@ export default function AiTutorPage() {
     streamingContent,
     isHistoryOpen,
     selectConversation,
-    createConversation,
     setActiveAgent,
     setTargetLanguage,
     toggleHistoryDrawer,

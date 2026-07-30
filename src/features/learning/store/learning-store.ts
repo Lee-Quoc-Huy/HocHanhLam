@@ -31,7 +31,7 @@ interface LearningState {
   setLeaderboardOpen: (open: boolean) => void;
 }
 
-export const useLearningStore = create<LearningState>((set, get) => ({
+export const useLearningStore = create<LearningState>((set) => ({
   activeGameMode: null,
   gamification: MOCK_GAMIFICATION,
   leaderboard: [],

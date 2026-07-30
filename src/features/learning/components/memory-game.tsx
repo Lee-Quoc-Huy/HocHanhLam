@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Brain, Sparkles, CheckCircle2 } from "lucide-react";
+import { Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GameResult, MemoryCardItem } from "../types";
 import { SAMPLE_MATCHING_PAIRS } from "../api/learning-service";

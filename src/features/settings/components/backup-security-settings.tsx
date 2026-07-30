@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ShieldCheck, Download, Upload, Database, Lock, Key, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ShieldCheck, Download, Upload, Database, Lock, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserSettings } from "../types";
 
