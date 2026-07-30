@@ -16,61 +16,48 @@ export function useSpeech() {
         const audio = new Audio(customAudioUrl);
         setIsPlaying(true);
         audio.onended = () => setIsPlaying(false);
-        audio.onerror = () => {
-          playGoogleTTS(cleanText, language, setIsPlaying);
-        };
-        audio.play().catch(() => {
-          playGoogleTTS(cleanText, language, setIsPlaying);
-        });
+        audio.onerror = () => playTtsApi(cleanText, language, setIsPlaying);
+        audio.play().catch(() => playTtsApi(cleanText, language, setIsPlaying));
         return;
       } catch {
         // Fallback
       }
     }
 
-    // 2. Play via Google TTS / Web Speech API
-    playGoogleTTS(cleanText, language, setIsPlaying);
+    // 2. Play via Server-side Audio Streaming API (/api/tts)
+    playTtsApi(cleanText, language, setIsPlaying);
   }, []);
 
   return { speak, isPlaying };
 }
 
-function playGoogleTTS(
+function playTtsApi(
   text: string,
   language: VocabularyLanguage,
   setIsPlaying: (playing: boolean) => void
 ) {
   if (!text) return;
 
-  const langMap: Record<VocabularyLanguage, string> = {
-    en: "en",
-    ko: "ko",
-    zh: "zh-CN",
-  };
-  const targetLang = langMap[language] || "en";
-
-  // Google Translate TTS URL
-  const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(
-    text
-  )}&tl=${targetLang}&client=tw-ob`;
+  const apiUrl = `/api/tts?text=${encodeURIComponent(text)}&lang=${language}`;
 
   try {
-    const audio = new Audio(ttsUrl);
+    const audio = new Audio(apiUrl);
     setIsPlaying(true);
+
     audio.onended = () => setIsPlaying(false);
     audio.onerror = () => {
-      // Fallback to Web Speech API
-      playWebSpeech(text, language, setIsPlaying);
+      playWebSpeechFallback(text, language, setIsPlaying);
     };
+
     audio.play().catch(() => {
-      playWebSpeech(text, language, setIsPlaying);
+      playWebSpeechFallback(text, language, setIsPlaying);
     });
   } catch {
-    playWebSpeech(text, language, setIsPlaying);
+    playWebSpeechFallback(text, language, setIsPlaying);
   }
 }
 
-function playWebSpeech(
+function playWebSpeechFallback(
   text: string,
   language: VocabularyLanguage,
   setIsPlaying: (playing: boolean) => void
@@ -80,7 +67,7 @@ function playWebSpeech(
     return;
   }
 
-  window.speechSynthesis.cancel(); // Stop active speech
+  window.speechSynthesis.cancel();
 
   const utterance = new SpeechSynthesisUtterance(text);
   const langTagMap: Record<VocabularyLanguage, string> = {
@@ -91,18 +78,25 @@ function playWebSpeech(
   const targetTag = langTagMap[language] || "en-US";
   utterance.lang = targetTag;
   utterance.rate = 0.85;
-  utterance.pitch = 1.0;
 
-  // Search for explicit voice matching target language
-  const voices = window.speechSynthesis.getVoices();
-  const matchedVoice = voices.find((v) => {
-    const vLang = v.lang.toLowerCase();
-    return vLang.includes(language.toLowerCase()) || vLang.includes(targetTag.toLowerCase());
-  });
+  const loadAndSetVoice = () => {
+    const voices = window.speechSynthesis.getVoices();
+    const matchedVoice = voices.find((v) => {
+      const vLang = v.lang.toLowerCase();
+      return (
+        vLang.includes(language.toLowerCase()) ||
+        vLang.includes(targetTag.toLowerCase()) ||
+        (language === "ko" && (vLang.includes("kor") || vLang.includes("ko"))) ||
+        (language === "zh" && (vLang.includes("cmn") || vLang.includes("chi") || vLang.includes("zh")))
+      );
+    });
 
-  if (matchedVoice) {
-    utterance.voice = matchedVoice;
-  }
+    if (matchedVoice) {
+      utterance.voice = matchedVoice;
+    }
+  };
+
+  loadAndSetVoice();
 
   utterance.onstart = () => setIsPlaying(true);
   utterance.onend = () => setIsPlaying(false);
