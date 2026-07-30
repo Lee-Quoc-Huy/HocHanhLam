@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { Volume2, Star, MoreVertical, Edit, Trash2, Eye, Tag } from "lucide-react";

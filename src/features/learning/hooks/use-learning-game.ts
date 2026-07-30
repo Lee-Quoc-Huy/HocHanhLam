@@ -8,7 +8,6 @@ export function useLearningGame() {
 
   useEffect(() => {
     store.fetchUserData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return store;

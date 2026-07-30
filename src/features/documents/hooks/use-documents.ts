@@ -22,7 +22,6 @@ export function useDocuments() {
     return () => {
       unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Global Clipboard Paste Listener (Ctrl+V Screenshot OCR)
@@ -62,7 +61,6 @@ export function useDocuments() {
 
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Parse file and upload document helper

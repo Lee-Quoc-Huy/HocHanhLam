@@ -31,7 +31,6 @@ export function GrammarAiModal({
         handleTriggerGeneration();
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item]);
 
   const handleTriggerGeneration = async () => {
