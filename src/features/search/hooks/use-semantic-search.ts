@@ -17,6 +17,7 @@ export function useSemanticSearch() {
     return () => {
       unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Global Ctrl+K / Cmd+K listener
@@ -30,6 +31,7 @@ export function useSemanticSearch() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return store;

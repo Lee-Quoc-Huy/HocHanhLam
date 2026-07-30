@@ -18,6 +18,7 @@ export function useLibrary() {
     return () => {
       unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Upload handler
