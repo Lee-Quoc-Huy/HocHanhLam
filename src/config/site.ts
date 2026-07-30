@@ -25,10 +25,8 @@ export const navConfig = {
     { title: "Từ Vựng", href: "/vocabulary", icon: "BookOpenText" },
     { title: "Ngữ Pháp", href: "/grammar", icon: "BookMarked" },
     { title: "Thẻ Ghi Nhớ", href: "/flashcards", icon: "Layers" },
-    { title: "Kế Hoạch Học Tập", href: "/study-plan", icon: "CalendarDays" },
     { title: "Tài Liệu", href: "/documents", icon: "FolderKanban" },
     { title: "Trợ Lý AI Center", href: "/ai-tutor", icon: "Sparkles" },
-    { title: "Tiến Độ", href: "/progress", icon: "TrendingUp" },
   ],
   secondary: [
     { title: "Cài Đặt", href: "/settings", icon: "Settings" },
