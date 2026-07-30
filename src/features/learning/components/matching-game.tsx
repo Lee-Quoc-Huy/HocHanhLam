@@ -20,7 +20,7 @@ interface TileItem {
 export function MatchingGame({ onFinish, onExit }: MatchingGameProps) {
   const pairs = SAMPLE_MATCHING_PAIRS;
 
-  const [tiles, setTiles] = useState<TileItem[]>(() => {
+  const [tiles] = useState<TileItem[]>(() => {
     const list: TileItem[] = [];
     pairs.forEach((p) => {
       list.push({ id: `t-${p.id}`, pairId: p.id, text: p.term, type: "term" });
