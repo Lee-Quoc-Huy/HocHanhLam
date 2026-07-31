@@ -11,7 +11,7 @@ export const siteConfig = {
     "Hệ thống quản lý học tập ngôn ngữ thông minh tích hợp AI cho Tiếng Anh, Tiếng Hàn và Tiếng Trung.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   ogImage: "/og-image.png",
-  authors: [{ name: "Học Hành Lắm Team" }],
+  authors: [{ name: "Huy" }],
   links: {
     github: "https://github.com/linguaverse-ai",
   },
