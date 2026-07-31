@@ -29,7 +29,7 @@ const DOMAIN_TABS: { id: SearchDomain; label: string }[] = [
   { id: "conversation", label: "Hội Thoại" },
   { id: "quizzes", label: "Bài Quiz" },
   { id: "collections", label: "Bộ Thẻ" },
-  { id: "knowledge_graph", label: "Knowledge Graph" },
+  { id: "knowledge_graph", label: "Sơ Đồ Tri Thức" },
   { id: "recommendation", label: "Gợi Ý AI" },
 ];
 

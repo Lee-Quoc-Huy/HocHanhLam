@@ -31,7 +31,7 @@ const DOMAIN_LABEL_MAP: Record<string, string> = {
   flashcards: "Thẻ Flashcards",
   quizzes: "Bài Quiz",
   collections: "Bộ Thẻ",
-  knowledge_graph: "Knowledge Graph",
+  knowledge_graph: "Sơ Đồ Tri Thức",
   recommendation: "Gợi Ý AI",
 };
 
@@ -80,7 +80,7 @@ export function SearchResultsList({ results, isSearching, query }: SearchResults
                 {/* Similarity Score Badge */}
                 <span className="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
                   <Sparkles className="size-3 text-amber-500" />
-                  <span>{item.similarityScore}% Vector Match</span>
+                  <span>{item.similarityScore}% Độ Tương Đồng</span>
                 </span>
 
                 {item.language && (
