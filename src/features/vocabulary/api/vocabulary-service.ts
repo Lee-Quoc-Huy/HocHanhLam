@@ -5,12 +5,33 @@ import type {
   UpdateVocabularyInput,
 } from "../types";
 
-const LOCAL_STORAGE_KEY = "linguaverse_vocabulary_items";
+/**
+ * Vocabulary data layer — Supabase is the single source of truth.
+ *
+ * Historically this service fell back to `localStorage` whenever Supabase
+ * returned zero rows or an error, and every write silently mirrored into
+ * localStorage regardless of whether the Supabase call actually succeeded.
+ * That meant each browser/device kept its own private copy: deleting a word
+ * on mobile only ever touched that phone's local cache, so it kept
+ * reappearing on desktop. Supabase already has the `vocabulary` table with
+ * an open RLS policy and realtime enabled (see
+ * supabase/migrations/00000000000002_vocabulary_module.sql) — so all reads
+ * and writes now go straight through it, and every device fetches the same
+ * rows and receives realtime updates when another device changes them.
+ *
+ * A one-time, per-browser flag (`SEED_FLAG_KEY`) still seeds a starter
+ * dataset into Supabase the very first time an account has zero words, so
+ * new users don't land on a totally empty page — but after that the account
+ * is free to go to zero words (e.g. after deleting everything) without ever
+ * being silently refilled again.
+ */
 
-// Default initial dataset to ensure user has rich initial vocabulary for EN, KO, ZH
-export const SAMPLE_VOCABULARY: VocabularyItem[] = [
+const SEED_FLAG_KEY = "hhl_vocabulary_seeded_v1";
+
+type SampleSeed = Omit<VocabularyItem, "id" | "created_at" | "updated_at" | "user_id">;
+
+const SAMPLE_VOCABULARY: SampleSeed[] = [
   {
-    id: "sample-en-1",
     language: "en",
     word: "Serendipity",
     ipa: "/ˌser.ənˈdɪp.ə.ti/",
@@ -27,11 +48,8 @@ export const SAMPLE_VOCABULARY: VocabularyItem[] = [
     difficulty: "advanced",
     is_favorite: true,
     collection: "IELTS Academic",
-    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
-    updated_at: new Date(Date.now() - 86400000 * 3).toISOString(),
   },
   {
-    id: "sample-ko-1",
     language: "ko",
     word: "설레다",
     ipa: "seol-le-da",
@@ -48,11 +66,8 @@ export const SAMPLE_VOCABULARY: VocabularyItem[] = [
     difficulty: "intermediate",
     is_favorite: true,
     collection: "TOPIK II",
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-    updated_at: new Date(Date.now() - 86400000 * 2).toISOString(),
   },
   {
-    id: "sample-zh-1",
     language: "zh",
     word: "坚持",
     ipa: "jiān chí",
@@ -69,11 +84,8 @@ export const SAMPLE_VOCABULARY: VocabularyItem[] = [
     difficulty: "intermediate",
     is_favorite: false,
     collection: "HSK 4",
-    created_at: new Date(Date.now() - 86400000 * 1).toISOString(),
-    updated_at: new Date(Date.now() - 86400000 * 1).toISOString(),
   },
   {
-    id: "sample-en-2",
     language: "en",
     word: "Resilient",
     ipa: "/rɪˈzɪl.jənt/",
@@ -90,125 +102,94 @@ export const SAMPLE_VOCABULARY: VocabularyItem[] = [
     difficulty: "intermediate",
     is_favorite: false,
     collection: "Daily Communication",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
   },
 ];
 
 class VocabularyService {
-  private getLocalItems(): VocabularyItem[] {
-    if (typeof window === "undefined") return SAMPLE_VOCABULARY;
-    try {
-      const data = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (!data) {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(SAMPLE_VOCABULARY));
-        return SAMPLE_VOCABULARY;
-      }
-      return JSON.parse(data);
-    } catch {
-      return SAMPLE_VOCABULARY;
-    }
-  }
-
-  private setLocalItems(items: VocabularyItem[]) {
-    if (typeof window === "undefined") return;
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items));
-    } catch (e) {
-      console.error("Failed to persist vocabulary to localStorage:", e);
-    }
-  }
-
   async fetchVocabulary(): Promise<VocabularyItem[]> {
     const supabase = createClient();
-    try {
-      const { data, error } = await supabase
-        .from("vocabulary")
-        .select("*")
-        .order("created_at", { ascending: false });
+    const { data, error } = await supabase
+      .from("vocabulary")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-      if (error || !data || data.length === 0) {
-        return this.getLocalItems();
-      }
-
-      const items = data as VocabularyItem[];
-      this.setLocalItems(items);
-      return items;
-    } catch {
-      return this.getLocalItems();
+    if (error) {
+      throw new Error(`Không thể tải danh sách từ vựng: ${error.message}`);
     }
+
+    const items = (data ?? []) as VocabularyItem[];
+
+    // First-ever load with an empty account: seed a small starter set once,
+    // on Supabase directly (shared across devices), then never again.
+    const alreadySeeded =
+      typeof window !== "undefined" && window.localStorage.getItem(SEED_FLAG_KEY);
+
+    if (items.length === 0 && !alreadySeeded) {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(SEED_FLAG_KEY, "1");
+      }
+      return this.seedSampleVocabulary();
+    }
+
+    return items;
+  }
+
+  private async seedSampleVocabulary(): Promise<VocabularyItem[]> {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const rows = SAMPLE_VOCABULARY.map((item) => ({ ...item, user_id: user?.id ?? null }));
+    const { data, error } = await supabase.from("vocabulary").insert(rows).select();
+
+    if (error || !data) {
+      // Seeding failed (e.g. offline) — don't block the page, just show empty.
+      return [];
+    }
+    return data as VocabularyItem[];
   }
 
   async createWord(input: CreateVocabularyInput): Promise<VocabularyItem> {
-    const newItem: VocabularyItem = {
-      ...input,
-      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `vocab-${Date.now()}`,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
     const supabase = createClient();
-    try {
-      const { data, error } = await supabase
-        .from("vocabulary")
-        .insert([newItem])
-        .select()
-        .single();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-      if (!error && data) {
-        newItem.id = data.id;
-      }
-    } catch {
-      // Supabase unavailable, saved locally
+    const { data, error } = await supabase
+      .from("vocabulary")
+      .insert([{ ...input, user_id: input.user_id ?? user?.id ?? null }])
+      .select()
+      .single();
+
+    if (error || !data) {
+      throw new Error(`Không thể lưu từ vựng mới: ${error?.message ?? "lỗi không xác định"}`);
     }
-
-    // Always update local cache for instant UI availability
-    const items = [newItem, ...this.getLocalItems()];
-    this.setLocalItems(items);
-
-    return newItem;
+    return data as VocabularyItem;
   }
 
   async updateWord(id: string, updates: UpdateVocabularyInput): Promise<VocabularyItem> {
-    const localItems = this.getLocalItems();
-    const existing = localItems.find((item) => item.id === id);
-
-    if (!existing) {
-      throw new Error(`Vocabulary item with id ${id} not found.`);
-    }
-
-    const updatedItem: VocabularyItem = {
-      ...existing,
-      ...updates,
-      updated_at: new Date().toISOString(),
-    };
-
     const supabase = createClient();
-    try {
-      await supabase
-        .from("vocabulary")
-        .update(updates)
-        .eq("id", id);
-    } catch {
-      // Ignore Supabase error in fallback mode
+    const { data, error } = await supabase
+      .from("vocabulary")
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error || !data) {
+      throw new Error(`Không thể cập nhật từ vựng: ${error?.message ?? "lỗi không xác định"}`);
     }
-
-    const updatedItems = localItems.map((item) => (item.id === id ? updatedItem : item));
-    this.setLocalItems(updatedItems);
-
-    return updatedItem;
+    return data as VocabularyItem;
   }
 
   async deleteWord(id: string): Promise<boolean> {
     const supabase = createClient();
-    try {
-      await supabase.from("vocabulary").delete().eq("id", id);
-    } catch {
-      // Ignore
-    }
+    const { error } = await supabase.from("vocabulary").delete().eq("id", id);
 
-    const items = this.getLocalItems().filter((item) => item.id !== id);
-    this.setLocalItems(items);
+    if (error) {
+      throw new Error(`Không thể xoá từ vựng: ${error.message}`);
+    }
     return true;
   }
 
@@ -226,8 +207,12 @@ class VocabularyService {
         "postgres_changes",
         { event: "*", schema: "public", table: "vocabulary" },
         async () => {
-          const freshData = await this.fetchVocabulary();
-          onRealtimeUpdate(freshData);
+          try {
+            const freshData = await this.fetchVocabulary();
+            onRealtimeUpdate(freshData);
+          } catch {
+            // Realtime refresh failed silently — next successful fetch will resync.
+          }
         }
       )
       .subscribe();
