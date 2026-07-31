@@ -44,7 +44,7 @@ export function MobileNavSheet() {
 
             {navConfig.primary.map((item) => {
               const Icon = (Icons[item.icon as keyof typeof Icons] || Icons.BookOpenText) as Icons.LucideIcon;
-              const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+              const isActive = pathname === item.href || pathname.startsWith(item.href);
 
               return (
                 <Link

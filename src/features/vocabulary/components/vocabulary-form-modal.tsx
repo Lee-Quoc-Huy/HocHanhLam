@@ -143,7 +143,7 @@ export function VocabularyFormModal({
           <div className="flex items-center justify-between border-b border-border pb-4">
             <Dialog.Title className="font-display text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
               <Sparkles className="size-5 text-primary" />
-              <span>{itemToEdit ? "Edit Vocabulary Word" : "Add New Vocabulary Word"}</span>
+              <span>{itemToEdit ? "Sửa Từ Vựng" : "Thêm Từ Vựng Mới"}</span>
             </Dialog.Title>
             <Dialog.Close asChild>
               <Button variant="ghost" size="icon" className="size-8 rounded-full">
@@ -156,12 +156,12 @@ export function VocabularyFormModal({
           <form onSubmit={handleSubmitForm} className="mt-5 space-y-4 text-xs sm:text-sm">
             {/* Language Selector */}
             <div className="space-y-1.5">
-              <Label className="font-semibold">Target Language</Label>
+              <Label className="font-semibold">Ngôn Ngữ Đích</Label>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: "en", label: "English", flag: "🇬🇧" },
-                  { id: "ko", label: "Korean", flag: "🇰🇷" },
-                  { id: "zh", label: "Chinese", flag: "🇨🇳" },
+                  { id: "en", label: "Tiếng Anh", flag: "🇬🇧" },
+                  { id: "ko", label: "Tiếng Hàn", flag: "🇰🇷" },
+                  { id: "zh", label: "Tiếng Trung", flag: "🇨🇳" },
                 ].map((lang) => (
                   <button
                     key={lang.id}
@@ -184,7 +184,7 @@ export function VocabularyFormModal({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="word" className="font-semibold">
-                  Word / Vocabulary <span className="text-destructive">*</span>
+                  Từ Vựng <span className="text-destructive">*</span>
                 </Label>
                 <div className="flex gap-2">
                   <Input
@@ -205,7 +205,7 @@ export function VocabularyFormModal({
                     variant="outline"
                     size="icon"
                     onClick={() => speak(word, language, audioUrl)}
-                    title="Test Pronunciation"
+                    title="Nghe thử phát âm"
                     disabled={!word.trim()}
                   >
                     <Volume2 className="size-4" />
@@ -215,7 +215,7 @@ export function VocabularyFormModal({
 
               <div className="space-y-1.5">
                 <Label htmlFor="ipa" className="font-semibold">
-                  IPA / Pinyin / Phonetic
+                  Phiên Âm (IPA / Pinyin)
                 </Label>
                 <Input
                   id="ipa"
@@ -249,13 +249,13 @@ export function VocabularyFormModal({
 
               <div className="space-y-1.5">
                 <Label htmlFor="englishMeaning" className="font-semibold">
-                  English Explanation / Definition
+                  Giải Nghĩa Tiếng Anh
                 </Label>
                 <Input
                   id="englishMeaning"
                   value={englishMeaning}
                   onChange={(e) => setEnglishMeaning(e.target.value)}
-                  placeholder="e.g., Lasting for a very short time"
+                  placeholder="Ví dụ: Lasting for a very short time"
                 />
               </div>
             </div>
@@ -264,7 +264,7 @@ export function VocabularyFormModal({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="space-y-1.5">
                 <Label htmlFor="pos" className="font-semibold">
-                  Part of Speech
+                  Từ Loại
                 </Label>
                 <select
                   id="pos"
@@ -272,19 +272,19 @@ export function VocabularyFormModal({
                   onChange={(e) => setPartOfSpeech(e.target.value)}
                   className="w-full h-9 rounded-md border border-border bg-background px-3 text-xs font-medium outline-none focus:ring-1 focus:ring-primary"
                 >
-                  <option value="noun">Noun (Danh từ)</option>
-                  <option value="verb">Verb (Động từ)</option>
-                  <option value="adjective">Adjective (Tính từ)</option>
-                  <option value="adverb">Adverb (Phó từ)</option>
-                  <option value="phrase">Phrase (Cụm từ)</option>
-                  <option value="idiom">Idiom (Thành ngữ)</option>
-                  <option value="particle">Particle (Trợ từ)</option>
+                  <option value="noun">Danh từ</option>
+                  <option value="verb">Động từ</option>
+                  <option value="adjective">Tính từ</option>
+                  <option value="adverb">Phó từ</option>
+                  <option value="phrase">Cụm từ</option>
+                  <option value="idiom">Thành ngữ</option>
+                  <option value="particle">Trợ từ</option>
                 </select>
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="diff" className="font-semibold">
-                  Difficulty Level
+                  Cấp Độ
                 </Label>
                 <select
                   id="diff"
@@ -292,16 +292,16 @@ export function VocabularyFormModal({
                   onChange={(e) => setDifficulty(e.target.value as DifficultyLevel)}
                   className="w-full h-9 rounded-md border border-border bg-background px-3 text-xs font-medium outline-none focus:ring-1 focus:ring-primary"
                 >
-                  <option value="beginner">Beginner (A1-A2)</option>
-                  <option value="intermediate">Intermediate (B1-B2)</option>
-                  <option value="advanced">Advanced (C1-C2)</option>
-                  <option value="master">Master</option>
+                  <option value="beginner">Sơ cấp (A1-A2)</option>
+                  <option value="intermediate">Trung cấp (B1-B2)</option>
+                  <option value="advanced">Nâng cao (C1-C2)</option>
+                  <option value="master">Bậc thầy</option>
                 </select>
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="collection" className="font-semibold">
-                  Collection
+                  Bộ Sưu Tập
                 </Label>
                 <select
                   id="collection"
@@ -309,7 +309,7 @@ export function VocabularyFormModal({
                   onChange={(e) => setCollection(e.target.value)}
                   className="w-full h-9 rounded-md border border-border bg-background px-3 text-xs font-medium outline-none focus:ring-1 focus:ring-primary"
                 >
-                  <option value="General">General</option>
+                  <option value="General">Chung</option>
                   <option value="IELTS Academic">IELTS Academic</option>
                   <option value="TOPIK II">TOPIK II</option>
                   <option value="HSK 4">HSK 4</option>
@@ -330,7 +330,7 @@ export function VocabularyFormModal({
                         {c}
                       </option>
                     ))}
-                  <option value="NEW">+ Create New Collection</option>
+                  <option value="NEW">+ Tạo Bộ Sưu Tập Mới</option>
                 </select>
               </div>
             </div>
@@ -339,13 +339,13 @@ export function VocabularyFormModal({
             {collection === "NEW" && (
               <div className="space-y-1.5 animate-in fade-in">
                 <Label htmlFor="customCollection" className="font-semibold">
-                  New Collection Name
+                  Tên Bộ Sưu Tập Mới
                 </Label>
                 <Input
                   id="customCollection"
                   value={customCollection}
                   onChange={(e) => setCustomCollection(e.target.value)}
-                  placeholder="e.g., Business English, Drama Vocab"
+                  placeholder="Ví dụ: Tiếng Anh Thương Mại, Từ Vựng Phim"
                 />
               </div>
             )}
@@ -353,19 +353,19 @@ export function VocabularyFormModal({
             {/* Example Sentence & Example Translation */}
             <div className="space-y-1.5">
               <Label htmlFor="example" className="font-semibold">
-                Example Sentence
+                Câu Ví Dụ
               </Label>
               <Input
                 id="example"
                 value={example}
                 onChange={(e) => setExample(e.target.value)}
-                placeholder="Target language example sentence…"
+                placeholder="Câu ví dụ bằng ngôn ngữ đích…"
               />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="exampleTrans" className="font-semibold">
-                Example Translation (Vietnamese)
+                Dịch Câu Ví Dụ (Tiếng Việt)
               </Label>
               <Input
                 id="exampleTrans"
@@ -406,7 +406,7 @@ export function VocabularyFormModal({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="imageUrl" className="font-semibold flex items-center gap-1.5">
-                  <ImageIcon className="size-3.5" /> Image URL (Optional)
+                  <ImageIcon className="size-3.5" /> Link Hình Ảnh (Tuỳ chọn)
                 </Label>
                 <Input
                   id="imageUrl"
@@ -418,7 +418,7 @@ export function VocabularyFormModal({
 
               <div className="space-y-1.5">
                 <Label htmlFor="audioUrl" className="font-semibold flex items-center gap-1.5">
-                  <Volume2 className="size-3.5" /> Custom Audio URL (Optional)
+                  <Volume2 className="size-3.5" /> Link Âm Thanh Tuỳ Chỉnh (Tuỳ chọn)
                 </Label>
                 <Input
                   id="audioUrl"
@@ -432,7 +432,7 @@ export function VocabularyFormModal({
             {/* Frequency (1 to 5) & Favorite Checkbox */}
             <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border pt-3">
               <div className="flex items-center gap-3">
-                <Label className="font-semibold">Frequency Rate:</Label>
+                <Label className="font-semibold">Mức Độ Thường Gặp:</Label>
                 <div className="flex gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
@@ -458,14 +458,14 @@ export function VocabularyFormModal({
                   onChange={(e) => setIsFavorite(e.target.checked)}
                   className="size-4 rounded border-border text-primary focus:ring-primary"
                 />
-                <span>Add to Favorites</span>
+                <span>Thêm vào Yêu Thích</span>
               </label>
             </div>
 
             {/* Modal Actions */}
             <div className="flex justify-end gap-2 border-t border-border pt-4">
               <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
+                Huỷ
               </Button>
               <Button
                 type="submit"
@@ -473,10 +473,10 @@ export function VocabularyFormModal({
                 className="bg-gradient-to-r from-primary to-indigo-600 font-medium text-white shadow-md"
               >
                 {isSubmitting
-                  ? "Saving…"
+                  ? "Đang lưu…"
                   : itemToEdit
-                  ? "Update Word"
-                  : "Create Word"}
+                  ? "Cập Nhật Từ"
+                  : "Tạo Từ Mới"}
               </Button>
             </div>
           </form>

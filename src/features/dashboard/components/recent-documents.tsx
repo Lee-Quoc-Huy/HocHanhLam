@@ -15,7 +15,7 @@ const TYPE_ICON: Record<RecentDocument["type"], React.ComponentType<{ className?
 export function RecentDocumentsSection({ documents }: { documents: RecentDocument[] }) {
   return (
     <Section delay={0.2}>
-      <SectionHeading title="Recent Documents" subtitle="Continue where you left off" />
+      <SectionHeading title="Tài Liệu Gần Đây" subtitle="Tiếp tục từ nơi bạn đã dừng lại" />
       <ul className="space-y-2">
         {documents.map((doc, i) => {
           const Icon = TYPE_ICON[doc.type];

@@ -22,7 +22,7 @@ export function DesktopSidebar() {
     >
       <div className="flex h-16 items-center justify-between px-4">
         {!isDesktopSidebarCollapsed ? (
-          <Link href="/dashboard" className="flex items-center gap-2 font-display text-lg font-bold text-foreground hover:opacity-90">
+          <Link href="/vocabulary" className="flex items-center gap-2 font-display text-lg font-bold text-foreground hover:opacity-90">
             <div className="flex size-8 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               <Leaf className="size-4 fill-emerald-500/20 text-emerald-600 dark:text-emerald-400" />
             </div>

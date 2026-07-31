@@ -25,7 +25,7 @@ export function QuickFlashcardSection({ flashcards }: { flashcards: Flashcard[] 
   return (
     <Section delay={0.18}>
       <SectionHeading
-        title="Quick Flashcard"
+        title="Flashcard Nhanh"
         subtitle={`Card ${(index % flashcards.length) + 1} of ${flashcards.length}`}
         action={<LangBadge code={card.language} />}
       />

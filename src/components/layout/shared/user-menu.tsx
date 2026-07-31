@@ -9,7 +9,7 @@ export function UserMenu() {
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Personal Profile">
+        <Button variant="ghost" size="icon" aria-label="Hồ sơ cá nhân">
           <User className="size-5" />
         </Button>
       </DropdownMenu.Trigger>
@@ -20,7 +20,7 @@ export function UserMenu() {
           className="z-50 min-w-56 rounded-md border border-border bg-surface-raised p-1 shadow-lg"
         >
           <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-            Personal Workspace
+            Không gian làm việc cá nhân
           </div>
           <DropdownMenu.Separator className="my-1 h-px bg-border" />
           <DropdownMenu.Item asChild>
@@ -28,7 +28,7 @@ export function UserMenu() {
               href="/vocabulary"
               className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-muted"
             >
-              <BookOpenText className="size-4" /> Vocabulary Vault
+              <BookOpenText className="size-4" /> Kho Từ Vựng
             </Link>
           </DropdownMenu.Item>
           <DropdownMenu.Item asChild>
@@ -36,7 +36,7 @@ export function UserMenu() {
               href="/settings"
               className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-muted"
             >
-              <Settings className="size-4" /> Settings
+              <Settings className="size-4" /> Cài đặt
             </Link>
           </DropdownMenu.Item>
         </DropdownMenu.Content>

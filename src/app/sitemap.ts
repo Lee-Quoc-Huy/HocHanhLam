@@ -5,7 +5,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const routes = [
     "",
-    "/dashboard",
     "/vocabulary",
     "/grammar",
     "/flashcards",
@@ -22,6 +21,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: `${baseUrl}${route}`,
     lastModified: new Date(),
     changeFrequency: route === "" ? "daily" : "weekly",
-    priority: route === "" || route === "/dashboard" ? 1.0 : 0.8,
+    priority: route === "" || route === "/vocabulary" ? 1.0 : 0.8,
   }));
 }

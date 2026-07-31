@@ -27,13 +27,13 @@ export function GrammarTable({
         <table className="w-full text-left text-xs">
           <thead className="border-b border-border bg-muted/50 font-semibold uppercase tracking-wider text-muted-foreground">
             <tr>
-              <th className="px-4 py-3">Fav</th>
-              <th className="px-4 py-3">Structure / Title</th>
-              <th className="px-4 py-3">Language</th>
-              <th className="px-4 py-3">Meaning Summary</th>
-              <th className="px-4 py-3">Category</th>
-              <th className="px-4 py-3">Difficulty</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">YT</th>
+              <th className="px-4 py-3">Cấu Trúc / Tiêu Đề</th>
+              <th className="px-4 py-3">Ngôn Ngữ</th>
+              <th className="px-4 py-3">Tóm Tắt Ý Nghĩa</th>
+              <th className="px-4 py-3">Danh Mục</th>
+              <th className="px-4 py-3">Cấp Độ</th>
+              <th className="px-4 py-3 text-right">Thao Tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/60">
@@ -91,7 +91,7 @@ export function GrammarTable({
                       size="icon"
                       className="size-7 text-indigo-600 dark:text-indigo-400"
                       onClick={() => onOpenAiModal(item)}
-                      title="AI Deep Dive"
+                      title="Phân Tích Sâu Với AI"
                     >
                       <Sparkles className="size-3.5 text-amber-500" />
                     </Button>
@@ -100,7 +100,7 @@ export function GrammarTable({
                       size="icon"
                       className="size-7"
                       onClick={() => onOpenDetail(item)}
-                      title="View Details"
+                      title="Xem Chi Tiết"
                     >
                       <Eye className="size-3.5" />
                     </Button>
@@ -109,7 +109,7 @@ export function GrammarTable({
                       size="icon"
                       className="size-7"
                       onClick={() => onOpenEdit(item)}
-                      title="Edit Rule"
+                      title="Sửa Quy Tắc"
                     >
                       <Edit className="size-3.5" />
                     </Button>
@@ -118,7 +118,7 @@ export function GrammarTable({
                       size="icon"
                       className="size-7 text-destructive hover:bg-destructive/10"
                       onClick={() => onOpenDelete(item)}
-                      title="Delete Rule"
+                      title="Xoá Quy Tắc"
                     >
                       <Trash2 className="size-3.5" />
                     </Button>

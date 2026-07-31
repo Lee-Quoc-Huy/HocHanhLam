@@ -176,7 +176,7 @@ export function GrammarFormModal({
           <div className="flex items-center justify-between border-b border-border pb-4">
             <Dialog.Title className="font-display text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
               <BookMarked className="size-5 text-indigo-600 dark:text-indigo-400" />
-              <span>{itemToEdit ? "Edit Grammar Structure" : "Add New Grammar Structure"}</span>
+              <span>{itemToEdit ? "Sửa Cấu Trúc Ngữ Pháp" : "Thêm Cấu Trúc Ngữ Pháp Mới"}</span>
             </Dialog.Title>
             <Dialog.Close asChild>
               <Button variant="ghost" size="icon" className="size-8 rounded-full">
@@ -189,12 +189,12 @@ export function GrammarFormModal({
           <form onSubmit={handleSubmitForm} className="mt-5 space-y-4 text-xs sm:text-sm">
             {/* Target Language */}
             <div className="space-y-1.5">
-              <Label className="font-semibold">Target Language</Label>
+              <Label className="font-semibold">Ngôn Ngữ Đích</Label>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: "en", label: "English", flag: "🇬🇧" },
-                  { id: "ko", label: "Korean", flag: "🇰🇷" },
-                  { id: "zh", label: "Chinese", flag: "🇨🇳" },
+                  { id: "en", label: "Tiếng Anh", flag: "🇬🇧" },
+                  { id: "ko", label: "Tiếng Hàn", flag: "🇰🇷" },
+                  { id: "zh", label: "Tiếng Trung", flag: "🇨🇳" },
                 ].map((lang) => (
                   <button
                     key={lang.id}
@@ -217,7 +217,7 @@ export function GrammarFormModal({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="title" className="font-semibold">
-                  Grammar Structure / Title <span className="text-destructive">*</span>
+                  Cấu Trúc Ngữ Pháp / Tiêu Đề <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="title"
@@ -236,7 +236,7 @@ export function GrammarFormModal({
 
               <div className="space-y-1.5">
                 <Label htmlFor="meaning" className="font-semibold">
-                  Vietnamese Meaning Summary <span className="text-destructive">*</span>
+                  Tóm Tắt Ý Nghĩa (Tiếng Việt) <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="meaning"
@@ -252,7 +252,7 @@ export function GrammarFormModal({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="diff" className="font-semibold">
-                  Difficulty Level
+                  Cấp Độ
                 </Label>
                 <select
                   id="diff"
@@ -260,16 +260,16 @@ export function GrammarFormModal({
                   onChange={(e) => setDifficulty(e.target.value as DifficultyLevel)}
                   className="w-full h-9 rounded-md border border-border bg-background px-3 text-xs font-medium outline-none focus:ring-1 focus:ring-primary"
                 >
-                  <option value="beginner">Beginner (A1-A2)</option>
-                  <option value="intermediate">Intermediate (B1-B2)</option>
-                  <option value="advanced">Advanced (C1-C2)</option>
-                  <option value="master">Master</option>
+                  <option value="beginner">Sơ cấp (A1-A2)</option>
+                  <option value="intermediate">Trung cấp (B1-B2)</option>
+                  <option value="advanced">Nâng cao (C1-C2)</option>
+                  <option value="master">Bậc thầy</option>
                 </select>
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="category" className="font-semibold">
-                  Category
+                  Danh Mục
                 </Label>
                 <select
                   id="category"
@@ -277,11 +277,11 @@ export function GrammarFormModal({
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full h-9 rounded-md border border-border bg-background px-3 text-xs font-medium outline-none focus:ring-1 focus:ring-primary"
                 >
-                  <option value="General">General</option>
-                  <option value="Tenses & Verbs">Tenses & Verbs</option>
-                  <option value="Connectors & Clause">Connectors & Clause</option>
-                  <option value="TOPIK II Advanced">TOPIK II Advanced</option>
-                  <option value="HSK 3-4 Structures">HSK 3-4 Structures</option>
+                  <option value="General">Chung</option>
+                  <option value="Tenses & Verbs">Thì & Động Từ</option>
+                  <option value="Connectors & Clause">Liên Từ & Mệnh Đề</option>
+                  <option value="TOPIK II Advanced">TOPIK II Nâng Cao</option>
+                  <option value="HSK 3-4 Structures">Cấu Trúc HSK 3-4</option>
                   {availableCategories
                     .filter(
                       (c) =>
@@ -298,7 +298,7 @@ export function GrammarFormModal({
                         {c}
                       </option>
                     ))}
-                  <option value="NEW">+ Create New Category</option>
+                  <option value="NEW">+ Tạo Danh Mục Mới</option>
                 </select>
               </div>
             </div>
@@ -306,13 +306,13 @@ export function GrammarFormModal({
             {category === "NEW" && (
               <div className="space-y-1.5 animate-in fade-in">
                 <Label htmlFor="customCategory" className="font-semibold">
-                  New Category Name
+                  Tên Danh Mục Mới
                 </Label>
                 <Input
                   id="customCategory"
                   value={customCategory}
                   onChange={(e) => setCustomCategory(e.target.value)}
-                  placeholder="e.g., Modals, Subjunctive"
+                  placeholder="Ví dụ: Động từ khuyết thiếu, Giả định cách"
                 />
               </div>
             )}
@@ -320,7 +320,7 @@ export function GrammarFormModal({
             {/* Explanation & Formula */}
             <div className="space-y-1.5">
               <Label htmlFor="explanation" className="font-semibold">
-                Detailed Explanation & Formula
+                Giải Thích Chi Tiết & Công Thức
               </Label>
               <textarea
                 id="explanation"
@@ -335,7 +335,7 @@ export function GrammarFormModal({
             {/* Examples Dynamic List */}
             <div className="space-y-2 border-t border-border pt-3">
               <div className="flex items-center justify-between">
-                <Label className="font-semibold">Example Sentences</Label>
+                <Label className="font-semibold">Câu Ví Dụ</Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -343,7 +343,7 @@ export function GrammarFormModal({
                   onClick={handleAddExample}
                   className="h-7 gap-1 text-xs"
                 >
-                  <Plus className="size-3" /> Add Example
+                  <Plus className="size-3" /> Thêm Ví Dụ
                 </Button>
               </div>
 
@@ -353,7 +353,7 @@ export function GrammarFormModal({
                     <Input
                       value={ex.example}
                       onChange={(e) => handleExampleChange(i, "example", e.target.value)}
-                      placeholder="Target language sentence..."
+                      placeholder="Câu bằng ngôn ngữ đích..."
                     />
                     <Input
                       value={ex.translation}
@@ -380,7 +380,7 @@ export function GrammarFormModal({
             <div className="space-y-2 border-t border-border pt-3">
               <div className="flex items-center justify-between">
                 <Label className="font-semibold flex items-center gap-1.5 text-rose-600 dark:text-rose-400">
-                  <AlertTriangle className="size-3.5" /> Common Mistakes (Lỗi thường gặp)
+                  <AlertTriangle className="size-3.5" /> Lỗi Thường Gặp
                 </Label>
                 <Button
                   type="button"
@@ -389,7 +389,7 @@ export function GrammarFormModal({
                   onClick={handleAddMistake}
                   className="h-7 gap-1 text-xs"
                 >
-                  <Plus className="size-3" /> Add Mistake Rule
+                  <Plus className="size-3" /> Thêm Quy Tắc Lỗi
                 </Button>
               </div>
 
@@ -397,7 +397,7 @@ export function GrammarFormModal({
                 <div key={i} className="space-y-2 bg-rose-500/5 p-2.5 rounded-lg border border-rose-500/20">
                   <div className="flex justify-between items-center">
                     <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
-                      Rule #{i + 1}
+                      Quy tắc #{i + 1}
                     </span>
                     <Button
                       type="button"
@@ -413,12 +413,12 @@ export function GrammarFormModal({
                     <Input
                       value={m.incorrect}
                       onChange={(e) => handleMistakeChange(i, "incorrect", e.target.value)}
-                      placeholder="Incorrect: Câu sai..."
+                      placeholder="Sai: Câu sai..."
                     />
                     <Input
                       value={m.correct}
                       onChange={(e) => handleMistakeChange(i, "correct", e.target.value)}
-                      placeholder="Correct: Câu đúng..."
+                      placeholder="Đúng: Câu đúng..."
                     />
                   </div>
                   <Input
@@ -433,7 +433,7 @@ export function GrammarFormModal({
             {/* Related Grammar Tags */}
             <div className="space-y-1.5 border-t border-border pt-3">
               <Label htmlFor="related" className="font-semibold">
-                Related Grammar Patterns (Cách nhau bởi dấu phẩy)
+                Cấu Trúc Ngữ Pháp Liên Quan (Cách nhau bởi dấu phẩy)
               </Label>
               <Input
                 id="related"
@@ -452,14 +452,14 @@ export function GrammarFormModal({
                   onChange={(e) => setIsFavorite(e.target.checked)}
                   className="size-4 rounded border-border text-indigo-600 focus:ring-indigo-600"
                 />
-                <span>Add to Favorite Grammar Points</span>
+                <span>Thêm vào Ngữ Pháp Yêu Thích</span>
               </label>
             </div>
 
             {/* Modal Actions */}
             <div className="flex justify-end gap-2 border-t border-border pt-4">
               <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
+                Huỷ
               </Button>
               <Button
                 type="submit"
@@ -467,10 +467,10 @@ export function GrammarFormModal({
                 className="bg-gradient-to-r from-indigo-600 to-purple-600 font-medium text-white shadow-md"
               >
                 {isSubmitting
-                  ? "Saving…"
+                  ? "Đang lưu…"
                   : itemToEdit
-                  ? "Update Grammar"
-                  : "Create Grammar"}
+                  ? "Cập Nhật Ngữ Pháp"
+                  : "Tạo Ngữ Pháp Mới"}
               </Button>
             </div>
           </form>

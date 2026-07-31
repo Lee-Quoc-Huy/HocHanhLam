@@ -38,7 +38,7 @@ export function DailyMissionSection({ missions }: { missions: DailyMission[] }) 
   return (
     <Section delay={0.1}>
       <SectionHeading
-        title="Daily Mission"
+        title="Nhiệm Vụ Hằng Ngày"
         subtitle={`${doneCount}/${items.length} completed · ${earnedXp}/${totalXp} XP earned`}
       />
       <ul className="space-y-2">

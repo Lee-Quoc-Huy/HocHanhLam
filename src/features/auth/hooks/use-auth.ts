@@ -16,12 +16,12 @@ export function useAuth() {
 
   const loginMutation = useMutation({
     mutationFn: (input: LoginInput) => authService.signInWithPassword(input),
-    onSuccess: () => router.push("/dashboard"),
+    onSuccess: () => router.push("/vocabulary"),
   });
 
   const registerMutation = useMutation({
     mutationFn: (input: RegisterInput) => authService.signUpWithPassword(input),
-    onSuccess: () => router.push("/dashboard"),
+    onSuccess: () => router.push("/vocabulary"),
   });
 
   const oauthMutation = useMutation({

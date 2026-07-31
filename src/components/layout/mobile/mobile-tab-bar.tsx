@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, BookOpenText, Layers, Sparkles, FolderKanban } from "lucide-react";
+import { BookOpenText, Layers, Sparkles, FolderKanban } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 const TAB_ITEMS = [
-  { title: "Trang Chủ", href: "/dashboard", icon: LayoutDashboard },
   { title: "Từ Vựng", href: "/vocabulary", icon: BookOpenText },
   { title: "Flashcard", href: "/flashcards", icon: Layers },
   { title: "AI Tutor", href: "/ai-tutor", icon: Sparkles },
@@ -21,7 +20,7 @@ export function MobileTabBar() {
       <div className="pointer-events-auto mx-auto flex h-16 max-w-md items-center justify-around rounded-[1.75rem] border border-white/10 bg-surface/70 p-1.5 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all duration-300 ring-1 ring-black/5 dark:ring-white/5">
         {TAB_ITEMS.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+          const isActive = pathname === item.href || pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}

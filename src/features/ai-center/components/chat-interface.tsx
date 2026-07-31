@@ -151,7 +151,7 @@ export function ChatInterface({
                 <button
                   onClick={() => speak(msg.content, targetLanguage)}
                   className="absolute right-2 top-2 p-1 text-muted-foreground hover:text-emerald-600"
-                  title="Doc noi dung"
+                  title="Đọc nội dung"
                 >
                   <Volume2 className="size-3.5" />
                 </button>

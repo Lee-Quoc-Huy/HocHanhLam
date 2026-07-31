@@ -37,7 +37,7 @@ const GAME_CARDS: {
   {
     id: "quiz",
     title: "Quiz Trắc Nghiệm Tổng Hợp",
-    subtitle: "Multiple Choice Quiz",
+    subtitle: "Trắc nghiệm nhiều lựa chọn",
     description: "Bài kiểm tra trắc nghiệm 4 lựa chọn thử thách kiến thức tổng hợp.",
     icon: HelpCircle,
     color: "from-purple-500/20 via-purple-500/10 to-transparent text-purple-600 border-purple-500/20",
@@ -46,7 +46,7 @@ const GAME_CARDS: {
   {
     id: "listening_quiz",
     title: "Listening Quiz Luyện Nghe",
-    subtitle: "Audio Listening Practice",
+    subtitle: "Luyện nghe âm thanh",
     description: "Nghe phát âm mẫu và lựa chọn đáp án câu hội thoại phù hợp.",
     icon: Volume2,
     color: "from-emerald-500/20 via-emerald-500/10 to-transparent text-emerald-600 border-emerald-500/20",
@@ -55,7 +55,7 @@ const GAME_CARDS: {
   {
     id: "grammar_quiz",
     title: "Grammar Quiz Ngữ Pháp",
-    subtitle: "Grammar Pattern Challenge",
+    subtitle: "Thử thách mẫu câu ngữ pháp",
     description: "Luyện tập phân tích mẫu câu & điền từ vào chỗ trống đúng cấu trúc.",
     icon: BookMarked,
     color: "from-indigo-500/20 via-indigo-500/10 to-transparent text-indigo-600 border-indigo-500/20",
@@ -64,7 +64,7 @@ const GAME_CARDS: {
   {
     id: "vocabulary_quiz",
     title: "Vocabulary Quiz Từ Vựng",
-    subtitle: "Word Association Test",
+    subtitle: "Kiểm tra liên tưởng từ vựng",
     description: "Kiểm tra vốn từ vựng, chọn nghĩa tiếng Việt & từ đồng nghĩa.",
     icon: BookOpenText,
     color: "from-rose-500/20 via-rose-500/10 to-transparent text-rose-600 border-rose-500/20",
@@ -72,8 +72,8 @@ const GAME_CARDS: {
   },
   {
     id: "sentence_builder",
-    title: "Sentence Builder Ghép Câu",
-    subtitle: "Word Unscramble Game",
+    title: "Ghép Câu Hoàn Chỉnh",
+    subtitle: "Trò chơi sắp xếp từ",
     description: "Kéo chọn các thẻ từ vựng xáo trộn để xếp thành câu hoàn chỉnh.",
     icon: Puzzle,
     color: "from-amber-500/20 via-amber-500/10 to-transparent text-amber-600 border-amber-500/20",
@@ -82,7 +82,7 @@ const GAME_CARDS: {
   {
     id: "matching_game",
     title: "Matching Game Ghép Thẻ",
-    subtitle: "Word & Meaning Match",
+    subtitle: "Nối từ với nghĩa",
     description: "Nối cặp từ vựng với nghĩa tiếng Việt tương ứng nhanh nhất.",
     icon: Layers,
     color: "from-blue-500/20 via-blue-500/10 to-transparent text-blue-600 border-blue-500/20",
@@ -91,7 +91,7 @@ const GAME_CARDS: {
   {
     id: "memory_game",
     title: "Memory Game Lật Thẻ",
-    subtitle: "3D Memory Card Flip",
+    subtitle: "Lật thẻ ghi nhớ 3D",
     description: "Lật các thẻ bài úp để tìm cặp từ vựng trùng khớp trí nhớ.",
     icon: Brain,
     color: "from-cyan-500/20 via-cyan-500/10 to-transparent text-cyan-600 border-cyan-500/20",
@@ -99,8 +99,8 @@ const GAME_CARDS: {
   },
   {
     id: "typing_game",
-    title: "Typing Game Tốc Độ Gõ",
-    subtitle: "Speed & Accuracy Typing",
+    title: "Luyện Gõ Tốc Độ",
+    subtitle: "Gõ nhanh và chính xác",
     description: "Luyện gõ bàn phím chính xác câu tiếng Anh/Hàn/Trung theo thời gian.",
     icon: Keyboard,
     color: "from-teal-500/20 via-teal-500/10 to-transparent text-teal-600 border-teal-500/20",

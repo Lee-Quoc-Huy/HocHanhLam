@@ -21,7 +21,6 @@ export type SiteConfig = typeof siteConfig;
 
 export const navConfig = {
   primary: [
-    { title: "Tổng Quan", href: "/dashboard", icon: "LayoutDashboard" },
     { title: "Từ Vựng", href: "/vocabulary", icon: "BookOpenText" },
     { title: "Ngữ Pháp", href: "/grammar", icon: "BookMarked" },
     { title: "Thẻ Ghi Nhớ", href: "/flashcards", icon: "Layers" },

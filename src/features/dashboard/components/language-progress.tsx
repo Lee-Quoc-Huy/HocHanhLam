@@ -10,8 +10,8 @@ export function LearningProgressSection({ languages }: { languages: LanguageProg
   return (
     <Section delay={0.05}>
       <SectionHeading
-        title="Learning Progress"
-        subtitle="Level, XP, and vocabulary coverage per language"
+        title="Tiến Độ Học Tập"
+        subtitle="Cấp độ, điểm kinh nghiệm và số từ vựng đã học theo từng ngôn ngữ"
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {languages.map((lang, i) => {
@@ -50,7 +50,7 @@ export function LearningProgressSection({ languages }: { languages: LanguageProg
               <div className="mt-4 space-y-3">
                 <div>
                   <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>XP</span>
+                    <span>Điểm KN (XP)</span>
                     <span>
                       {lang.xp}/{lang.xpToNext}
                     </span>
@@ -67,7 +67,7 @@ export function LearningProgressSection({ languages }: { languages: LanguageProg
                 </div>
                 <div>
                   <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Vocabulary</span>
+                    <span>Từ vựng</span>
                     <span>
                       {lang.wordsLearned}/{lang.wordsGoal}
                     </span>

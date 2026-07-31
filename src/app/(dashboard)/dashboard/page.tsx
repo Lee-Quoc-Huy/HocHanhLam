@@ -2,7 +2,7 @@ import { DashboardView } from "@/features/dashboard/components/dashboard-view";
 import { getDashboardData } from "@/features/dashboard/data/mock-dashboard-data";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Dashboard" };
+export const metadata = { title: "Trang chủ" };
 
 /**
  * Full product dashboard (Home).

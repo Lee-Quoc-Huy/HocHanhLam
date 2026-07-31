@@ -35,13 +35,13 @@ export function LearningStatsSection({ stats }: { stats: LearningStats }) {
 
   return (
     <Section delay={0.22}>
-      <SectionHeading title="Learning Statistics" subtitle="This week at a glance" />
+      <SectionHeading title="Thống Kê Học Tập" subtitle="Tổng quan tuần này" />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile icon={Flame} label="Current streak" value={`${stats.currentStreak}d`} delay={0.05} />
-        <StatTile icon={Target} label="Best streak" value={`${stats.bestStreak}d`} delay={0.1} />
-        <StatTile icon={BookMarked} label="Total words" value={stats.totalWords.toLocaleString()} delay={0.15} />
-        <StatTile icon={Clock3} label="Minutes this week" value={`${stats.totalMinutesThisWeek}`} delay={0.2} />
+        <StatTile icon={Flame} label="Chuỗi hiện tại" value={`${stats.currentStreak} ngày`} delay={0.05} />
+        <StatTile icon={Target} label="Chuỗi dài nhất" value={`${stats.bestStreak} ngày`} delay={0.1} />
+        <StatTile icon={BookMarked} label="Tổng số từ" value={stats.totalWords.toLocaleString()} delay={0.15} />
+        <StatTile icon={Clock3} label="Phút học tuần này" value={`${stats.totalMinutesThisWeek}`} delay={0.2} />
       </div>
 
       <div className="mt-6">

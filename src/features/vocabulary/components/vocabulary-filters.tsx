@@ -41,7 +41,7 @@ export function VocabularyFilters({
           <Input
             value={filter.search}
             onChange={(e) => onFilterChange({ search: e.target.value })}
-            placeholder="Search word, Vietnamese meaning, IPA, example, collection…"
+            placeholder="Tìm từ, nghĩa tiếng Việt, IPA, ví dụ, bộ sưu tập…"
             className="pl-9 pr-9 bg-background/80"
           />
           {filter.search && (
@@ -67,7 +67,7 @@ export function VocabularyFilters({
                 filter.onlyFavorites ? "fill-amber-400 text-amber-400" : "text-amber-500"
               }`}
             />
-            <span>Favorites</span>
+            <span>Yêu thích</span>
           </Button>
 
           <div className="flex items-center rounded-lg border border-border bg-background p-0.5">
@@ -76,7 +76,7 @@ export function VocabularyFilters({
               size="icon"
               className="size-8"
               onClick={() => onViewModeChange("grid")}
-              title="Grid View"
+              title="Xem dạng lưới"
             >
               <LayoutGrid className="size-4" />
             </Button>
@@ -85,7 +85,7 @@ export function VocabularyFilters({
               size="icon"
               className="size-8"
               onClick={() => onViewModeChange("table")}
-              title="Table View"
+              title="Xem dạng bảng"
             >
               <Table className="size-4" />
             </Button>
@@ -97,15 +97,15 @@ export function VocabularyFilters({
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-3">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="mr-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Language:
+            Ngôn ngữ:
           </span>
 
           {(
             [
-              { id: "all", label: "All Languages", emoji: "🌐" },
-              { id: "en", label: "English", emoji: "🇬🇧" },
-              { id: "ko", label: "Korean", emoji: "🇰🇷" },
-              { id: "zh", label: "Chinese", emoji: "🇨🇳" },
+              { id: "all", label: "Tất cả ngôn ngữ", emoji: "🌐" },
+              { id: "en", label: "Tiếng Anh", emoji: "🇬🇧" },
+              { id: "ko", label: "Tiếng Hàn", emoji: "🇰🇷" },
+              { id: "zh", label: "Tiếng Trung", emoji: "🇨🇳" },
             ] as const
           ).map((lang) => {
             const isActive = filter.language === lang.id;
@@ -138,7 +138,7 @@ export function VocabularyFilters({
             onChange={(e) => onFilterChange({ collection: e.target.value })}
             className="h-8 rounded-md border border-border bg-background px-2.5 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-primary"
           >
-            <option value="all">All Collections</option>
+            <option value="all">Tất cả bộ sưu tập</option>
             {availableCollections.map((col) => (
               <option key={col} value={col}>
                 {col}
@@ -156,11 +156,11 @@ export function VocabularyFilters({
             }
             className="h-8 rounded-md border border-border bg-background px-2.5 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-primary"
           >
-            <option value="all">All Difficulties</option>
-            <option value="beginner">Beginner (A1-A2)</option>
-            <option value="intermediate">Intermediate (B1-B2)</option>
-            <option value="advanced">Advanced (C1-C2)</option>
-            <option value="master">Master</option>
+            <option value="all">Tất cả cấp độ</option>
+            <option value="beginner">Sơ cấp (A1-A2)</option>
+            <option value="intermediate">Trung cấp (B1-B2)</option>
+            <option value="advanced">Nâng cao (C1-C2)</option>
+            <option value="master">Bậc thầy</option>
           </select>
 
           {/* Part of Speech Filter */}
@@ -169,7 +169,7 @@ export function VocabularyFilters({
             onChange={(e) => onFilterChange({ part_of_speech: e.target.value })}
             className="h-8 rounded-md border border-border bg-background px-2.5 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-primary"
           >
-            <option value="all">All Parts of Speech</option>
+            <option value="all">Tất cả từ loại</option>
             <option value="noun">Noun (Danh từ)</option>
             <option value="verb">Verb (Động từ)</option>
             <option value="adjective">Adjective (Tính từ)</option>
@@ -186,7 +186,7 @@ export function VocabularyFilters({
               onClick={onResetFilter}
               className="h-8 gap-1 px-2 text-xs text-muted-foreground hover:text-destructive"
             >
-              <RotateCcw className="size-3" /> Reset
+              <RotateCcw className="size-3" /> Đặt lại
             </Button>
           )}
         </div>
