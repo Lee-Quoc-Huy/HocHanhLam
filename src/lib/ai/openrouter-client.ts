@@ -2,9 +2,13 @@ import "server-only";
 
 import { AI_MODEL_ROUTES, OPENROUTER_CONFIG, type AiTaskType } from "@/config/ai-models";
 
+export type ChatContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  content: string | ChatContentPart[];
 }
 
 export interface CompletionParams {
@@ -12,6 +16,9 @@ export interface CompletionParams {
   messages: ChatMessage[];
   temperature?: number;
   stream?: boolean;
+  /** Overrides the routed model — used e.g. to append OpenRouter's `:online`
+   *  suffix for web-grounded answers without adding a whole new task type. */
+  modelOverride?: string;
 }
 
 export interface CompletionResult {
@@ -22,6 +29,7 @@ export interface CompletionResult {
 
 export async function createChatCompletion(params: CompletionParams): Promise<CompletionResult> {
   const route = AI_MODEL_ROUTES[params.task];
+  const model = params.modelOverride ?? route.model;
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not configured.");
 
@@ -33,7 +41,7 @@ export async function createChatCompletion(params: CompletionParams): Promise<Co
       ...OPENROUTER_CONFIG.siteHeaders,
     },
     body: JSON.stringify({
-      model: route.model,
+      model,
       messages: params.messages,
       temperature: params.temperature ?? 0.7,
       max_tokens: route.maxOutputTokens,
@@ -67,7 +75,7 @@ export async function createChatCompletion(params: CompletionParams): Promise<Co
   }
 
   const data = await response.json();
-  return mapResponse(data, route.model);
+  return mapResponse(data, model);
 }
 
 /**
@@ -75,6 +83,7 @@ export async function createChatCompletion(params: CompletionParams): Promise<Co
  */
 export async function createChatStream(params: CompletionParams): Promise<Response> {
   const route = AI_MODEL_ROUTES[params.task];
+  const model = params.modelOverride ?? route.model;
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not configured.");
 
@@ -86,7 +95,7 @@ export async function createChatStream(params: CompletionParams): Promise<Respon
       ...OPENROUTER_CONFIG.siteHeaders,
     },
     body: JSON.stringify({
-      model: route.model,
+      model,
       messages: params.messages,
       temperature: params.temperature ?? 0.7,
       max_tokens: route.maxOutputTokens,

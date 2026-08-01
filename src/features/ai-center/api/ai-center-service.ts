@@ -80,7 +80,7 @@ class AiCenterService {
         .select("*")
         .order("updated_at", { ascending: false });
 
-      if (error || !data || data.length === 0) {
+      if (error || !data) {
         return this.getLocalConversations();
       }
 
@@ -134,7 +134,7 @@ class AiCenterService {
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true });
 
-      if (error || !data || data.length === 0) {
+      if (error || !data) {
         return this.getLocalMessages(conversationId);
       }
 
@@ -145,12 +145,18 @@ class AiCenterService {
   }
 
   // Save message
-  async saveMessage(conversationId: string, role: "user" | "assistant", content: string): Promise<AiMessage> {
+  async saveMessage(
+    conversationId: string,
+    role: "user" | "assistant",
+    content: string,
+    metadata?: Record<string, any>
+  ): Promise<AiMessage> {
     const newMsg: AiMessage = {
       id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `msg-${Date.now()}`,
       conversation_id: conversationId,
       role,
       content,
+      metadata,
       created_at: new Date().toISOString(),
     };
 
@@ -175,12 +181,13 @@ class AiCenterService {
     agentType: AgentType,
     targetLanguage: TargetLanguage,
     messages: { role: "system" | "user" | "assistant"; content: string }[],
-    onChunk: (chunk: string) => void
+    onChunk: (chunk: string) => void,
+    useWebSearch = false
   ): Promise<string> {
     const response = await fetch("/api/ai/agent-stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ agentType, targetLanguage, messages }),
+      body: JSON.stringify({ agentType, targetLanguage, messages, useWebSearch }),
     });
 
     if (!response.ok) {
@@ -221,6 +228,31 @@ class AiCenterService {
     }
 
     return fullText;
+  }
+
+  // Analyze an attached image/document — asks the AI to propose vocabulary,
+  // grammar, and flashcards found in it. Never writes to Supabase itself;
+  // the caller decides what to actually save after the person confirms.
+  async analyzeAttachment(params: {
+    imageDataUrl?: string;
+    text?: string;
+    targetLanguage: TargetLanguage;
+  }): Promise<{
+    summary: string;
+    vocabulary: any[];
+    grammar: any[];
+    flashcards: any[];
+  }> {
+    const res = await fetch("/api/ai/analyze-attachment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || "Không thể phân tích tệp đính kèm.");
+    }
+    return data;
   }
 
   subscribeToRealtime(onUpdate: () => void) {

@@ -10,9 +10,9 @@ const STORAGE_SETTINGS_KEY = "linguaverse_user_settings";
 
 export const DEFAULT_SETTINGS: UserSettings = {
   id: "user-set-1",
-  full_name: "Học Viên Học Hành Lắm 🍃",
-  avatar_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&q=80",
-  bio: "Hành trình chinh phục IELTS 8.0, TOPIK 6 và HSK 6 cùng Trợ lý AI.",
+  full_name: "",
+  avatar_url: "",
+  bio: "",
   learning_goal_mins: 30,
   daily_words_target: 10,
   theme: "system",
@@ -26,29 +26,28 @@ export const DEFAULT_SETTINGS: UserSettings = {
   updated_at: new Date().toISOString(),
 };
 
+// Achievement catalog — the definitions (title/description/icon) are fixed
+// app content, but unlock state used to be faked as already-earned progress.
+// Every achievement now starts locked; real unlock tracking needs a
+// Supabase table (e.g. `user_achievements`) which doesn't exist yet.
 export const MOCK_ACHIEVEMENTS: AchievementItem[] = [
-  { id: "a1", achievement_key: "first_step", title: "Khởi Đầu Đam Mê", description: "Hoàn thành bài học từ vựng đầu tiên", icon: "footprints", isUnlocked: true, unlocked_at: new Date(Date.now() - 86400000 * 5).toISOString() },
-  { id: "a2", achievement_key: "streak_7", title: "Bền Bỉ 7 Ngày", description: "Duy trì chuỗi học liên tục 7 ngày", icon: "flame", isUnlocked: true, unlocked_at: new Date(Date.now() - 86400000 * 1).toISOString() },
-  { id: "a3", achievement_key: "vocab_master", title: "Bậc Thầy Từ Vựng", description: "Lưu trữ trên 50 từ vựng vào kho cá nhân", icon: "book-open", isUnlocked: true, unlocked_at: new Date().toISOString() },
+  { id: "a1", achievement_key: "first_step", title: "Khởi Đầu Đam Mê", description: "Hoàn thành bài học từ vựng đầu tiên", icon: "footprints", isUnlocked: false },
+  { id: "a2", achievement_key: "streak_7", title: "Bền Bỉ 7 Ngày", description: "Duy trì chuỗi học liên tục 7 ngày", icon: "flame", isUnlocked: false },
+  { id: "a3", achievement_key: "vocab_master", title: "Bậc Thầy Từ Vựng", description: "Lưu trữ trên 50 từ vựng vào kho cá nhân", icon: "book-open", isUnlocked: false },
   { id: "a4", achievement_key: "ai_pioneer", title: "Tiên Phong Trí Tuệ AI", description: "Hỏi đáp với cả 8 trợ lý AI Agent", icon: "bot", isUnlocked: false },
   { id: "a5", achievement_key: "srs_champion", title: "Nhà Vô Địch Thẻ SRS", description: "Đạt độ chính xác SRS trên 90%", icon: "award", isUnlocked: false },
 ];
 
+// No `study_analytics` table exists in Supabase yet, so this used to render
+// a fixed set of fake numbers and a fake weekly chart as if they were the
+// user's real study history. Zeroed out until a real analytics table backs it.
 export const MOCK_ANALYTICS: StudyAnalytics = {
-  totalStudyHours: 14.5,
-  totalWordsLearned: 128,
-  srsRetentionRate: 94.2,
-  gamesWon: 18,
-  aiInteractionsCount: 64,
-  weeklyMetrics: [
-    { date: "2026-07-23", studyMins: 25, wordsLearned: 8, cardsReviewed: 20, aiMessages: 10 },
-    { date: "2026-07-24", studyMins: 40, wordsLearned: 12, cardsReviewed: 35, aiMessages: 15 },
-    { date: "2026-07-25", studyMins: 30, wordsLearned: 10, cardsReviewed: 25, aiMessages: 8 },
-    { date: "2026-07-26", studyMins: 50, wordsLearned: 15, cardsReviewed: 40, aiMessages: 18 },
-    { date: "2026-07-27", studyMins: 35, wordsLearned: 11, cardsReviewed: 30, aiMessages: 12 },
-    { date: "2026-07-28", studyMins: 45, wordsLearned: 14, cardsReviewed: 38, aiMessages: 14 },
-    { date: "2026-07-29", studyMins: 60, wordsLearned: 18, cardsReviewed: 50, aiMessages: 22 },
-  ],
+  totalStudyHours: 0,
+  totalWordsLearned: 0,
+  srsRetentionRate: 0,
+  gamesWon: 0,
+  aiInteractionsCount: 0,
+  weeklyMetrics: [],
 };
 
 class SettingsService {

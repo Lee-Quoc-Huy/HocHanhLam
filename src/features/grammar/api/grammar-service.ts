@@ -118,16 +118,13 @@ export const SAMPLE_GRAMMAR: GrammarItem[] = [
 
 class GrammarService {
   private getLocalItems(): GrammarItem[] {
-    if (typeof window === "undefined") return SAMPLE_GRAMMAR;
+    if (typeof window === "undefined") return [];
     try {
       const data = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (!data) {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(SAMPLE_GRAMMAR));
-        return SAMPLE_GRAMMAR;
-      }
+      if (!data) return [];
       return JSON.parse(data);
     } catch {
-      return SAMPLE_GRAMMAR;
+      return [];
     }
   }
 
@@ -148,7 +145,7 @@ class GrammarService {
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error || !data || data.length === 0) {
+      if (error || !data) {
         return this.getLocalItems();
       }
 

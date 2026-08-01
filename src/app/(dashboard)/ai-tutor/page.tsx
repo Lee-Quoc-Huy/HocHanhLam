@@ -21,6 +21,9 @@ export default function AiTutorPage() {
     setTargetLanguage,
     toggleHistoryDrawer,
     sendMessage,
+    sendAttachment,
+    useWebSearch,
+    toggleWebSearch,
     resetActiveChat,
   } = useAiCenter();
 
@@ -66,6 +69,9 @@ export default function AiTutorPage() {
         isStreaming={isStreaming}
         streamingContent={streamingContent}
         onSendMessage={sendMessage}
+        onSendAttachment={sendAttachment}
+        useWebSearch={useWebSearch}
+        onToggleWebSearch={toggleWebSearch}
         onSetTargetLanguage={setTargetLanguage}
         onToggleHistoryDrawer={toggleHistoryDrawer}
         onNewChat={handleNewChat}

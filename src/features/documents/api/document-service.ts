@@ -47,16 +47,13 @@ export const SAMPLE_DOCUMENTS: DocumentItem[] = [
 
 class DocumentService {
   private getLocalDocs(): DocumentItem[] {
-    if (typeof window === "undefined") return SAMPLE_DOCUMENTS;
+    if (typeof window === "undefined") return [];
     try {
       const data = localStorage.getItem(STORAGE_DOCUMENTS_KEY);
-      if (!data) {
-        localStorage.setItem(STORAGE_DOCUMENTS_KEY, JSON.stringify(SAMPLE_DOCUMENTS));
-        return SAMPLE_DOCUMENTS;
-      }
+      if (!data) return [];
       return JSON.parse(data);
     } catch {
-      return SAMPLE_DOCUMENTS;
+      return [];
     }
   }
 
@@ -99,7 +96,7 @@ class DocumentService {
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error || !data || data.length === 0) {
+      if (error || !data) {
         return this.getLocalDocs();
       }
 
@@ -256,7 +253,7 @@ class DocumentService {
         .eq("document_id", documentId)
         .order("created_at", { ascending: false });
 
-      if (error || !data || data.length === 0) {
+      if (error || !data) {
         return this.getLocalQuizzes(documentId);
       }
 

@@ -19,91 +19,10 @@ import type {
  * and writes now go straight through it, and every device fetches the same
  * rows and receives realtime updates when another device changes them.
  *
- * A one-time, per-browser flag (`SEED_FLAG_KEY`) still seeds a starter
- * dataset into Supabase the very first time an account has zero words, so
- * new users don't land on a totally empty page — but after that the account
- * is free to go to zero words (e.g. after deleting everything) without ever
- * being silently refilled again.
+ * A brand-new account simply starts with zero words — no sample/demo data
+ * is auto-inserted. Anything shown in the vocabulary list is data the
+ * person actually created themselves.
  */
-
-const SEED_FLAG_KEY = "hhl_vocabulary_seeded_v1";
-
-type SampleSeed = Omit<VocabularyItem, "id" | "created_at" | "updated_at" | "user_id">;
-
-const SAMPLE_VOCABULARY: SampleSeed[] = [
-  {
-    language: "en",
-    word: "Serendipity",
-    ipa: "/ˌser.ənˈdɪp.ə.ti/",
-    vietnamese: "Sự tình cờ may mắn",
-    english_meaning: "The occurrence of events by chance in a happy or beneficial way.",
-    part_of_speech: "noun",
-    example: "We found this charming cafe by pure serendipity.",
-    example_translation: "Chúng tôi tìm thấy quán cà phê xinh đẹp này nhờ sự tình cờ may mắn.",
-    audio_url: "",
-    image_url: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=600&q=80",
-    synonyms: ["coincidence", "fluke", "fortuity"],
-    antonyms: ["misfortune", "design"],
-    frequency: 4,
-    difficulty: "advanced",
-    is_favorite: true,
-    collection: "IELTS Academic",
-  },
-  {
-    language: "ko",
-    word: "설레다",
-    ipa: "seol-le-da",
-    vietnamese: "Hồi hộp, xao xuyến (với niềm vui)",
-    english_meaning: "To feel fluttered, excited, or restless with joyful anticipation.",
-    part_of_speech: "verb",
-    example: "내일 여행을 가려고 하니까 마음이 설렌다.",
-    example_translation: "Vì ngày mai đi du lịch nên lòng tôi thấy rất hồi hộp, xao xuyến.",
-    audio_url: "",
-    image_url: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=600&q=80",
-    synonyms: ["두근거리다", "기대되다"],
-    antonyms: ["덤덤하다"],
-    frequency: 5,
-    difficulty: "intermediate",
-    is_favorite: true,
-    collection: "TOPIK II",
-  },
-  {
-    language: "zh",
-    word: "坚持",
-    ipa: "jiān chí",
-    vietnamese: "Kiên trì, giữ vững",
-    english_meaning: "To persevere, insist on, or persist in doing something.",
-    part_of_speech: "verb",
-    example: "只要坚持下去，就一定能成功。",
-    example_translation: "Chỉ cần kiên trì tiếp tục, nhất định sẽ thành công.",
-    audio_url: "",
-    image_url: "https://images.unsplash.com/photo-1519834785169-98be25ec3f84?auto=format&fit=crop&w=600&q=80",
-    synonyms: ["恒心", "坚守"],
-    antonyms: ["放弃", "半途而废"],
-    frequency: 5,
-    difficulty: "intermediate",
-    is_favorite: false,
-    collection: "HSK 4",
-  },
-  {
-    language: "en",
-    word: "Resilient",
-    ipa: "/rɪˈzɪl.jənt/",
-    vietnamese: "Kiên cường, khôi phục nhanh",
-    english_meaning: "Able to withstand or recover quickly from difficult conditions.",
-    part_of_speech: "adjective",
-    example: "She is a resilient person who never gives up in face of failure.",
-    example_translation: "Cô ấy là một người kiên cường, không bao giờ bỏ cuộc trước thất bại.",
-    audio_url: "",
-    image_url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=80",
-    synonyms: ["tough", "strong", "adaptable"],
-    antonyms: ["fragile", "vulnerable"],
-    frequency: 4,
-    difficulty: "intermediate",
-    is_favorite: false,
-    collection: "Daily Communication",
-  },
-];
 
 class VocabularyService {
   async fetchVocabulary(): Promise<VocabularyItem[]> {
@@ -117,37 +36,10 @@ class VocabularyService {
       throw new Error(`Không thể tải danh sách từ vựng: ${error.message}`);
     }
 
-    const items = (data ?? []) as VocabularyItem[];
-
-    // First-ever load with an empty account: seed a small starter set once,
-    // on Supabase directly (shared across devices), then never again.
-    const alreadySeeded =
-      typeof window !== "undefined" && window.localStorage.getItem(SEED_FLAG_KEY);
-
-    if (items.length === 0 && !alreadySeeded) {
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(SEED_FLAG_KEY, "1");
-      }
-      return this.seedSampleVocabulary();
-    }
-
-    return items;
-  }
-
-  private async seedSampleVocabulary(): Promise<VocabularyItem[]> {
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    const rows = SAMPLE_VOCABULARY.map((item) => ({ ...item, user_id: user?.id ?? null }));
-    const { data, error } = await supabase.from("vocabulary").insert(rows).select();
-
-    if (error || !data) {
-      // Seeding failed (e.g. offline) — don't block the page, just show empty.
-      return [];
-    }
-    return data as VocabularyItem[];
+    // A genuinely empty account just shows an empty list now — this used to
+    // auto-insert a starter set of sample words the first time, which meant
+    // "existing" vocabulary would appear that the person never actually added.
+    return (data ?? []) as VocabularyItem[];
   }
 
   async createWord(input: CreateVocabularyInput): Promise<VocabularyItem> {

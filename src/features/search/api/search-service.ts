@@ -35,16 +35,13 @@ export const SAMPLE_KNOWLEDGE_EDGES: KnowledgeGraphEdge[] = [
 
 class SearchService {
   private getLocalHistory(): SearchHistoryItem[] {
-    if (typeof window === "undefined") return SAMPLE_HISTORY;
+    if (typeof window === "undefined") return [];
     try {
       const data = localStorage.getItem(STORAGE_SEARCH_HISTORY_KEY);
-      if (!data) {
-        localStorage.setItem(STORAGE_SEARCH_HISTORY_KEY, JSON.stringify(SAMPLE_HISTORY));
-        return SAMPLE_HISTORY;
-      }
+      if (!data) return [];
       return JSON.parse(data);
     } catch {
-      return SAMPLE_HISTORY;
+      return [];
     }
   }
 
@@ -106,7 +103,7 @@ class SearchService {
         .order("created_at", { ascending: false })
         .limit(10);
 
-      if (error || !data || data.length === 0) {
+      if (error || !data) {
         return this.getLocalHistory();
       }
 
@@ -152,11 +149,13 @@ class SearchService {
     return true;
   }
 
-  // Fetch Knowledge Graph Data
+  // Knowledge Graph — no Supabase table backs this feature yet, so return
+  // an empty graph rather than the same fixed demo nodes/edges every time
+  // regardless of what the person has actually searched or saved.
   getKnowledgeGraphData() {
     return {
-      nodes: SAMPLE_KNOWLEDGE_NODES,
-      edges: SAMPLE_KNOWLEDGE_EDGES,
+      nodes: [],
+      edges: [],
     };
   }
 

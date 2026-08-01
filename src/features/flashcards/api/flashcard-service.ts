@@ -152,16 +152,13 @@ export const SAMPLE_FLASHCARDS: Flashcard[] = [
 
 class FlashcardService {
   private getLocalCards(): Flashcard[] {
-    if (typeof window === "undefined") return SAMPLE_FLASHCARDS;
+    if (typeof window === "undefined") return [];
     try {
       const data = localStorage.getItem(STORAGE_CARDS_KEY);
-      if (!data) {
-        localStorage.setItem(STORAGE_CARDS_KEY, JSON.stringify(SAMPLE_FLASHCARDS));
-        return SAMPLE_FLASHCARDS;
-      }
+      if (!data) return [];
       return JSON.parse(data);
     } catch {
-      return SAMPLE_FLASHCARDS;
+      return [];
     }
   }
 
@@ -175,16 +172,13 @@ class FlashcardService {
   }
 
   private getLocalCollections(): FlashcardCollection[] {
-    if (typeof window === "undefined") return SAMPLE_COLLECTIONS;
+    if (typeof window === "undefined") return [];
     try {
       const data = localStorage.getItem(STORAGE_DECKS_KEY);
-      if (!data) {
-        localStorage.setItem(STORAGE_DECKS_KEY, JSON.stringify(SAMPLE_COLLECTIONS));
-        return SAMPLE_COLLECTIONS;
-      }
+      if (!data) return [];
       return JSON.parse(data);
     } catch {
-      return SAMPLE_COLLECTIONS;
+      return [];
     }
   }
 
@@ -198,16 +192,13 @@ class FlashcardService {
   }
 
   private getLocalFolders(): FlashcardFolder[] {
-    if (typeof window === "undefined") return SAMPLE_FOLDERS;
+    if (typeof window === "undefined") return [];
     try {
       const data = localStorage.getItem(STORAGE_FOLDERS_KEY);
-      if (!data) {
-        localStorage.setItem(STORAGE_FOLDERS_KEY, JSON.stringify(SAMPLE_FOLDERS));
-        return SAMPLE_FOLDERS;
-      }
+      if (!data) return [];
       return JSON.parse(data);
     } catch {
-      return SAMPLE_FOLDERS;
+      return [];
     }
   }
 
@@ -229,7 +220,7 @@ class FlashcardService {
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error || !data || data.length === 0) {
+      if (error || !data) {
         return this.getLocalCards();
       }
 
@@ -246,7 +237,7 @@ class FlashcardService {
     const supabase = createClient();
     try {
       const { data, error } = await supabase.from("flashcard_collections").select("*");
-      if (error || !data || data.length === 0) {
+      if (error || !data) {
         return this.getLocalCollections();
       }
       const collections = (data as unknown) as FlashcardCollection[];
@@ -262,7 +253,7 @@ class FlashcardService {
     const supabase = createClient();
     try {
       const { data, error } = await supabase.from("flashcard_folders").select("*");
-      if (error || !data || data.length === 0) {
+      if (error || !data) {
         return this.getLocalFolders();
       }
       const folders = (data as unknown) as FlashcardFolder[];

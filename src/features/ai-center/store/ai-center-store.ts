@@ -29,6 +29,9 @@ interface AiCenterState {
   toggleHistoryDrawer: () => void;
 
   sendMessage: (text: string) => Promise<void>;
+  sendAttachment: (file: File) => Promise<void>;
+  useWebSearch: boolean;
+  toggleWebSearch: () => void;
   resetActiveChat: () => void;
 }
 
@@ -46,6 +49,7 @@ export const useAiCenterStore = create<AiCenterState>((set, get) => ({
   isHistoryOpen: false,
   isLoading: false,
   error: null,
+  useWebSearch: false,
 
   fetchConversations: async () => {
     set({ isLoading: true, error: null });
@@ -104,7 +108,7 @@ export const useAiCenterStore = create<AiCenterState>((set, get) => ({
   toggleHistoryDrawer: () => set((state) => ({ isHistoryOpen: !state.isHistoryOpen })),
 
   sendMessage: async (text) => {
-    const { activeConversation, activeAgent, targetLanguage, messages, createConversation } = get();
+    const { activeConversation, activeAgent, targetLanguage, messages, createConversation, useWebSearch } = get();
     let currentConv = activeConversation;
 
     if (!currentConv) {
@@ -126,17 +130,129 @@ export const useAiCenterStore = create<AiCenterState>((set, get) => ({
         content: m.content,
       }));
 
+      let rawStreamText = "";
+      let actionTagSeen = false;
       const fullText = await aiCenterService.streamAgentResponse(
         activeAgent,
         targetLanguage,
         historyContext,
         (chunk) => {
-          set((state) => ({ streamingContent: state.streamingContent + chunk }));
-        }
+          rawStreamText += chunk;
+          if (actionTagSeen) return; // JSON block is always at the very end — freeze display.
+          const tagStart = rawStreamText.indexOf("<ACTION_JSON>");
+          if (tagStart !== -1) {
+            actionTagSeen = true;
+            set({ streamingContent: rawStreamText.slice(0, tagStart).trim() });
+          } else {
+            set({ streamingContent: rawStreamText });
+          }
+        },
+        useWebSearch
       );
 
+      // If the model proposed vocabulary/grammar/flashcards via the
+      // ACTION_JSON protocol (triggered by plain-text requests like "tạo
+      // giúp tôi 1 flashcard..."), pull that block out of the visible reply
+      // and attach it as metadata so it renders as a confirm-to-save card —
+      // nothing is written to Supabase until the person clicks "Lưu".
+      const actionMatch = fullText.match(/<ACTION_JSON>([\s\S]*?)<\/ACTION_JSON>/);
+      let displayText = fullText;
+      let extraction: { vocabulary: any[]; grammar: any[]; flashcards: any[] } | undefined;
+
+      if (actionMatch) {
+        displayText = fullText.replace(actionMatch[0], "").trim();
+        try {
+          const parsed = JSON.parse(actionMatch[1].trim());
+          const vocabulary = Array.isArray(parsed.vocabulary) ? parsed.vocabulary : [];
+          const grammar = Array.isArray(parsed.grammar) ? parsed.grammar : [];
+          const flashcards = Array.isArray(parsed.flashcards) ? parsed.flashcards : [];
+          if (vocabulary.length || grammar.length || flashcards.length) {
+            extraction = { vocabulary, grammar, flashcards };
+          }
+        } catch {
+          // Malformed JSON from the model — just show the plain text reply.
+        }
+      }
+
       // Save Assistant response
-      const assistantMsg = await aiCenterService.saveMessage(currentConv.id, "assistant", fullText);
+      const assistantMsg = await aiCenterService.saveMessage(
+        currentConv.id,
+        "assistant",
+        displayText,
+        extraction ? { extraction } : undefined
+      );
+
+      set((state) => ({
+        messages: [...state.messages, assistantMsg],
+        isStreaming: false,
+        streamingContent: "",
+      }));
+    } catch (err) {
+      set({ error: (err as Error).message, isStreaming: false, streamingContent: "" });
+    }
+  },
+
+  toggleWebSearch: () => set((state) => ({ useWebSearch: !state.useWebSearch })),
+
+  sendAttachment: async (file) => {
+    const { activeConversation, activeAgent, targetLanguage, createConversation } = get();
+    let currentConv = activeConversation;
+
+    if (!currentConv) {
+      currentConv = await createConversation(`Đính kèm: ${file.name}`.slice(0, 40), activeAgent);
+    }
+
+    const isImage = file.type.startsWith("image/");
+
+    set({ isStreaming: true, streamingContent: "" });
+
+    try {
+      let imageDataUrl: string | undefined;
+      let text: string | undefined;
+
+      if (isImage) {
+        imageDataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error("Không thể đọc ảnh."));
+          reader.readAsDataURL(file);
+        });
+      } else {
+        text = await file.text();
+      }
+
+      // Save the user's message — image previews render straight from
+      // metadata.imageDataUrl in the chat bubble.
+      const userMsg = await aiCenterService.saveMessage(
+        currentConv.id,
+        "user",
+        isImage ? `📎 Đã gửi ảnh: ${file.name}` : `📎 Đã gửi tài liệu: ${file.name}`,
+        isImage ? { imageDataUrl } : { attachedFileName: file.name }
+      );
+
+      set((state) => ({ messages: [...state.messages, userMsg] }));
+
+      const result = await aiCenterService.analyzeAttachment({
+        imageDataUrl,
+        text,
+        targetLanguage,
+      });
+
+      const hasCandidates =
+        result.vocabulary.length > 0 || result.grammar.length > 0 || result.flashcards.length > 0;
+
+      const assistantContent =
+        result.summary ||
+        (hasCandidates
+          ? "Mình đã tìm thấy một số nội dung có thể lưu lại — bạn xem và chọn bên dưới nhé."
+          : "Mình không tìm thấy nội dung từ vựng/ngữ pháp rõ ràng trong tệp này.");
+
+      const assistantMsg = await aiCenterService.saveMessage(
+        currentConv.id,
+        "assistant",
+        assistantContent,
+        hasCandidates ? { extraction: result } : undefined
+      );
 
       set((state) => ({
         messages: [...state.messages, assistantMsg],

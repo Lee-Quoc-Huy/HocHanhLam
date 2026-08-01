@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send, Bot, User, Sparkles, Loader2, Volume2, History, RotateCcw } from "lucide-react";
+import { Send, Bot, User, Sparkles, Loader2, Volume2, History, RotateCcw, Paperclip, Globe, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AiMessage, AgentType, TargetLanguage } from "../types";
 import { AGENT_TEMPLATES } from "../lib/prompt-templates";
 import { useSpeech } from "@/features/vocabulary/hooks/use-speech";
+import { ExtractionConfirmCard } from "./extraction-confirm-card";
 
 interface ChatInterfaceProps {
   activeAgent: AgentType;
@@ -14,6 +15,9 @@ interface ChatInterfaceProps {
   isStreaming: boolean;
   streamingContent: string;
   onSendMessage: (text: string) => Promise<void>;
+  onSendAttachment: (file: File) => Promise<void>;
+  useWebSearch: boolean;
+  onToggleWebSearch: () => void;
   onSetTargetLanguage: (lang: TargetLanguage) => void;
   onToggleHistoryDrawer: () => void;
   onNewChat: () => void;
@@ -26,12 +30,18 @@ export function ChatInterface({
   isStreaming,
   streamingContent,
   onSendMessage,
+  onSendAttachment,
+  useWebSearch,
+  onToggleWebSearch,
   onSetTargetLanguage,
   onToggleHistoryDrawer,
   onNewChat,
 }: ChatInterfaceProps) {
   const { speak } = useSpeech();
   const [input, setInput] = useState("");
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [isAttaching, setIsAttaching] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeTemplate = AGENT_TEMPLATES[activeAgent];
 
@@ -45,11 +55,31 @@ export function ChatInterface({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isStreaming) return;
+    if (isStreaming) return;
 
+    if (pendingFile) {
+      const file = pendingFile;
+      setPendingFile(null);
+      setInput("");
+      setIsAttaching(true);
+      try {
+        await onSendAttachment(file);
+      } finally {
+        setIsAttaching(false);
+      }
+      return;
+    }
+
+    if (!input.trim()) return;
     const userText = input.trim();
     setInput("");
     await onSendMessage(userText);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setPendingFile(file);
+    e.target.value = "";
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -101,11 +131,21 @@ export function ChatInterface({
             ))}
           </div>
 
-          <Button variant="outline" size="sm" onClick={onNewChat} className="h-8 gap-1 text-xs">
-            <RotateCcw className="size-3" /> New Chat
+          <Button
+            variant={useWebSearch ? "default" : "outline"}
+            size="sm"
+            onClick={onToggleWebSearch}
+            className={`h-8 gap-1 text-xs ${useWebSearch ? "bg-blue-600 hover:bg-blue-700 text-white" : ""}`}
+            title="Bật/tắt tìm kiếm Web"
+          >
+            <Globe className="size-3.5" /> Web
           </Button>
 
-          <Button variant="outline" size="icon" onClick={onToggleHistoryDrawer} className="size-8" title="History">
+          <Button variant="outline" size="sm" onClick={onNewChat} className="h-8 gap-1 text-xs">
+            <RotateCcw className="size-3" /> Trò Chuyện Mới
+          </Button>
+
+          <Button variant="outline" size="icon" onClick={onToggleHistoryDrawer} className="size-8" title="Lịch sử trò chuyện">
             <History className="size-4" />
           </Button>
         </div>
@@ -157,6 +197,18 @@ export function ChatInterface({
                 </button>
               )}
               {msg.content}
+
+              {msg.role === "user" && msg.metadata?.imageDataUrl && (
+                <img
+                  src={msg.metadata.imageDataUrl}
+                  alt="Ảnh đính kèm"
+                  className="mt-2 max-h-56 rounded-lg border border-white/20 object-contain"
+                />
+              )}
+
+              {msg.role !== "user" && msg.metadata?.extraction && (
+                <ExtractionConfirmCard data={msg.metadata.extraction} targetLanguage={targetLanguage} />
+              )}
             </div>
 
             {msg.role === "user" && (
@@ -194,22 +246,59 @@ export function ChatInterface({
 
       {/* Message Input Box */}
       <form onSubmit={handleSubmit} className="border-t border-border bg-surface-raised p-3">
+        {pendingFile && (
+          <div className="mb-2 flex items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5 text-xs">
+            <span className="flex items-center gap-1.5 text-foreground">
+              <Paperclip className="size-3.5 text-emerald-600" />
+              {pendingFile.name}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPendingFile(null)}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-2 rounded-xl border border-border bg-background p-1.5 focus-within:ring-1 focus-within:ring-emerald-600">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,.txt,.md,.pdf"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isStreaming || isAttaching}
+            className="size-9 shrink-0 rounded-lg text-muted-foreground hover:text-emerald-600"
+            title="Gửi ảnh hoặc tài liệu (AI sẽ đọc và đề xuất thêm vào Từ Vựng/Ngữ Pháp/Flashcard)"
+          >
+            <Paperclip className="size-4" />
+          </Button>
           <textarea
             rows={2}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`Hỏi ${activeTemplate.name}... (Enter để gửi, Shift+Enter để xuống dòng)`}
+            placeholder={
+              pendingFile
+                ? "Ghi chú thêm cho ảnh/tài liệu này (không bắt buộc)…"
+                : `Hỏi ${activeTemplate.name}... (Enter để gửi, Shift+Enter để xuống dòng)`
+            }
             className="flex-1 bg-transparent p-2 text-xs sm:text-sm outline-none resize-none"
           />
           <Button
             type="submit"
             size="icon"
-            disabled={!input.trim() || isStreaming}
+            disabled={(!input.trim() && !pendingFile) || isStreaming || isAttaching}
             className="size-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 shadow-sm"
           >
-            <Send className="size-4" />
+            {isAttaching ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
           </Button>
         </div>
       </form>

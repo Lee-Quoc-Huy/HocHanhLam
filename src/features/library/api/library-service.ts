@@ -13,132 +13,15 @@ const STORAGE_LIBRARY_FOLDERS_KEY = "linguaverse_library_folders";
 const STORAGE_LIBRARY_COLLECTIONS_KEY = "linguaverse_library_collections";
 const STORAGE_LIBRARY_VERSIONS_KEY = "linguaverse_library_versions";
 
-export const SAMPLE_FOLDERS: LibraryFolder[] = [
-  { id: "f-1", name: "IELTS Exam Prep", color: "#10b981", icon: "folder", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "f-2", name: "TOPIK Korean Practice", color: "#3b82f6", icon: "folder", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "f-3", name: "HSK Chinese Business", color: "#f59e0b", icon: "folder", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-];
-
-export const SAMPLE_COLLECTIONS: LibraryCollection[] = [
-  { id: "c-1", folder_id: "f-1", name: "IELTS Speaking Audio Clips", description: "Audio podcast mẫu phần 2 & 3", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "c-2", folder_id: "f-2", name: "TOPIK Reading Passages", description: "Đoạn văn đọc hiểu TOPIK II", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-];
-
-export const SAMPLE_ITEMS: LibraryItem[] = [
-  {
-    id: "lib-1",
-    folder_id: "f-1",
-    collection_id: "c-1",
-    title: "IELTS Speaking Part 2 - Sustainable Energy.mp3",
-    item_type: "audio",
-    file_url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-    file_size: "3.4 MB",
-    content_text: "Sample audio conversation discussing climate change resilience and renewable energy adoption.",
-    tags: ["IELTS", "Audio", "Speaking"],
-    is_favorite: true,
-    is_trashed: false,
-    share_token: "share-audio-101",
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-    updated_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-  {
-    id: "lib-2",
-    folder_id: "f-1",
-    title: "Grammar Master Notes - Conditional Clauses.md",
-    item_type: "note",
-    file_url: null,
-    file_size: "8.1 KB",
-    content_text: `# Ghi Chú Cấu Trúc Câu Điều Kiện
-
-## 1. Type 1 (Điều kiện có thật)
-- **Formula:** \`If + S + V(pres), S + will + V\`
-- **Example:** If you study hard, you will pass the exam.
-
-## 2. Type 2 (Giả định trái với hiện tại)
-- **Formula:** \`If + S + V(past), S + would + V\`
-- **Example:** If I had more time, I would learn Korean.`,
-    tags: ["Grammar", "Notes", "English"],
-    is_favorite: true,
-    is_trashed: false,
-    share_token: "share-note-202",
-    created_at: new Date(Date.now() - 86400000 * 1).toISOString(),
-    updated_at: new Date(Date.now() - 86400000 * 1).toISOString(),
-  },
-  {
-    id: "lib-3",
-    folder_id: "f-2",
-    collection_id: "c-2",
-    title: "TOPIK II Essay Writing Sample.pdf",
-    item_type: "document",
-    file_url: null,
-    file_size: "412 KB",
-    content_text: "한국어 능력 시험 II 쓰기 영역 54번 작문 예시. 현대 사회와 정보화 시대의 장단점 논술.",
-    tags: ["TOPIK", "PDF", "Writing"],
-    is_favorite: false,
-    is_trashed: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "lib-4",
-    folder_id: "f-3",
-    title: "HSK 5 Business Presentation Video.mp4",
-    item_type: "video",
-    file_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-    file_size: "15.8 MB",
-    content_text: "Video bài giảng kinh doanh HSK 5 về thị trường thương mại điện tử.",
-    tags: ["HSK", "Video", "Business"],
-    is_favorite: false,
-    is_trashed: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "lib-5",
-    title: "Vocabulary Infographic Chart.png",
-    item_type: "image",
-    file_url: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=800&q=80",
-    file_size: "1.2 MB",
-    content_text: "Sơ đồ minh họa 100 từ vựng nâng cao IELTS theo chủ đề Môi trường & Công nghệ.",
-    tags: ["Vocabulary", "Image", "Infographic"],
-    is_favorite: true,
-    is_trashed: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
-export const SAMPLE_VERSIONS: ItemVersion[] = [
-  {
-    id: "ver-1",
-    item_id: "lib-2",
-    version_number: 1,
-    title: "Grammar Master Notes - Draft 1",
-    content_text: "# Draft Note on Conditionals",
-    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
-  },
-  {
-    id: "ver-2",
-    item_id: "lib-2",
-    version_number: 2,
-    title: "Grammar Master Notes - Conditional Clauses.md",
-    content_text: `# Ghi Chú Cấu Trúc Câu Điều Kiện\n- Type 1, 2, 3`,
-    created_at: new Date(Date.now() - 86400000 * 1).toISOString(),
-  },
-];
-
 class LibraryService {
   private getLocalItems(): LibraryItem[] {
-    if (typeof window === "undefined") return SAMPLE_ITEMS;
+    if (typeof window === "undefined") return [];
     try {
       const data = localStorage.getItem(STORAGE_LIBRARY_ITEMS_KEY);
-      if (!data) {
-        localStorage.setItem(STORAGE_LIBRARY_ITEMS_KEY, JSON.stringify(SAMPLE_ITEMS));
-        return SAMPLE_ITEMS;
-      }
+      if (!data) return [];
       return JSON.parse(data);
     } catch {
-      return SAMPLE_ITEMS;
+      return [];
     }
   }
 
@@ -152,16 +35,13 @@ class LibraryService {
   }
 
   private getLocalFolders(): LibraryFolder[] {
-    if (typeof window === "undefined") return SAMPLE_FOLDERS;
+    if (typeof window === "undefined") return [];
     try {
       const data = localStorage.getItem(STORAGE_LIBRARY_FOLDERS_KEY);
-      if (!data) {
-        localStorage.setItem(STORAGE_LIBRARY_FOLDERS_KEY, JSON.stringify(SAMPLE_FOLDERS));
-        return SAMPLE_FOLDERS;
-      }
+      if (!data) return [];
       return JSON.parse(data);
     } catch {
-      return SAMPLE_FOLDERS;
+      return [];
     }
   }
 
@@ -175,16 +55,13 @@ class LibraryService {
   }
 
   private getLocalCollections(): LibraryCollection[] {
-    if (typeof window === "undefined") return SAMPLE_COLLECTIONS;
+    if (typeof window === "undefined") return [];
     try {
       const data = localStorage.getItem(STORAGE_LIBRARY_COLLECTIONS_KEY);
-      if (!data) {
-        localStorage.setItem(STORAGE_LIBRARY_COLLECTIONS_KEY, JSON.stringify(SAMPLE_COLLECTIONS));
-        return SAMPLE_COLLECTIONS;
-      }
+      if (!data) return [];
       return JSON.parse(data);
     } catch {
-      return SAMPLE_COLLECTIONS;
+      return [];
     }
   }
 
@@ -198,14 +75,14 @@ class LibraryService {
   }
 
   private getLocalVersions(itemId: string): ItemVersion[] {
-    if (typeof window === "undefined") return SAMPLE_VERSIONS.filter((v) => v.item_id === itemId);
+    if (typeof window === "undefined") return [];
     try {
       const data = localStorage.getItem(STORAGE_LIBRARY_VERSIONS_KEY);
-      if (!data) return SAMPLE_VERSIONS.filter((v) => v.item_id === itemId);
+      if (!data) return [];
       const all: ItemVersion[] = JSON.parse(data);
       return all.filter((v) => v.item_id === itemId);
     } catch {
-      return SAMPLE_VERSIONS.filter((v) => v.item_id === itemId);
+      return [];
     }
   }
 
@@ -218,12 +95,14 @@ class LibraryService {
     }
   }
 
-  // Fetch Items
+  // Fetch Items — Supabase is the source of truth. A legitimately empty
+  // result (e.g. after trashing/deleting everything) is trusted as-is; we
+  // only fall back to the local cache if the request itself failed (offline).
   async fetchItems(): Promise<LibraryItem[]> {
     const supabase = createClient();
     try {
       const { data, error } = await supabase.from("library_items").select("*").order("created_at", { ascending: false });
-      if (error || !data || data.length === 0) return this.getLocalItems();
+      if (error) return this.getLocalItems();
       const items = (data as unknown) as LibraryItem[];
       this.setLocalItems(items);
       return items;
@@ -232,12 +111,12 @@ class LibraryService {
     }
   }
 
-  // Fetch Folders
+  // Fetch Folders — same trust-real-data rule as fetchItems.
   async fetchFolders(): Promise<LibraryFolder[]> {
     const supabase = createClient();
     try {
       const { data, error } = await supabase.from("library_folders").select("*").order("name", { ascending: true });
-      if (error || !data || data.length === 0) return this.getLocalFolders();
+      if (error) return this.getLocalFolders();
       const folders = (data as unknown) as LibraryFolder[];
       this.setLocalFolders(folders);
       return folders;
@@ -246,12 +125,12 @@ class LibraryService {
     }
   }
 
-  // Fetch Collections
+  // Fetch Collections — same trust-real-data rule.
   async fetchCollections(): Promise<LibraryCollection[]> {
     const supabase = createClient();
     try {
       const { data, error } = await supabase.from("library_collections").select("*").order("name", { ascending: true });
-      if (error || !data || data.length === 0) return this.getLocalCollections();
+      if (error) return this.getLocalCollections();
       const collections = (data as unknown) as LibraryCollection[];
       this.setLocalCollections(collections);
       return collections;

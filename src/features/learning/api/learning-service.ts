@@ -13,26 +13,29 @@ import type {
 const STORAGE_GAMIFICATION_KEY = "linguaverse_user_gamification";
 const STORAGE_CHALLENGES_KEY = "linguaverse_user_challenges";
 
+// Default starting stats for a brand-new account — zeroed rather than
+// pretending the user already has 1250 XP / a 7-day streak they never earned.
 export const MOCK_GAMIFICATION: UserGamification = {
   id: "user-gami-1",
-  totalXp: 1250,
-  level: 5,
-  streakDays: 7,
-  gamesPlayed: 14,
+  totalXp: 0,
+  level: 1,
+  streakDays: 0,
+  gamesPlayed: 0,
   lastActiveDate: new Date().toISOString().slice(0, 10),
 };
 
-export const MOCK_LEADERBOARD: LeaderboardEntry[] = [
-  { id: "u1", userId: "u1", name: "Nguyễn Văn Minh", avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80", totalXp: 4850, level: 18, streakDays: 24, rank: 1 },
-  { id: "u2", userId: "u2", name: "Trần Thị Mai", avatarUrl: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&q=80", totalXp: 3920, level: 15, streakDays: 19, rank: 2 },
-  { id: "u3", userId: "u3", name: "Lê Hoàng Nam", avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80", totalXp: 2840, level: 11, streakDays: 12, rank: 3 },
-  { id: "u4", userId: "u4", name: "Bạn (Học Viên)", avatarUrl: "", totalXp: 1250, level: 5, streakDays: 7, rank: 4 },
-];
+// No `leaderboard`/multi-user table exists in Supabase yet, so this used to
+// show 3 fake other learners with made-up XP as if they were real people.
+// Kept empty until a real shared leaderboard table backs this feature.
+export const MOCK_LEADERBOARD: LeaderboardEntry[] = [];
 
+// Challenge definitions are real app content, but their progress
+// (currentCount / isCompleted) used to be pre-filled as if already underway.
+// Progress now starts at zero until a real challenges table tracks it.
 export const MOCK_CHALLENGES: ChallengeItem[] = [
-  { id: "c1", challengeType: "daily", title: "Hoàn thành 2 Trận Game Bất Kỳ", description: "Luyện tập 2 game bất kỳ trong ngày hôm nay", targetCount: 2, currentCount: 1, rewardXp: 50, isCompleted: false, dueDate: new Date(Date.now() + 86400000).toISOString() },
-  { id: "c2", challengeType: "daily", title: "Đạt Độ Chính Xác Trên 80%", description: "Hoàn thành 1 bài Quiz đạt chính xác từ 80% trở lên", targetCount: 1, currentCount: 1, rewardXp: 80, isCompleted: true, dueDate: new Date(Date.now() + 86400000).toISOString() },
-  { id: "c3", challengeType: "weekly", title: "Thách Thức Tuần: Tích Lũy 500 XP", description: "Chiến thắng các trò chơi để tích lũy 500 XP trong tuần", targetCount: 500, currentCount: 280, rewardXp: 250, isCompleted: false, dueDate: new Date(Date.now() + 86400000 * 7).toISOString() },
+  { id: "c1", challengeType: "daily", title: "Hoàn thành 2 Trận Game Bất Kỳ", description: "Luyện tập 2 game bất kỳ trong ngày hôm nay", targetCount: 2, currentCount: 0, rewardXp: 50, isCompleted: false, dueDate: new Date(Date.now() + 86400000).toISOString() },
+  { id: "c2", challengeType: "daily", title: "Đạt Độ Chính Xác Trên 80%", description: "Hoàn thành 1 bài Quiz đạt chính xác từ 80% trở lên", targetCount: 1, currentCount: 0, rewardXp: 80, isCompleted: false, dueDate: new Date(Date.now() + 86400000).toISOString() },
+  { id: "c3", challengeType: "weekly", title: "Thách Thức Tuần: Tích Lũy 500 XP", description: "Chiến thắng các trò chơi để tích lũy 500 XP trong tuần", targetCount: 500, currentCount: 0, rewardXp: 250, isCompleted: false, dueDate: new Date(Date.now() + 86400000 * 7).toISOString() },
 ];
 
 // Content datasets for games
@@ -171,16 +174,21 @@ class LearningService {
   }
 
   async fetchLeaderboard(): Promise<LeaderboardEntry[]> {
+    // No shared leaderboard table in Supabase yet — return only the current
+    // user's real stats rather than fabricating other "learners" around them.
     const currentGami = this.getLocalGamification();
-    const list = [...MOCK_LEADERBOARD];
-    const userIdx = list.findIndex((u) => u.userId === "u4");
-    if (userIdx !== -1 && list[userIdx]) {
-      list[userIdx].totalXp = currentGami.totalXp;
-      list[userIdx].level = currentGami.level;
-    }
-    list.sort((a, b) => b.totalXp - a.totalXp);
-    list.forEach((u, idx) => (u.rank = idx + 1));
-    return list;
+    return [
+      {
+        id: "me",
+        userId: currentGami.id,
+        name: "Bạn",
+        avatarUrl: "",
+        totalXp: currentGami.totalXp,
+        level: currentGami.level,
+        streakDays: currentGami.streakDays,
+        rank: 1,
+      },
+    ];
   }
 
   async fetchChallenges(): Promise<ChallengeItem[]> {

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createChatStream, type ChatMessage } from "@/lib/ai/openrouter-client";
 import { AGENT_TEMPLATES } from "@/features/ai-center/lib/prompt-templates";
 import { AgentType } from "@/features/ai-center/types";
+import { AI_MODEL_ROUTES } from "@/config/ai-models";
 
 const requestSchema = z.object({
   agentType: z.enum([
@@ -19,7 +20,30 @@ const requestSchema = z.object({
   messages: z
     .array(z.object({ role: z.enum(["system", "user", "assistant"]), content: z.string() }))
     .min(1),
+  useWebSearch: z.boolean().default(false),
 });
+
+// Lets the person ask for content creation in plain chat ("hãy tạo 1
+// flashcard từ vựng tiếng Hàn về trường học", "thêm giúp tôi từ này vào kho
+// từ vựng", "soạn 5 từ vựng chủ đề du lịch"...) without needing to attach an
+// image. When the request implies creating vocabulary/grammar/flashcards,
+// the model appends a structured block the client parses out of the reply
+// and renders as the same confirm-to-save card used for image attachments —
+// nothing is ever saved without the person clicking a "Lưu" button.
+const ACTION_PROTOCOL_INSTRUCTIONS = `--- GIAO THỨC TẠO NỘI DUNG (ACTION_JSON) ---
+Nếu người dùng yêu cầu bạn TẠO MỚI một hoặc nhiều mục từ vựng, cấu trúc ngữ pháp, hoặc flashcard (ví dụ: "tạo giúp tôi 1 flashcard...", "soạn 5 từ vựng chủ đề...", "thêm từ này vào kho từ vựng", "tạo cấu trúc ngữ pháp về...", hoặc bất kỳ cách diễn đạt tương đương nào khác bằng tiếng Việt hay ngoại ngữ), hãy:
+1. Trả lời bình thường bằng văn bản thân thiện, ngắn gọn xác nhận những gì bạn vừa tạo.
+2. Ở CUỐI câu trả lời, thêm một khối JSON duy nhất được bọc chính xác trong thẻ <ACTION_JSON> và </ACTION_JSON>, theo đúng cấu trúc:
+<ACTION_JSON>
+{
+  "vocabulary": [ { "language": "en|ko|zh", "word": "...", "ipa": "...", "vietnamese": "...", "english_meaning": "...", "part_of_speech": "...", "example": "...", "example_translation": "...", "difficulty": "beginner|intermediate|advanced|master" } ],
+  "grammar": [ { "language": "en|ko|zh", "title": "...", "meaning": "...", "explanation": "...", "examples": [{"example":"...","translation":"..."}], "category": "...", "difficulty": "beginner|intermediate|advanced|master" } ],
+  "flashcards": [ { "front_text": "...", "front_subtext": "...", "back_text": "...", "back_explanation": "...", "tags": ["..."] } ]
+}
+</ACTION_JSON>
+3. Chỉ điền các mảng thực sự liên quan đến yêu cầu, để mảng rỗng [] cho phần không liên quan.
+4. TUYỆT ĐỐI KHÔNG dùng khối ACTION_JSON nếu người dùng chỉ đang hỏi/giải thích/trò chuyện thông thường mà không yêu cầu tạo mới nội dung để lưu.
+5. Không đề cập đến việc "đã lưu" — vì nội dung chỉ được lưu khi người dùng tự bấm xác nhận trên giao diện, không phải do bạn.`;
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -29,7 +53,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { agentType, targetLanguage, messages } = parsed.data;
+  const { agentType, targetLanguage, messages, useWebSearch } = parsed.data;
 
   const template = AGENT_TEMPLATES[agentType as AgentType];
   const langLabel =
@@ -37,10 +61,19 @@ export async function POST(request: Request) {
 
   const systemMessage: ChatMessage = {
     role: "system",
-    content: template.systemPrompt(langLabel),
+    content: useWebSearch
+      ? `${template.systemPrompt(langLabel)}\n\nBạn có quyền truy cập Internet cho câu trả lời này — hãy tra cứu thông tin mới nhất/chính xác nhất khi cần, và nêu rõ nếu có dùng nguồn từ web.\n\n${ACTION_PROTOCOL_INSTRUCTIONS}`
+      : `${template.systemPrompt(langLabel)}\n\n${ACTION_PROTOCOL_INSTRUCTIONS}`,
   };
 
   const fullMessages: ChatMessage[] = [systemMessage, ...(messages as ChatMessage[])];
+
+  // AI_MODEL_ROUTES[task].model already includes the provider prefix
+  // (e.g. "google/gemini-2.5-flash"); OpenRouter turns on its web-search
+  // plugin for any model when ":online" is appended to it — no separate
+  // tool-calling loop needed for this MVP.
+  const route = AI_MODEL_ROUTES[template.taskType];
+  const modelOverride = useWebSearch ? `${route.model}:online` : undefined;
 
   try {
     const streamResponse = await createChatStream({
@@ -48,6 +81,7 @@ export async function POST(request: Request) {
       messages: fullMessages,
       temperature: 0.7,
       stream: true,
+      modelOverride,
     });
 
     return new Response(streamResponse.body, {
