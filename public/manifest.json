@@ -2,7 +2,7 @@
   "name": "Học Hành Lắm 🍃 - Nền Tảng Học Ngôn Ngữ AI",
   "short_name": "Học Hành Lắm",
   "description": "Nền tảng học ngôn ngữ thông minh tích hợp Trợ lý AI, Flashcards SRS, Game hóa và Thư viện Tri thức.",
-  "start_url": "/dashboard",
+  "start_url": "/vocabulary",
   "display": "standalone",
   "background_color": "#090d16",
   "theme_color": "#10b981",

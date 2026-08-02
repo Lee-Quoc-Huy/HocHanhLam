@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
 import { createChatCompletion, type ChatMessage } from "@/lib/ai/openrouter-client";
 
 /**
@@ -18,15 +17,7 @@ const requestSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+  // Personal single-user app — no login wall on any feature.
   const body = await request.json();
   const parsed = requestSchema.safeParse(body);
   if (!parsed.success) {

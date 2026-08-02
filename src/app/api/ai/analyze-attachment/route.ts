@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
 import { createChatCompletion, type ChatMessage } from "@/lib/ai/openrouter-client";
 
 /**
@@ -76,15 +75,7 @@ difficulty phải là một trong: "beginner", "intermediate", "advanced", "mast
 Nếu ảnh không chứa nội dung học ngoại ngữ nào rõ ràng, trả về summary mô tả điều đó và để 3 mảng đều rỗng.`;
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Bạn cần đăng nhập để dùng tính năng này." }, { status: 401 });
-  }
-
+  // Personal single-user app — no login wall on any feature.
   const body = await request.json();
   const parsed = requestSchema.safeParse(body);
   if (!parsed.success) {
