@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { BookOpenText, BookMarked, Layers, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,8 +47,6 @@ export interface ExtractionData {
 
 type SectionKey = "vocabulary" | "grammar" | "flashcards";
 
-const PRESET_COLLECTIONS = ["General", "IELTS Academic", "TOPIK II", "HSK 4", "Daily Communication"];
-
 export function ExtractionConfirmCard({ data, targetLanguage }: { data: ExtractionData; targetLanguage: "en" | "ko" | "zh" }) {
   const [checked, setChecked] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
@@ -65,6 +63,24 @@ export function ExtractionConfirmCard({ data, targetLanguage }: { data: Extracti
   const [saving, setSaving] = useState<SectionKey | null>(null);
   const [collection, setCollection] = useState("General");
   const [customCollection, setCustomCollection] = useState("");
+  const [existingCollections, setExistingCollections] = useState<string[]>([]);
+
+  // Reuse the same collections already used on the Vocabulary page — instead
+  // of a fixed preset list — so a word saved here lands in the same
+  // "bucket" the person already sees and filters by on that page.
+  useEffect(() => {
+    if (data.vocabulary.length === 0) return;
+    vocabularyService
+      .fetchVocabulary()
+      .then((items) => {
+        const distinct = Array.from(new Set(items.map((i) => i.collection).filter(Boolean)));
+        setExistingCollections(distinct);
+        if (distinct.length > 0) setCollection(distinct[0]);
+      })
+      .catch(() => {
+        // Offline / fetch failed — fall back to the "General" default already set.
+      });
+  }, [data.vocabulary.length]);
 
   const toggle = (key: string) => setChecked((prev) => ({ ...prev, [key]: !prev[key] }));
 
@@ -230,7 +246,8 @@ export function ExtractionConfirmCard({ data, targetLanguage }: { data: Extracti
                   onChange={(e) => setCollection(e.target.value)}
                   className="h-6 rounded-md border border-border bg-background px-1.5 text-[11px] font-medium outline-none focus:ring-1 focus:ring-emerald-600"
                 >
-                  {PRESET_COLLECTIONS.map((c) => (
+                  {existingCollections.length === 0 && <option value="General">Chung</option>}
+                  {existingCollections.map((c) => (
                     <option key={c} value={c}>
                       {c === "General" ? "Chung" : c}
                     </option>
