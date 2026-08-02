@@ -42,10 +42,33 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setPreview(reader.result as string);
-    reader.readAsDataURL(file);
     e.target.value = "";
+
+    // Downscale large phone photos before sending — a raw photo can be
+    // 5-10MB, which risks silently exceeding Vercel's ~4.5MB request body
+    // limit for serverless functions. Cap the longest side and re-encode
+    // as JPEG so the analyze request stays small and fast.
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = () => {
+      img.onload = () => {
+        const MAX_DIM = 1600;
+        const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          setPreview(reader.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setPreview(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.onerror = () => setPreview(reader.result as string);
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
   }
 
   async function handleAnalyze() {
@@ -84,7 +107,7 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
               </div>
             </div>
             <Dialog.Close asChild>
-              <button className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
+              <button type="button" className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
                 <X className="size-4" />
               </button>
             </Dialog.Close>
@@ -94,6 +117,7 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
 
           {!preview && (
             <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
               className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border py-10 text-muted-foreground transition-colors hover:border-emerald-500/50 hover:text-emerald-600"
             >
@@ -108,6 +132,7 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
                 <img src={preview} alt="Ảnh đã chọn" className="max-h-64 w-full object-contain bg-muted" />
                 {!result && (
                   <button
+                    type="button"
                     onClick={reset}
                     className="absolute right-2 top-2 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
                   >
@@ -118,6 +143,7 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
 
               {!result && (
                 <Button
+                  type="button"
                   onClick={handleAnalyze}
                   disabled={isAnalyzing}
                   className="w-full gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
@@ -137,7 +163,7 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
               {result && <ExtractionConfirmCard data={result} targetLanguage="en" />}
 
               {result && (
-                <Button variant="outline" onClick={reset} className="w-full">
+                <Button type="button" variant="outline" onClick={reset} className="w-full">
                   Chọn Ảnh Khác
                 </Button>
               )}
