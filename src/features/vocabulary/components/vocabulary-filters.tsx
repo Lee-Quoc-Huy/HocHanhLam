@@ -70,7 +70,7 @@ export function VocabularyFilters({
             <span>Yêu thích</span>
           </Button>
 
-          <div className="flex items-center rounded-lg border border-border bg-background p-0.5">
+          <div className="hidden lg:flex items-center rounded-lg border border-border bg-background p-0.5">
             <Button
               variant={viewMode === "grid" ? "secondary" : "ghost"}
               size="icon"
