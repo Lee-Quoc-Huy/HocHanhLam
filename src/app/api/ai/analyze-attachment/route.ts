@@ -1,18 +1,18 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createChatCompletion, type ChatMessage } from "@/lib/ai/openrouter-client";
+import { generateFromImage, parseImageDataUrl } from "@/lib/ai/google-ai-client";
 
 /**
  * Reads an image (photo of a vocabulary list, a grammar chart, a textbook
- * page, etc.) or a plain-text document the person attaches in the AI chat,
- * and asks a vision-capable model (Gemini 2.5 Pro via the `vision_ocr`
- * route) to propose vocabulary words, grammar structures, and flashcards
- * found in it.
+ * page, etc.) or a plain-text document the person attaches, and asks
+ * Google AI Studio directly (model: gemini-3.5-flash-late, kept separate
+ * from the OpenRouter-routed chat models) to propose vocabulary words,
+ * grammar structures, and flashcards found in it.
  *
  * This never writes to Supabase directly — it only returns candidates. The
- * person reviews and picks what to keep in the chat UI
- * (`ExtractionConfirmCard`), which then calls the normal
- * vocabulary/grammar/flashcard services to actually save anything.
+ * person reviews and picks what to keep in the UI (`ExtractionConfirmCard`),
+ * which then calls the normal vocabulary/grammar/flashcard services to
+ * actually save anything.
  */
 
 export const maxDuration = 60;
@@ -88,21 +88,15 @@ export async function POST(request: Request) {
   const langLabel =
     targetLanguage === "en" ? "tiếng Anh" : targetLanguage === "ko" ? "tiếng Hàn" : "tiếng Trung";
 
-  const userContent: ChatMessage["content"] = imageDataUrl
-    ? [
-        { type: "text", text: text?.trim() ? text : "Hãy phân tích ảnh này." },
-        { type: "image_url", image_url: { url: imageDataUrl } },
-      ]
-    : (text as string);
-
-  const messages: ChatMessage[] = [
-    { role: "system", content: EXTRACTION_SYSTEM_PROMPT(langLabel) },
-    { role: "user", content: userContent },
-  ];
-
   try {
-    const res = await createChatCompletion({ task: "vision_ocr", messages, temperature: 0.3 });
-    const jsonMatch = res.content.match(/\{[\s\S]*\}/);
+    const responseText = await generateFromImage({
+      systemInstruction: EXTRACTION_SYSTEM_PROMPT(langLabel),
+      userText: text?.trim() ? text : "Hãy phân tích ảnh này.",
+      image: imageDataUrl ? parseImageDataUrl(imageDataUrl) : undefined,
+      temperature: 0.3,
+    });
+
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return NextResponse.json(
         { error: "AI không trả về dữ liệu đúng định dạng. Vui lòng thử lại." },
