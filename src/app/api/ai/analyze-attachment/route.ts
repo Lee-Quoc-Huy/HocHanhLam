@@ -31,7 +31,6 @@ Nhiệm vụ của bạn:
 1. Đọc kỹ toàn bộ nội dung nhìn thấy được.
 2. Xác định TẤT CẢ từ vựng đáng học có trong đó (nếu có).
 3. Xác định TẤT CẢ cấu trúc ngữ pháp đáng học có trong đó (nếu có).
-4. Với mỗi từ vựng/ngữ pháp tìm được, đề xuất luôn một flashcard tương ứng.
 
 CHỈ trả lời bằng một khối JSON DUY NHẤT, không thêm giải thích, không thêm markdown code fence, đúng theo cấu trúc sau (bỏ trống mảng nếu không có gì phù hợp):
 
@@ -60,21 +59,13 @@ CHỈ trả lời bằng một khối JSON DUY NHẤT, không thêm giải thíc
       "category": "General",
       "difficulty": "intermediate"
     }
-  ],
-  "flashcards": [
-    {
-      "front_text": "...",
-      "front_subtext": "...",
-      "back_text": "...",
-      "back_explanation": "...",
-      "tags": ["Ảnh Đính Kèm"]
-    }
   ]
 }
 
 language phải là một trong: "en", "ko", "zh" (tuỳ theo ngôn ngữ thực tế nhìn thấy trong ảnh — có thể khác ${langLabel} nếu ảnh chứa ngôn ngữ khác).
 difficulty phải là một trong: "beginner", "intermediate", "advanced", "master".
-Nếu ảnh không chứa nội dung học ngoại ngữ nào rõ ràng, trả về summary mô tả điều đó và để 3 mảng đều rỗng.`;
+Nếu ảnh không chứa nội dung học ngoại ngữ nào rõ ràng, trả về summary mô tả điều đó và để 2 mảng đều rỗng.
+Không đề xuất flashcard — chỉ đề xuất từ vựng và ngữ pháp, flashcard sẽ được tạo riêng sau này khi người dùng chọn.`;
 
 export async function POST(request: Request) {
   // Personal single-user app — no login wall on any feature.
@@ -109,7 +100,7 @@ export async function POST(request: Request) {
       summary: extracted.summary ?? "",
       vocabulary: Array.isArray(extracted.vocabulary) ? extracted.vocabulary : [],
       grammar: Array.isArray(extracted.grammar) ? extracted.grammar : [],
-      flashcards: Array.isArray(extracted.flashcards) ? extracted.flashcards : [],
+      flashcards: [],
     });
   } catch (err) {
     console.error("Analyze attachment error:", err);

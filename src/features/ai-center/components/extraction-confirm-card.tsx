@@ -47,6 +47,8 @@ export interface ExtractionData {
 
 type SectionKey = "vocabulary" | "grammar" | "flashcards";
 
+const PRESET_COLLECTIONS = ["General", "IELTS Academic", "TOPIK II", "HSK 4", "Daily Communication"];
+
 export function ExtractionConfirmCard({ data, targetLanguage }: { data: ExtractionData; targetLanguage: "en" | "ko" | "zh" }) {
   const [checked, setChecked] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
@@ -61,12 +63,15 @@ export function ExtractionConfirmCard({ data, targetLanguage }: { data: Extracti
     flashcards: false,
   });
   const [saving, setSaving] = useState<SectionKey | null>(null);
+  const [collection, setCollection] = useState("General");
+  const [customCollection, setCustomCollection] = useState("");
 
   const toggle = (key: string) => setChecked((prev) => ({ ...prev, [key]: !prev[key] }));
 
   async function saveVocabulary() {
     setSaving("vocabulary");
     try {
+      const finalCollection = collection === "NEW" ? customCollection.trim() || "General" : collection;
       const items = data.vocabulary.filter((_, i) => checked[`vocabulary-${i}`]);
       for (const item of items) {
         await vocabularyService.createWord({
@@ -85,10 +90,10 @@ export function ExtractionConfirmCard({ data, targetLanguage }: { data: Extracti
           frequency: 3,
           difficulty: item.difficulty ?? "intermediate",
           is_favorite: false,
-          collection: "Từ Ảnh/Tài Liệu AI",
+          collection: finalCollection,
         } as any);
       }
-      toast.success(`Đã lưu ${items.length} từ vào Kho Từ Vựng.`);
+      toast.success(`Đã lưu ${items.length} từ vào Kho Từ Vựng (Bộ sưu tập: ${finalCollection}).`);
       setSaved((s) => ({ ...s, vocabulary: true }));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Không thể lưu từ vựng.");
@@ -216,6 +221,32 @@ export function ExtractionConfirmCard({ data, targetLanguage }: { data: Extracti
                 </Button>
               )}
             </div>
+
+            {section.key === "vocabulary" && !saved.vocabulary && (
+              <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-md bg-muted/40 p-1.5">
+                <span className="text-[11px] font-semibold text-muted-foreground">Bộ Sưu Tập:</span>
+                <select
+                  value={collection}
+                  onChange={(e) => setCollection(e.target.value)}
+                  className="h-6 rounded-md border border-border bg-background px-1.5 text-[11px] font-medium outline-none focus:ring-1 focus:ring-emerald-600"
+                >
+                  {PRESET_COLLECTIONS.map((c) => (
+                    <option key={c} value={c}>
+                      {c === "General" ? "Chung" : c}
+                    </option>
+                  ))}
+                  <option value="NEW">+ Bộ sưu tập mới</option>
+                </select>
+                {collection === "NEW" && (
+                  <input
+                    value={customCollection}
+                    onChange={(e) => setCustomCollection(e.target.value)}
+                    placeholder="Tên bộ sưu tập mới…"
+                    className="h-6 flex-1 min-w-[120px] rounded-md border border-border bg-background px-1.5 text-[11px] outline-none focus:ring-1 focus:ring-emerald-600"
+                  />
+                )}
+              </div>
+            )}
 
             <div className="space-y-1.5">
               {section.items.map((item, i) => {
