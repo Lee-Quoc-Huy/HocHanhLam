@@ -29,24 +29,24 @@ export function GrammarHeader({ stats, onOpenCreateModal, onOpenImageExtract }: 
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
           <Button
             variant="outline"
             size="default"
             onClick={onOpenImageExtract}
-            className="gap-2 border-indigo-500/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10"
+            className="flex-col gap-1 h-auto py-2.5 sm:h-9 sm:flex-row sm:gap-2 sm:py-0 border-indigo-500/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10"
           >
             <ImageUp className="size-4" />
-            <span>Đọc Từ Ảnh (AI)</span>
+            <span className="text-[10px] leading-tight sm:text-sm">Đọc Từ Ảnh</span>
           </Button>
 
           <Button
             onClick={onOpenCreateModal}
             size="default"
-            className="gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 font-medium shadow-md transition-all hover:opacity-95 text-white"
+            className="flex-col gap-1 h-auto py-2.5 sm:h-9 sm:flex-row sm:gap-2 sm:py-0 bg-gradient-to-r from-indigo-600 to-purple-600 font-medium shadow-md transition-all hover:opacity-95 text-white"
           >
             <Plus className="size-4" />
-            <span>Thêm Ngữ Pháp Mới</span>
+            <span className="text-[10px] leading-tight sm:text-sm">Thêm Mới</span>
           </Button>
         </div>
       </div>

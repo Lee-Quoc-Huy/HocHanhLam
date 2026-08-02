@@ -35,34 +35,36 @@ export function VocabularyHeader({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Action buttons — compact 3-col grid on mobile (nothing clipped off
+            a portrait screen), flows into a normal row from sm+ up. */}
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center">
           <Button
             variant="outline"
             size="default"
             onClick={onOpenImageExtract}
-            className="gap-2 border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10"
+            className="flex-col gap-1 h-auto py-2.5 sm:h-9 sm:flex-row sm:gap-2 sm:py-0 border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10"
           >
             <ImageUp className="size-4" />
-            <span>Đọc Từ Ảnh (AI)</span>
+            <span className="text-[10px] leading-tight sm:text-sm">Đọc Từ Ảnh</span>
           </Button>
 
           <Button
             variant="outline"
             size="default"
             onClick={onOpenFlashcards}
-            className="gap-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+            className="flex-col gap-1 h-auto py-2.5 sm:h-9 sm:flex-row sm:gap-2 sm:py-0 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
           >
             <Sparkles className="size-4" />
-            <span>Ôn Tập Flashcard</span>
+            <span className="text-[10px] leading-tight sm:text-sm">Ôn Tập</span>
           </Button>
 
           <Button
             onClick={onOpenCreateModal}
             size="default"
-            className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 font-medium shadow-md transition-all hover:opacity-95 text-white"
+            className="flex-col gap-1 h-auto py-2.5 sm:h-9 sm:flex-row sm:gap-2 sm:py-0 bg-gradient-to-r from-blue-600 to-indigo-600 font-medium shadow-md transition-all hover:opacity-95 text-white"
           >
             <Plus className="size-4" />
-            <span>Thêm Từ Mới</span>
+            <span className="text-[10px] leading-tight sm:text-sm">Thêm Từ</span>
           </Button>
         </div>
       </div>

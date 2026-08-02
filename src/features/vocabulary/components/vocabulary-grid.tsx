@@ -44,13 +44,13 @@ export function VocabularyGrid({
           <BookOpen className="size-7" />
         </div>
         <h3 className="font-display text-lg font-semibold text-foreground">
-          No vocabulary items found
+          Không tìm thấy từ vựng nào
         </h3>
         <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-          Try adjusting your search filters, language tabs, or add a brand new word to your collection.
+          Thử điều chỉnh bộ lọc tìm kiếm, tab ngôn ngữ, hoặc thêm một từ mới vào kho từ vựng của bạn.
         </p>
         <Button onClick={onOpenCreate} className="mt-4 gap-2">
-          <Plus className="size-4" /> Add your first word
+          <Plus className="size-4" /> Thêm Từ Đầu Tiên
         </Button>
       </div>
     );

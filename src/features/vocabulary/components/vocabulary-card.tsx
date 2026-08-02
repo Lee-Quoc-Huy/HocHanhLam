@@ -27,19 +27,19 @@ export function VocabularyCard({
     switch (lang) {
       case "en":
         return {
-          label: "English",
+          label: "Tiếng Anh",
           flag: "🇬🇧",
           badgeClass: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
         };
       case "ko":
         return {
-          label: "Korean",
+          label: "Tiếng Hàn",
           flag: "🇰🇷",
           badgeClass: "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20",
         };
       case "zh":
         return {
-          label: "Chinese",
+          label: "Tiếng Trung",
           flag: "🇨🇳",
           badgeClass: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
         };
@@ -98,7 +98,7 @@ export function VocabularyCard({
           <button
             onClick={() => onToggleFavorite(item.id)}
             className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-amber-500"
-            title={item.is_favorite ? "Remove from Favorites" : "Add to Favorites"}
+            title={item.is_favorite ? "Bỏ khỏi Yêu Thích" : "Thêm vào Yêu Thích"}
           >
             <Star
               className={`size-4 ${
@@ -122,20 +122,20 @@ export function VocabularyCard({
                   onClick={() => onOpenDetail(item)}
                   className="flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-foreground outline-none hover:bg-muted"
                 >
-                  <Eye className="size-3.5" /> View Details
+                  <Eye className="size-3.5" /> Xem Chi Tiết
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   onClick={() => onOpenEdit(item)}
                   className="flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-foreground outline-none hover:bg-muted"
                 >
-                  <Edit className="size-3.5" /> Edit Word
+                  <Edit className="size-3.5" /> Sửa Từ
                 </DropdownMenu.Item>
                 <DropdownMenu.Separator className="my-1 h-px bg-border" />
                 <DropdownMenu.Item
                   onClick={() => onOpenDelete(item)}
                   className="flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-destructive outline-none hover:bg-destructive/10"
                 >
-                  <Trash2 className="size-3.5" /> Delete Word
+                  <Trash2 className="size-3.5" /> Xoá Từ
                 </DropdownMenu.Item>
               </DropdownMenu.Content>
             </DropdownMenu.Portal>
@@ -168,7 +168,7 @@ export function VocabularyCard({
                   ? "border-primary bg-primary text-primary-foreground animate-pulse"
                   : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-primary"
               }`}
-              title="Listen to pronunciation"
+              title="Nghe phát âm"
             >
               <Volume2 className="size-3.5" />
             </button>
@@ -235,7 +235,7 @@ export function VocabularyCard({
 
       {/* Frequency stars */}
       <div className="mt-4 flex items-center justify-between border-t border-border/40 pt-2 text-[11px] text-muted-foreground">
-        <span>Frequency</span>
+        <span>Mức độ thường gặp</span>
         <div className="flex gap-0.5">
           {Array.from({ length: 5 }).map((_, i) => (
             <span
