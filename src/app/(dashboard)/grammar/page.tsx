@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useGrammar } from "@/features/grammar/hooks/use-grammar";
 import { GrammarHeader } from "@/features/grammar/components/grammar-header";
 import { GrammarFilters } from "@/features/grammar/components/grammar-filters";
@@ -8,10 +9,12 @@ import { GrammarTable } from "@/features/grammar/components/grammar-table";
 import { GrammarFormModal } from "@/features/grammar/components/grammar-form-modal";
 import { GrammarDetailModal } from "@/features/grammar/components/grammar-detail-modal";
 import { GrammarAiModal } from "@/features/grammar/components/grammar-ai-modal";
+import { ImageExtractModal } from "@/components/shared/image-extract-modal";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
 
 export default function GrammarPage() {
+  const [isImageExtractOpen, setIsImageExtractOpen] = useState(false);
   const {
     items,
     stats,
@@ -58,7 +61,11 @@ export default function GrammarPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <GrammarHeader stats={stats} onOpenCreateModal={openCreateModal} />
+      <GrammarHeader
+        stats={stats}
+        onOpenCreateModal={openCreateModal}
+        onOpenImageExtract={() => setIsImageExtractOpen(true)}
+      />
 
       {/* Filters */}
       <GrammarFilters
@@ -148,6 +155,12 @@ export default function GrammarPage() {
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+
+      <ImageExtractModal
+        open={isImageExtractOpen}
+        onClose={() => setIsImageExtractOpen(false)}
+        focus="grammar"
+      />
     </div>
   );
 }

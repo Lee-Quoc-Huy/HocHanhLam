@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useVocabulary } from "@/features/vocabulary/hooks/use-vocabulary";
 import { VocabularyHeader } from "@/features/vocabulary/components/vocabulary-header";
 import { VocabularyFilters } from "@/features/vocabulary/components/vocabulary-filters";
@@ -8,10 +9,12 @@ import { VocabularyTable } from "@/features/vocabulary/components/vocabulary-tab
 import { VocabularyFormModal } from "@/features/vocabulary/components/vocabulary-form-modal";
 import { VocabularyDetailModal } from "@/features/vocabulary/components/vocabulary-detail-modal";
 import { VocabularyFlashcards } from "@/features/vocabulary/components/vocabulary-flashcards";
+import { ImageExtractModal } from "@/components/shared/image-extract-modal";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
 
 export default function VocabularyPage() {
+  const [isImageExtractOpen, setIsImageExtractOpen] = useState(false);
   const {
     items,
     stats,
@@ -59,6 +62,7 @@ export default function VocabularyPage() {
         stats={stats}
         onOpenCreateModal={openCreateModal}
         onOpenFlashcards={() => setViewMode("flashcards")}
+        onOpenImageExtract={() => setIsImageExtractOpen(true)}
       />
 
       {/* Mode Render: Flashcards or List/Grid */}
@@ -150,6 +154,12 @@ export default function VocabularyPage() {
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+
+      <ImageExtractModal
+        open={isImageExtractOpen}
+        onClose={() => setIsImageExtractOpen(false)}
+        focus="vocabulary"
+      />
     </div>
   );
 }

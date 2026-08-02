@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpenText, Plus, Layers, Star, Sparkles, CheckCircle2 } from "lucide-react";
+import { BookOpenText, Plus, Layers, Star, Sparkles, CheckCircle2, ImageUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VocabularyStats } from "../types";
 
@@ -8,12 +8,14 @@ interface VocabularyHeaderProps {
   stats: VocabularyStats;
   onOpenCreateModal: () => void;
   onOpenFlashcards: () => void;
+  onOpenImageExtract: () => void;
 }
 
 export function VocabularyHeader({
   stats,
   onOpenCreateModal,
   onOpenFlashcards,
+  onOpenImageExtract,
 }: VocabularyHeaderProps) {
   return (
     <div className="space-y-6">
@@ -34,6 +36,16 @@ export function VocabularyHeader({
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="default"
+            onClick={onOpenImageExtract}
+            className="gap-2 border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10"
+          >
+            <ImageUp className="size-4" />
+            <span>Đọc Từ Ảnh (AI)</span>
+          </Button>
+
           <Button
             variant="outline"
             size="default"

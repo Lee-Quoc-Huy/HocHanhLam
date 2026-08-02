@@ -1,15 +1,16 @@
 "use client";
 
-import { BookMarked, Plus, Layers, CheckCircle2, Star, Sparkles } from "lucide-react";
+import { BookMarked, Plus, Layers, CheckCircle2, Star, Sparkles, ImageUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GrammarStats } from "../types";
 
 interface GrammarHeaderProps {
   stats: GrammarStats;
   onOpenCreateModal: () => void;
+  onOpenImageExtract: () => void;
 }
 
-export function GrammarHeader({ stats, onOpenCreateModal }: GrammarHeaderProps) {
+export function GrammarHeader({ stats, onOpenCreateModal, onOpenImageExtract }: GrammarHeaderProps) {
   return (
     <div className="space-y-6">
       {/* Title Bar */}
@@ -28,14 +29,26 @@ export function GrammarHeader({ stats, onOpenCreateModal }: GrammarHeaderProps) 
           </div>
         </div>
 
-        <Button
-          onClick={onOpenCreateModal}
-          size="default"
-          className="gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 font-medium shadow-md transition-all hover:opacity-95 text-white"
-        >
-          <Plus className="size-4" />
-          <span>Thêm Ngữ Pháp Mới</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="default"
+            onClick={onOpenImageExtract}
+            className="gap-2 border-indigo-500/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10"
+          >
+            <ImageUp className="size-4" />
+            <span>Đọc Từ Ảnh (AI)</span>
+          </Button>
+
+          <Button
+            onClick={onOpenCreateModal}
+            size="default"
+            className="gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 font-medium shadow-md transition-all hover:opacity-95 text-white"
+          >
+            <Plus className="size-4" />
+            <span>Thêm Ngữ Pháp Mới</span>
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
