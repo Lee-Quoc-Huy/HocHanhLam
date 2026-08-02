@@ -24,6 +24,8 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
  * invisible to any other device. This route makes storage real and shared.
  */
 
+export const maxDuration = 60;
+
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB — Cloudflare R2 free tier friendly cap
 
 function getR2Client() {

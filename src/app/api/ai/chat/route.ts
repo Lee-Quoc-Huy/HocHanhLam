@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createChatCompletion, type ChatMessage } from "@/lib/ai/openrouter-client";
 
+export const maxDuration = 60;
+
 /**
  * Generic authenticated proxy to the AI chat layer. Learning-domain
  * endpoints (e.g. /api/ai/vocabulary-explain) will be built on top of this

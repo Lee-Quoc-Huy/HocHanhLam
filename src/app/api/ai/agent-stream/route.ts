@@ -5,6 +5,8 @@ import { AGENT_TEMPLATES } from "@/features/ai-center/lib/prompt-templates";
 import { AgentType } from "@/features/ai-center/types";
 import { AI_MODEL_ROUTES } from "@/config/ai-models";
 
+export const maxDuration = 60;
+
 const requestSchema = z.object({
   agentType: z.enum([
     "vocabulary",

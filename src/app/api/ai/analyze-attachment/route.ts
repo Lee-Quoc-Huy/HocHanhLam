@@ -15,6 +15,8 @@ import { createChatCompletion, type ChatMessage } from "@/lib/ai/openrouter-clie
  * vocabulary/grammar/flashcard services to actually save anything.
  */
 
+export const maxDuration = 60;
+
 const requestSchema = z.object({
   imageDataUrl: z.string().optional(),
   text: z.string().optional(),

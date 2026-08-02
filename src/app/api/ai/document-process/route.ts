@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createChatCompletion, type ChatMessage } from "@/lib/ai/openrouter-client";
 
+export const maxDuration = 60;
+
 const requestSchema = z.object({
   action: z.enum([
     "ocr_extract",

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createChatCompletion } from "@/lib/ai/openrouter-client";
 
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   try {
     const { title, language, meaning, explanation, examples } = await req.json();

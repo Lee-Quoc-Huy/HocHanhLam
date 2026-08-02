@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+export const maxDuration = 60;
+
 /**
  * Placeholder for Gemini Vision OCR ingestion (document photos -> text).
  * Wiring only: validates auth and the incoming multipart payload shape.
