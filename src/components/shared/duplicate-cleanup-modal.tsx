@@ -37,29 +37,38 @@ export function DuplicateCleanupModal<T extends { id: string; created_at: string
     [open, items, getCompareText, getLanguage]
   );
 
-  // Which item to KEEP per group — defaults to the oldest (first created).
-  const [keepChoice, setKeepChoice] = useState<Record<string, string>>({});
+  // Which items are marked for deletion — per item id, freely toggleable.
+  // Defaults to "keep the oldest, delete the rest" per group, but the
+  // person can check/uncheck any combination (keep all, delete all, keep
+  // several...), not forced to keep exactly one.
+  const [markedForDeletion, setMarkedForDeletion] = useState<Record<string, boolean>>({});
   const [isDeleting, setIsDeleting] = useState(false);
   const [done, setDone] = useState(false);
 
-  function keepIdFor(group: DuplicateGroup<T>): string {
-    if (keepChoice[group.key]) return keepChoice[group.key];
-    const oldest = [...group.items].sort(
+  function isMarked(group: DuplicateGroup<T>, item: T): boolean {
+    if (item.id in markedForDeletion) return markedForDeletion[item.id];
+    const oldestId = [...group.items].sort(
       (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    )[0];
-    return oldest.id;
+    )[0].id;
+    return item.id !== oldestId; // default: everything except the oldest is marked
   }
 
-  const totalToDelete = groups.reduce((sum, g) => sum + (g.items.length - 1), 0);
+  function toggleMark(id: string, current: boolean) {
+    setMarkedForDeletion((prev) => ({ ...prev, [id]: !current }));
+  }
+
+  const totalToDelete = groups.reduce(
+    (sum, g) => sum + g.items.filter((item) => isMarked(g, item)).length,
+    0
+  );
 
   async function handleCleanup() {
     setIsDeleting(true);
     let deletedCount = 0;
     try {
       for (const group of groups) {
-        const keepId = keepIdFor(group);
         for (const item of group.items) {
-          if (item.id === keepId) continue;
+          if (!isMarked(group, item)) continue;
           await onDelete(item.id);
           deletedCount++;
         }
@@ -76,7 +85,7 @@ export function DuplicateCleanupModal<T extends { id: string; created_at: string
 
   function handleClose() {
     setDone(false);
-    setKeepChoice({});
+    setMarkedForDeletion({});
     onClose();
   }
 
@@ -124,81 +133,80 @@ export function DuplicateCleanupModal<T extends { id: string; created_at: string
           ) : (
             <>
               <p className="mb-3 text-xs text-muted-foreground">
-                Tìm thấy <span className="font-semibold text-foreground">{groups.length}</span> nhóm trùng lặp
-                (<span className="font-semibold text-destructive">{totalToDelete}</span> mục sẽ bị xoá). Chọn bản muốn
-                giữ lại trong mỗi nhóm — mặc định giữ bản tạo sớm nhất.
+                Tìm thấy <span className="font-semibold text-foreground">{groups.length}</span> nhóm trùng lặp. Tick
+                chọn (các) mục bạn muốn <span className="font-semibold text-destructive">xoá</span> trong mỗi nhóm —
+                có thể chọn bao nhiêu mục tuỳ ý, kể cả giữ lại tất cả hoặc xoá hết. Mặc định đã tick sẵn mọi bản trừ
+                bản tạo sớm nhất.
               </p>
 
               <div className="space-y-3">
-                {groups.map((group) => {
-                  const keepId = keepIdFor(group);
-                  return (
-                    <div key={group.key} className="rounded-lg border border-border/80 bg-background p-3">
-                      <div className="mb-2 flex items-center gap-1.5">
-                        <span
-                          className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase ${
-                            group.matchType === "exact"
-                              ? "bg-red-500/15 text-red-600 dark:text-red-400"
-                              : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                          }`}
-                        >
-                          {group.matchType === "exact" ? "Trùng chính xác" : "Gần giống (nghi sai chính tả)"}
-                        </span>
-                        <span className="text-[11px] text-muted-foreground">{group.items.length} bản</span>
-                      </div>
-
-                      <div className="space-y-1">
-                        {group.items.map((item) => {
-                          const { title, subtitle } = renderLabel(item);
-                          const isKeep = item.id === keepId;
-                          return (
-                            <label
-                              key={item.id}
-                              className={`flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
-                                isKeep ? "bg-emerald-500/10 ring-1 ring-emerald-500/30" : "hover:bg-muted/50"
-                              }`}
-                            >
-                              <input
-                                type="radio"
-                                name={group.key}
-                                checked={isKeep}
-                                onChange={() => setKeepChoice((prev) => ({ ...prev, [group.key]: item.id }))}
-                                className="accent-emerald-600"
-                              />
-                              <span className="flex-1">
-                                <span className="font-semibold text-foreground">{title}</span>
-                                <span className="text-muted-foreground"> — {subtitle}</span>
-                              </span>
-                              {isKeep ? (
-                                <span className="shrink-0 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                                  Giữ lại
-                                </span>
-                              ) : (
-                                <span className="shrink-0 flex items-center gap-1 text-[10px] font-semibold text-destructive">
-                                  <Trash2 className="size-3" /> Sẽ xoá
-                                </span>
-                              )}
-                            </label>
-                          );
-                        })}
-                      </div>
+                {groups.map((group) => (
+                  <div key={group.key} className="rounded-lg border border-border/80 bg-background p-3">
+                    <div className="mb-2 flex items-center gap-1.5">
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase ${
+                          group.matchType === "exact"
+                            ? "bg-red-500/15 text-red-600 dark:text-red-400"
+                            : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                        }`}
+                      >
+                        {group.matchType === "exact" ? "Trùng chính xác" : "Gần giống (nghi sai chính tả)"}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">{group.items.length} bản</span>
                     </div>
-                  );
-                })}
+
+                    <div className="space-y-1">
+                      {group.items.map((item) => {
+                        const { title, subtitle } = renderLabel(item);
+                        const marked = isMarked(group, item);
+                        return (
+                          <label
+                            key={item.id}
+                            className={`flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                              marked ? "bg-destructive/10 ring-1 ring-destructive/30" : "bg-emerald-500/10 ring-1 ring-emerald-500/30"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={marked}
+                              onChange={() => toggleMark(item.id, marked)}
+                              className="accent-destructive"
+                            />
+                            <span className="flex-1">
+                              <span className="font-semibold text-foreground">{title}</span>
+                              <span className="text-muted-foreground"> — {subtitle}</span>
+                            </span>
+                            {marked ? (
+                              <span className="shrink-0 flex items-center gap-1 text-[10px] font-semibold text-destructive">
+                                <Trash2 className="size-3" /> Sẽ xoá
+                              </span>
+                            ) : (
+                              <span className="shrink-0 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                Giữ lại
+                              </span>
+                            )}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
 
               <Button
                 onClick={handleCleanup}
-                disabled={isDeleting}
-                className="mt-4 w-full gap-2 bg-destructive text-white hover:bg-destructive/90"
+                disabled={isDeleting || totalToDelete === 0}
+                className="mt-4 w-full gap-2 bg-destructive text-white hover:bg-destructive/90 disabled:opacity-50"
               >
                 {isDeleting ? (
                   <>
                     <Loader2 className="size-4 animate-spin" /> Đang dọn dẹp…
                   </>
+                ) : totalToDelete === 0 ? (
+                  "Chưa chọn mục nào để xoá"
                 ) : (
                   <>
-                    <Trash2 className="size-4" /> Xoá {totalToDelete} Mục Trùng Lặp
+                    <Trash2 className="size-4" /> Xoá {totalToDelete} Mục Đã Chọn
                   </>
                 )}
               </Button>
