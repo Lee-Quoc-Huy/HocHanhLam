@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpenText, Plus, Layers, Star, Sparkles, CheckCircle2, ImageUp } from "lucide-react";
+import { BookOpenText, Plus, Layers, Star, Sparkles, CheckCircle2, ImageUp, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VocabularyStats } from "../types";
 
@@ -9,6 +9,7 @@ interface VocabularyHeaderProps {
   onOpenCreateModal: () => void;
   onOpenFlashcards: () => void;
   onOpenImageExtract: () => void;
+  onOpenDuplicateCleanup: () => void;
 }
 
 export function VocabularyHeader({
@@ -16,6 +17,7 @@ export function VocabularyHeader({
   onOpenCreateModal,
   onOpenFlashcards,
   onOpenImageExtract,
+  onOpenDuplicateCleanup,
 }: VocabularyHeaderProps) {
   return (
     <div className="space-y-6">
@@ -26,9 +28,18 @@ export function VocabularyHeader({
             <BookOpenText className="size-5" />
           </div>
           <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              Kho Từ Vựng Đa Ngôn Ngữ
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                Kho Từ Vựng Đa Ngôn Ngữ
+              </h1>
+              <button
+                onClick={onOpenDuplicateCleanup}
+                title="Dọn từ vựng trùng lặp"
+                className="flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-amber-600"
+              >
+                <Copy className="size-4" />
+              </button>
+            </div>
             <p className="text-xs text-muted-foreground sm:text-sm">
               Tiếng Anh · Tiếng Hàn · Tiếng Trung · Tích hợp Phát âm & Thẻ ghi nhớ SRS
             </p>

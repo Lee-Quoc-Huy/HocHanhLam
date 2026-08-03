@@ -10,13 +10,16 @@ import { VocabularyFormModal } from "@/features/vocabulary/components/vocabulary
 import { VocabularyDetailModal } from "@/features/vocabulary/components/vocabulary-detail-modal";
 import { VocabularyFlashcards } from "@/features/vocabulary/components/vocabulary-flashcards";
 import { ImageExtractModal } from "@/components/shared/image-extract-modal";
+import { DuplicateCleanupModal } from "@/components/shared/duplicate-cleanup-modal";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
 
 export default function VocabularyPage() {
   const [isImageExtractOpen, setIsImageExtractOpen] = useState(false);
+  const [isDuplicateCleanupOpen, setIsDuplicateCleanupOpen] = useState(false);
   const {
     items,
+    allItems,
     stats,
     isLoading,
     filter,
@@ -63,6 +66,7 @@ export default function VocabularyPage() {
         onOpenCreateModal={openCreateModal}
         onOpenFlashcards={() => setViewMode("flashcards")}
         onOpenImageExtract={() => setIsImageExtractOpen(true)}
+        onOpenDuplicateCleanup={() => setIsDuplicateCleanupOpen(true)}
       />
 
       {/* Mode Render: Flashcards or List/Grid */}
@@ -160,6 +164,18 @@ export default function VocabularyPage() {
         open={isImageExtractOpen}
         onClose={() => setIsImageExtractOpen(false)}
         focus="vocabulary"
+      />
+
+      <DuplicateCleanupModal
+        open={isDuplicateCleanupOpen}
+        onClose={() => setIsDuplicateCleanupOpen(false)}
+        items={allItems}
+        getCompareText={(item) => item.word}
+        getLanguage={(item) => item.language}
+        renderLabel={(item) => ({ title: item.word, subtitle: item.vietnamese })}
+        onDelete={deleteItem}
+        onDone={() => {}}
+        entityLabel="từ vựng"
       />
     </div>
   );

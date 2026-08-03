@@ -10,13 +10,16 @@ import { GrammarFormModal } from "@/features/grammar/components/grammar-form-mod
 import { GrammarDetailModal } from "@/features/grammar/components/grammar-detail-modal";
 import { GrammarAiModal } from "@/features/grammar/components/grammar-ai-modal";
 import { ImageExtractModal } from "@/components/shared/image-extract-modal";
+import { DuplicateCleanupModal } from "@/components/shared/duplicate-cleanup-modal";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
 
 export default function GrammarPage() {
   const [isImageExtractOpen, setIsImageExtractOpen] = useState(false);
+  const [isDuplicateCleanupOpen, setIsDuplicateCleanupOpen] = useState(false);
   const {
     items,
+    allItems,
     stats,
     isLoading,
     filter,
@@ -65,6 +68,7 @@ export default function GrammarPage() {
         stats={stats}
         onOpenCreateModal={openCreateModal}
         onOpenImageExtract={() => setIsImageExtractOpen(true)}
+        onOpenDuplicateCleanup={() => setIsDuplicateCleanupOpen(true)}
       />
 
       {/* Filters */}
@@ -160,6 +164,18 @@ export default function GrammarPage() {
         open={isImageExtractOpen}
         onClose={() => setIsImageExtractOpen(false)}
         focus="grammar"
+      />
+
+      <DuplicateCleanupModal
+        open={isDuplicateCleanupOpen}
+        onClose={() => setIsDuplicateCleanupOpen(false)}
+        items={allItems}
+        getCompareText={(item) => item.title}
+        getLanguage={(item) => item.language}
+        renderLabel={(item) => ({ title: item.title, subtitle: item.meaning })}
+        onDelete={deleteItem}
+        onDone={() => {}}
+        entityLabel="cấu trúc ngữ pháp"
       />
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { BookMarked, Plus, Layers, CheckCircle2, Star, Sparkles, ImageUp } from "lucide-react";
+import { BookMarked, Plus, Layers, CheckCircle2, Star, Sparkles, ImageUp, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GrammarStats } from "../types";
 
@@ -8,9 +8,10 @@ interface GrammarHeaderProps {
   stats: GrammarStats;
   onOpenCreateModal: () => void;
   onOpenImageExtract: () => void;
+  onOpenDuplicateCleanup: () => void;
 }
 
-export function GrammarHeader({ stats, onOpenCreateModal, onOpenImageExtract }: GrammarHeaderProps) {
+export function GrammarHeader({ stats, onOpenCreateModal, onOpenImageExtract, onOpenDuplicateCleanup }: GrammarHeaderProps) {
   return (
     <div className="space-y-6">
       {/* Title Bar */}
@@ -20,9 +21,18 @@ export function GrammarHeader({ stats, onOpenCreateModal, onOpenImageExtract }: 
             <BookMarked className="size-5" />
           </div>
           <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              Kho Cấu Trúc Ngữ Pháp
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                Kho Cấu Trúc Ngữ Pháp
+              </h1>
+              <button
+                onClick={onOpenDuplicateCleanup}
+                title="Dọn ngữ pháp trùng lặp"
+                className="flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-amber-600"
+              >
+                <Copy className="size-4" />
+              </button>
+            </div>
             <p className="text-xs text-muted-foreground sm:text-sm">
               Tiếng Anh · Tiếng Hàn · Tiếng Trung · Tích hợp Trợ lý AI Phân Tích Chuyên Sâu
             </p>
