@@ -77,8 +77,8 @@ export default function GrammarPage() {
         onViewModeChange={setViewMode}
       />
 
-      {/* View Mode: always cards on mobile, respect toggle on lg+ */}
-      <div className="lg:hidden">
+      {/* View Mode: Grid or Table (Table renders as compact rows on mobile) */}
+      {viewMode === "grid" ? (
         <GrammarGrid
           items={items}
           isLoading={isLoading}
@@ -89,30 +89,16 @@ export default function GrammarPage() {
           onOpenAiModal={openAiModal}
           onOpenCreate={openCreateModal}
         />
-      </div>
-      <div className="hidden lg:block">
-        {viewMode === "grid" ? (
-          <GrammarGrid
-            items={items}
-            isLoading={isLoading}
-            onToggleFavorite={toggleFavorite}
-            onOpenDetail={openDetailModal}
-            onOpenEdit={openEditModal}
-            onOpenDelete={openDeleteModal}
-            onOpenAiModal={openAiModal}
-            onOpenCreate={openCreateModal}
-          />
-        ) : (
-          <GrammarTable
-            items={items}
-            onToggleFavorite={toggleFavorite}
-            onOpenDetail={openDetailModal}
-            onOpenEdit={openEditModal}
-            onOpenDelete={openDeleteModal}
-            onOpenAiModal={openAiModal}
-          />
-        )}
-      </div>
+      ) : (
+        <GrammarTable
+          items={items}
+          onToggleFavorite={toggleFavorite}
+          onOpenDetail={openDetailModal}
+          onOpenEdit={openEditModal}
+          onOpenDelete={openDeleteModal}
+          onOpenAiModal={openAiModal}
+        />
+      )}
 
       {/* Form Modal (Create / Edit) */}
       <GrammarFormModal

@@ -104,7 +104,7 @@ export function GrammarFilters({
 
         {/* View Mode Toggle */}
         {onViewModeChange && (
-          <div className="hidden lg:flex items-center rounded-lg border border-border bg-background p-0.5">
+          <div className="flex items-center rounded-lg border border-border bg-background p-0.5">
             <button
               onClick={() => onViewModeChange("grid")}
               className={`p-1.5 rounded-md transition-all ${

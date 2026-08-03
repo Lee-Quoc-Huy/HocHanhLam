@@ -84,9 +84,9 @@ export default function VocabularyPage() {
             onViewModeChange={setViewMode}
           />
 
-          {/* View Modes: always cards on mobile (a wide table doesn't fit a
-              portrait phone screen), respect the grid/table toggle on lg+ */}
-          <div className="lg:hidden">
+          {/* View Modes: Grid or Table (Table renders as compact rows on
+              mobile so it never has to scroll off a portrait screen) */}
+          {viewMode === "grid" ? (
             <VocabularyGrid
               items={items}
               isLoading={isLoading}
@@ -96,28 +96,15 @@ export default function VocabularyPage() {
               onOpenDelete={openDeleteModal}
               onOpenCreate={openCreateModal}
             />
-          </div>
-          <div className="hidden lg:block">
-            {viewMode === "grid" ? (
-              <VocabularyGrid
-                items={items}
-                isLoading={isLoading}
-                onToggleFavorite={toggleFavorite}
-                onOpenDetail={openDetailModal}
-                onOpenEdit={openEditModal}
-                onOpenDelete={openDeleteModal}
-                onOpenCreate={openCreateModal}
-              />
-            ) : (
-              <VocabularyTable
-                items={items}
-                onToggleFavorite={toggleFavorite}
-                onOpenDetail={openDetailModal}
-                onOpenEdit={openEditModal}
-                onOpenDelete={openDeleteModal}
-              />
-            )}
-          </div>
+          ) : (
+            <VocabularyTable
+              items={items}
+              onToggleFavorite={toggleFavorite}
+              onOpenDetail={openDetailModal}
+              onOpenEdit={openEditModal}
+              onOpenDelete={openDeleteModal}
+            />
+          )}
         </>
       )}
 
