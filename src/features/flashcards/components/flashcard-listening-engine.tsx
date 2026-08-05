@@ -293,13 +293,13 @@ export function FlashcardListeningEngine({
         </div>
 
         <div className="flex items-center gap-2">
-          {onOpenCreateCardForGame && (
+          {onOpenAutoGenForGame && (
             <Button
               size="sm"
-              onClick={onOpenCreateCardForGame}
-              className="h-8 text-xs gap-1 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl"
+              onClick={onOpenAutoGenForGame}
+              className="h-8 text-xs gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-xl shadow-md active:scale-95"
             >
-              <Plus className="size-3.5" /> + Thẻ Luyện Nghe
+              <Wand2 className="size-3.5" /> 🤖 AI Tạo Tự Động
             </Button>
           )}
 
@@ -308,7 +308,7 @@ export function FlashcardListeningEngine({
             <button
               onClick={() => setListenMode("ai_dictation")}
               className={cn(
-                "px-3 py-1.5 rounded-lg transition-all flex items-center gap-1",
+                "px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 text-xs",
                 listenMode === "ai_dictation" ? "bg-purple-600 text-white font-bold" : "text-muted-foreground"
               )}
             >
@@ -317,7 +317,7 @@ export function FlashcardListeningEngine({
             <button
               onClick={() => setListenMode("pick")}
               className={cn(
-                "px-3 py-1.5 rounded-lg transition-all",
+                "px-3 py-1.5 rounded-lg transition-all text-xs font-semibold",
                 listenMode === "pick" ? "bg-purple-600 text-white font-bold" : "text-muted-foreground"
               )}
             >
@@ -453,13 +453,20 @@ export function FlashcardListeningEngine({
       ) : (
         /* MODE 2: STANDARD LISTEN & PICK WORD (FIXED FOR REQ 4) */
         gameCards.length === 0 ? (
-          <div className="mx-auto max-w-md rounded-2xl border border-dashed border-border p-10 text-center bg-surface/40 space-y-3">
-            <Headphones className="size-8 text-purple-500 mx-auto" />
-            <h3 className="font-display text-base font-bold text-foreground">Chưa Có Thẻ Riêng Cho Trò Chơi Luyện Nghe</h3>
-            <p className="text-xs text-muted-foreground">Bấm "+ Thẻ Luyện Nghe" ở trên để tạo thẻ lưu riêng cho trò chơi này!</p>
-            {onOpenCreateCardForGame && (
-              <Button onClick={onOpenCreateCardForGame} className="bg-purple-600 hover:bg-purple-700 text-white gap-1 text-xs rounded-xl">
-                <Plus className="size-3.5" /> Thêm Thẻ Luyện Nghe Mới
+          <div className="mx-auto max-w-md rounded-3xl border border-dashed border-purple-500/30 bg-surface/80 p-8 text-center shadow-xl backdrop-blur-md space-y-4">
+            <div className="flex size-16 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-500 mx-auto border border-purple-500/30 shadow-md">
+              <Headphones className="size-8 animate-pulse" />
+            </div>
+            <h3 className="font-display text-xl font-bold text-foreground">Chưa Có Thẻ Cho Trò Luyện Nghe</h3>
+            <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
+              Bấm "🤖 AI Tạo Tự Động" để AI tạo ngay bộ thẻ luyện nghe riêng biệt cho bạn!
+            </p>
+            {onOpenAutoGenForGame && (
+              <Button
+                onClick={onOpenAutoGenForGame}
+                className="py-5 px-6 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-600 text-white font-bold text-xs gap-2 shadow-lg hover:opacity-95 active:scale-95"
+              >
+                <Wand2 className="size-4" /> 🤖 AI Tạo Tự Động Luyện Nghe
               </Button>
             )}
           </div>
@@ -469,20 +476,9 @@ export function FlashcardListeningEngine({
               <span className="flex items-center gap-1.5 text-purple-600 font-bold">
                 <Headphones className="size-4" /> Luyện Nghe Từ {currentIndex + 1} / {gameCards.length}
               </span>
-              <div className="flex items-center gap-2">
-                <span className="uppercase text-[10px] font-bold bg-purple-500/10 text-purple-600 px-2 py-0.5 rounded-md">
-                  {currentCard?.language}
-                </span>
-                {onDeleteCard && currentCard && (
-                  <button
-                    onClick={() => onDeleteCard(currentCard.id)}
-                    className="rounded-md bg-background border border-border p-1 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
-                    title="Xóa thẻ này khỏi Supabase"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
-                )}
-              </div>
+              <span className="uppercase text-[10px] font-bold bg-purple-500/10 text-purple-600 px-2.5 py-1 rounded-full border border-purple-500/20">
+                {currentCard?.language === "en" ? "🇬🇧 Tiếng Anh" : currentCard?.language === "ko" ? "🇰🇷 Tiếng Hàn" : "🇨🇳 Tiếng Trung"}
+              </span>
             </div>
 
             <div className="py-6 space-y-4">

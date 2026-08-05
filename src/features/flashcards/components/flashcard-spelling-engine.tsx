@@ -13,9 +13,7 @@ import {
   KeyRound,
   HelpCircle,
   Filter,
-  Plus,
   Wand2,
-  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -25,17 +23,13 @@ import { useSpeech } from "@/features/vocabulary/hooks/use-speech";
 interface FlashcardSpellingEngineProps {
   queue: Flashcard[];
   aiItems?: any[];
-  onOpenCreateCardForGame?: () => void;
   onOpenAutoGenForGame?: () => void;
-  onDeleteCard?: (id: string) => void;
 }
 
 export function FlashcardSpellingEngine({
   queue,
   aiItems,
-  onOpenCreateCardForGame,
   onOpenAutoGenForGame,
-  onDeleteCard,
 }: FlashcardSpellingEngineProps) {
   const { speak } = useSpeech();
 
@@ -84,9 +78,9 @@ export function FlashcardSpellingEngine({
     return (
       <div className="space-y-4">
         {/* Game Filter Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-surface/80 p-3 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-surface/80 p-3 text-xs shadow-sm backdrop-blur-md">
           <div className="flex items-center gap-2 font-bold text-foreground">
-            <Filter className="size-4 text-emerald-500" /> Nguồn dữ liệu Luyện Viết riêng:
+            <Filter className="size-4 text-emerald-500" /> Nguồn Luyện Viết:
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <select
@@ -100,42 +94,31 @@ export function FlashcardSpellingEngine({
               <option value="zh">🇨🇳 Trung</option>
             </select>
 
-            <select
-              value={selectedTopic}
-              onChange={(e) => setSelectedTopic(e.target.value)}
-              className="h-8 rounded-lg border border-border bg-background px-2 font-medium max-w-[130px] truncate"
-            >
-              <option value="all">Tất cả chủ đề</option>
-              {availableTopics.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-
-            <Button
-              variant={onlyFavorites ? "default" : "outline"}
-              size="sm"
-              onClick={() => setOnlyFavorites(!onlyFavorites)}
-              className="h-8 text-xs gap-1"
-            >
-              ⭐ Yêu Thích
-            </Button>
             {onOpenAutoGenForGame && (
-              <Button size="sm" onClick={onOpenAutoGenForGame} className="h-8 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl">
-                <Wand2 className="size-3.5" /> Tạo Tự Động
-              </Button>
-            )}
-            {onOpenCreateCardForGame && (
-              <Button size="sm" onClick={onOpenCreateCardForGame} className="h-8 text-xs gap-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl">
-                <Plus className="size-3.5" /> + Thẻ Viết
+              <Button size="sm" onClick={onOpenAutoGenForGame} className="h-8 text-xs gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl shadow-md active:scale-95">
+                <Wand2 className="size-3.5" /> 🤖 AI Tạo Tự Động
               </Button>
             )}
           </div>
         </div>
 
-        <div className="mx-auto max-w-md rounded-2xl border border-dashed border-border p-10 text-center bg-surface/40">
-          <KeyRound className="size-8 text-emerald-500 mx-auto mb-2" />
-          <h3 className="font-display text-base font-bold text-foreground">Chưa Có Thẻ Để Ôn Viết Với Bộ Lọc Này</h3>
-          <p className="mt-1 text-xs text-muted-foreground">Thử chọn tất cả chủ đề để bắt đầu luyện chính tả.</p>
+        <div className="mx-auto max-w-md rounded-3xl border border-dashed border-emerald-500/30 bg-surface/80 p-8 text-center shadow-xl backdrop-blur-md space-y-4">
+          <div className="flex size-16 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500 mx-auto border border-emerald-500/30 shadow-md">
+            <KeyRound className="size-8 animate-pulse" />
+          </div>
+          <h3 className="font-display text-xl font-bold text-foreground">Chưa Có Thẻ Để Ôn Viết</h3>
+          <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
+            Bấm "🤖 AI Tạo Tự Động" để AI tự động trích xuất thẻ luyện viết chính tả riêng biệt cho bạn!
+          </p>
+
+          {onOpenAutoGenForGame && (
+            <Button
+              onClick={onOpenAutoGenForGame}
+              className="py-5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 text-white font-bold text-xs gap-2 shadow-lg hover:opacity-95 active:scale-95"
+            >
+              <Wand2 className="size-4" /> 🤖 AI Tạo Tự Động Luyện Viết
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -204,7 +187,7 @@ export function FlashcardSpellingEngine({
             <p className="font-display text-2xl font-bold text-teal-600">{accuracy}%</p>
           </div>
         </div>
-        <Button onClick={handleRestart} className="w-full gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white py-6">
+        <Button onClick={handleRestart} className="w-full gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white py-6 font-bold shadow-lg">
           <RotateCcw className="size-4" /> Luyện Lại
         </Button>
       </motion.div>
@@ -214,9 +197,9 @@ export function FlashcardSpellingEngine({
   return (
     <div className="mx-auto max-w-xl space-y-4">
       {/* Game Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-surface/80 p-3 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-surface/80 p-3 text-xs shadow-sm backdrop-blur-md">
         <div className="flex items-center gap-2 font-bold text-foreground">
-          <Filter className="size-4 text-emerald-500" /> Nguồn Luyện Viết ({spellingPool.length} thẻ):
+          <Filter className="size-4 text-emerald-500" /> Nguồn Viết ({spellingPool.length} thẻ):
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
@@ -230,33 +213,9 @@ export function FlashcardSpellingEngine({
             <option value="zh">🇨🇳 Trung</option>
           </select>
 
-          <select
-            value={selectedTopic}
-            onChange={(e) => setSelectedTopic(e.target.value)}
-            className="h-8 rounded-lg border border-border bg-background px-2 font-medium max-w-[130px] truncate"
-          >
-            <option value="all">Tất cả chủ đề</option>
-            {availableTopics.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-
-          <Button
-            variant={onlyFavorites ? "default" : "outline"}
-            size="sm"
-            onClick={() => setOnlyFavorites(!onlyFavorites)}
-            className="h-8 text-xs gap-1"
-          >
-            ⭐ Yêu Thích
-          </Button>
           {onOpenAutoGenForGame && (
-            <Button size="sm" onClick={onOpenAutoGenForGame} className="h-8 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl">
-              <Wand2 className="size-3.5" /> Tạo Tự Động
-            </Button>
-          )}
-          {onOpenCreateCardForGame && (
-            <Button size="sm" onClick={onOpenCreateCardForGame} className="h-8 text-xs gap-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl">
-              <Plus className="size-3.5" /> + Thẻ Viết
+            <Button size="sm" onClick={onOpenAutoGenForGame} className="h-8 text-xs gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl shadow-md active:scale-95">
+              <Wand2 className="size-3.5" /> 🤖 AI Tạo Tự Động
             </Button>
           )}
         </div>
@@ -283,29 +242,18 @@ export function FlashcardSpellingEngine({
       </div>
 
       {/* Main Spelling Card */}
-      <div className="rounded-3xl border border-border/80 bg-surface/90 p-6 sm:p-8 shadow-xl backdrop-blur-md space-y-6 text-center">
+      <div className="rounded-3xl border border-border/80 bg-surface/90 p-6 sm:p-8 shadow-2xl backdrop-blur-md space-y-6 text-center">
         <div className="flex items-center justify-between">
-          <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 uppercase">
+          <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 uppercase border border-emerald-500/20">
             {currentCard.language === "en" ? "🇬🇧 Tiếng Anh" : currentCard.language === "ko" ? "🇰🇷 Tiếng Hàn" : "🇨🇳 Tiếng Trung"}
           </span>
 
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => speak(currentCard.front_text, currentCard.language, currentCard.audio_url)}
-              className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground hover:text-emerald-600"
-            >
-              <Volume2 className="size-4 text-emerald-500" /> Nghe từ
-            </button>
-            {onDeleteCard && (
-              <button
-                onClick={() => onDeleteCard(currentCard.id)}
-                className="rounded-full bg-background border border-border p-1.5 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
-                title="Xóa thẻ này khỏi Supabase"
-              >
-                <Trash2 className="size-4" />
-              </button>
-            )}
-          </div>
+          <button
+            onClick={() => speak(currentCard.front_text, currentCard.language, currentCard.audio_url)}
+            className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground hover:text-emerald-600 active:scale-90"
+          >
+            <Volume2 className="size-4 text-emerald-500" /> Nghe từ
+          </button>
         </div>
 
         {/* Meaning Prompt */}
@@ -350,7 +298,7 @@ export function FlashcardSpellingEngine({
                 type="button"
                 variant="outline"
                 onClick={() => setShowHint(true)}
-                className="gap-1 text-xs"
+                className="gap-1 text-xs active:scale-95"
               >
                 <HelpCircle className="size-3.5" /> Gợi Ý
               </Button>
@@ -359,7 +307,7 @@ export function FlashcardSpellingEngine({
             <Button
               type="submit"
               disabled={!isAnswered && !userInput.trim()}
-              className="flex-1 py-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold"
+              className="flex-1 py-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold shadow-lg active:scale-98"
             >
               {isAnswered ? (
                 <span className="flex items-center gap-2">Tiếp Theo <ArrowRight className="size-4" /></span>

@@ -13,10 +13,7 @@ import {
   Flame,
   Globe,
   Filter,
-  FilterX,
-  Plus,
   Wand2,
-  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -35,18 +32,14 @@ interface FlashcardQuizEngineProps {
   queue: Flashcard[];
   allCards: Flashcard[];
   aiItems?: any[];
-  onOpenCreateCardForGame?: () => void;
   onOpenAutoGenForGame?: () => void;
-  onDeleteCard?: (id: string) => void;
 }
 
 export function FlashcardQuizEngine({
   queue,
   allCards,
   aiItems,
-  onOpenCreateCardForGame,
   onOpenAutoGenForGame,
-  onDeleteCard,
 }: FlashcardQuizEngineProps) {
   const { speak } = useSpeech();
 
@@ -61,7 +54,7 @@ export function FlashcardQuizEngine({
     return Array.from(new Set(tags)).filter(Boolean);
   }, [queue]);
 
-  // Dedicated data pool for Quiz - STRICTLY isolated to queue (Quiz game cards only!)
+  // Dedicated data pool for Quiz - STRICTLY isolated to Quiz game cards only!
   const quizPool = useMemo(() => {
     return queue.filter((c) => {
       if (selectedLang !== "all" && c.language !== selectedLang) return false;
@@ -127,9 +120,9 @@ export function FlashcardQuizEngine({
     return (
       <div className="space-y-4">
         {/* Game Filter Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-surface/80 p-3.5 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-surface/80 p-3.5 text-xs shadow-sm backdrop-blur-md">
           <div className="flex items-center gap-2 font-bold text-foreground">
-            <Filter className="size-4 text-emerald-500" /> Nguồn dữ liệu Quiz riêng:
+            <Filter className="size-4 text-emerald-500" /> Bộ lọc Quiz VIP:
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <select
@@ -154,21 +147,35 @@ export function FlashcardQuizEngine({
               ))}
             </select>
 
-            <Button
-              variant={onlyFavorites ? "default" : "outline"}
-              size="sm"
-              onClick={() => setOnlyFavorites(!onlyFavorites)}
-              className="h-8 text-xs gap-1"
-            >
-              ⭐ Yêu Thích
-            </Button>
+            {onOpenAutoGenForGame && (
+              <Button
+                size="sm"
+                onClick={onOpenAutoGenForGame}
+                className="h-8 text-xs gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl shadow-md active:scale-95"
+              >
+                <Wand2 className="size-3.5" /> 🤖 AI Tạo Tự Động
+              </Button>
+            )}
           </div>
         </div>
 
-        <div className="mx-auto max-w-md rounded-2xl border border-dashed border-border p-10 text-center bg-surface/40">
-          <HelpCircle className="size-8 text-muted-foreground mx-auto mb-2" />
-          <h3 className="font-display text-base font-bold text-foreground">Không Tìm Thấy Thẻ Cho Bộ Lọc Này</h3>
-          <p className="mt-1 text-xs text-muted-foreground">Hãy thay đổi bộ lọc hoặc chọn tất cả chủ đề để bắt đầu Quiz.</p>
+        <div className="mx-auto max-w-md rounded-3xl border border-dashed border-emerald-500/30 bg-surface/80 p-8 text-center shadow-xl backdrop-blur-md space-y-4">
+          <div className="flex size-16 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500 mx-auto border border-emerald-500/30 shadow-md">
+            <HelpCircle className="size-8 animate-pulse" />
+          </div>
+          <h3 className="font-display text-xl font-bold text-foreground">Chưa Có Thẻ Cho Trò Quiz VIP</h3>
+          <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
+            Bấm "🤖 AI Tạo Tự Động" để AI tạo ngay bộ thẻ Quiz VIP riêng biệt cho bạn!
+          </p>
+
+          {onOpenAutoGenForGame && (
+            <Button
+              onClick={onOpenAutoGenForGame}
+              className="py-5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 text-white font-bold text-xs gap-2 shadow-lg hover:opacity-95 active:scale-95"
+            >
+              <Wand2 className="size-4" /> 🤖 AI Tạo Tự Động Quiz VIP
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -227,7 +234,7 @@ export function FlashcardQuizEngine({
         <div className="flex size-20 items-center justify-center rounded-3xl bg-gradient-to-br from-amber-500/20 via-emerald-500/10 to-transparent text-amber-500 mx-auto border border-amber-500/30 shadow-md">
           <Trophy className="size-10" />
         </div>
-        <h2 className="font-display text-2xl font-extrabold text-foreground">Hoàn Thành Bài Quiz!</h2>
+        <h2 className="font-display text-2xl font-extrabold text-foreground">Hoàn Thành Bài Quiz VIP!</h2>
         <div className="grid grid-cols-3 gap-3">
           <div className="rounded-2xl border border-border bg-background p-3 text-center">
             <span className="text-[10px] text-muted-foreground uppercase">Điểm</span>
@@ -244,7 +251,7 @@ export function FlashcardQuizEngine({
             </p>
           </div>
         </div>
-        <Button onClick={handleRestart} className="w-full gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white py-6">
+        <Button onClick={handleRestart} className="w-full gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white py-6 font-bold shadow-lg">
           <RotateCcw className="size-4" /> Làm Lại Bài Quiz
         </Button>
       </motion.div>
@@ -254,9 +261,9 @@ export function FlashcardQuizEngine({
   return (
     <div className="mx-auto max-w-xl space-y-4">
       {/* Game Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-surface/80 p-3 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-surface/80 p-3 text-xs shadow-sm backdrop-blur-md">
         <div className="flex items-center gap-2 font-bold text-foreground">
-          <Filter className="size-4 text-emerald-500" /> Nguồn Quiz ({questions.length} thẻ):
+          <Filter className="size-4 text-emerald-500" /> Quiz VIP ({questions.length} thẻ):
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
@@ -270,35 +277,13 @@ export function FlashcardQuizEngine({
             <option value="zh">🇨🇳 Trung</option>
           </select>
 
-          <select
-            value={selectedTopic}
-            onChange={(e) => setSelectedTopic(e.target.value)}
-            className="h-8 rounded-lg border border-border bg-background px-2 font-medium max-w-[130px] truncate"
-          >
-            <option value="all">Tất cả chủ đề</option>
-            {availableTopics.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-
-          <Button
-            variant={onlyFavorites ? "default" : "outline"}
-            size="sm"
-            onClick={() => setOnlyFavorites(!onlyFavorites)}
-            className="h-8 text-xs gap-1"
-          >
-            ⭐ Yêu Thích
-          </Button>
-
           {onOpenAutoGenForGame && (
-            <Button size="sm" onClick={onOpenAutoGenForGame} className="h-8 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl">
-              <Wand2 className="size-3.5" /> Tạo Tự Động
-            </Button>
-          )}
-
-          {onOpenCreateCardForGame && (
-            <Button size="sm" onClick={onOpenCreateCardForGame} className="h-8 text-xs gap-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl">
-              <Plus className="size-3.5" /> + Thẻ Quiz
+            <Button
+              size="sm"
+              onClick={onOpenAutoGenForGame}
+              className="h-8 text-xs gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl shadow-md active:scale-95"
+            >
+              <Wand2 className="size-3.5" /> 🤖 AI Tạo Tự Động
             </Button>
           )}
         </div>
@@ -325,39 +310,28 @@ export function FlashcardQuizEngine({
       </div>
 
       {/* Question Card Box */}
-      <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-surface/90 p-6 sm:p-8 shadow-xl backdrop-blur-md space-y-6">
+      <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-surface/90 p-6 sm:p-8 shadow-2xl backdrop-blur-md space-y-6">
         <div className="flex items-center justify-between">
-          <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
+          <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide border border-emerald-500/20">
             {currentCard.language === "en" ? "🇬🇧 Tiếng Anh" : currentCard.language === "ko" ? "🇰🇷 Tiếng Hàn" : "🇨🇳 Tiếng Trung"}
           </span>
 
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => speak(currentCard.front_text, currentCard.language, currentCard.audio_url)}
-              className="flex items-center gap-1.5 rounded-full bg-background border border-border px-3 py-1 text-xs font-semibold text-muted-foreground hover:text-emerald-600"
-            >
-              <Volume2 className="size-4 text-emerald-500" /> Nghe Phát Âm
-            </button>
-            {onDeleteCard && (
-              <button
-                onClick={() => onDeleteCard(currentCard.id)}
-                className="rounded-full bg-background border border-border p-1.5 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
-                title="Xóa thẻ này khỏi Supabase"
-              >
-                <Trash2 className="size-4" />
-              </button>
-            )}
-          </div>
+          <button
+            onClick={() => speak(currentCard.front_text, currentCard.language, currentCard.audio_url)}
+            className="flex items-center gap-1.5 rounded-full bg-background border border-border px-3 py-1 text-xs font-semibold text-muted-foreground hover:text-emerald-600 active:scale-90"
+          >
+            <Volume2 className="size-4 text-emerald-500" /> Nghe Phát Âm
+          </button>
         </div>
 
         <div className="text-center py-3 space-y-2">
-          <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-foreground">
+          <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-foreground leading-tight">
             {currentCard.front_text}
           </h2>
 
           {(currentCard.language === "ko" || currentCard.language === "zh") && (
             <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-2">
-              <Globe className="size-3.5 text-emerald-500" /> Gợi Ý Tiếng Anh: <span className="font-mono italic text-foreground">{currentQ.englishHint || currentCard.front_subtext || "English meaning"}</span>
+              <Globe className="size-3.5 text-emerald-500" /> Gợi Ý: <span className="font-mono italic text-foreground">{currentQ.englishHint || currentCard.front_subtext || "English meaning"}</span>
             </div>
           )}
         </div>
@@ -405,7 +379,7 @@ export function FlashcardQuizEngine({
         {isAnswered && (
           <Button
             onClick={handleNext}
-            className="w-full py-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 shadow-md"
+            className="w-full py-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 shadow-lg active:scale-98"
           >
             <span>{isLastQuestion ? "Xem Kết Quả" : "Câu Tiếp Theo"}</span>
             <ArrowRight className="size-4" />

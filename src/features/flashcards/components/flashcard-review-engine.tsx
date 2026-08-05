@@ -11,9 +11,7 @@ import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
-  Plus,
   Wand2,
-  Trash2,
   Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,10 +28,8 @@ interface FlashcardReviewEngineProps {
   onFlip: () => void;
   onRate: (rating: SRSRating) => Promise<void>;
   onToggleFavorite: (id: string) => void;
-  onDeleteCard?: (id: string) => void;
   onPrevCard?: () => void;
   onNextCard?: () => void;
-  onOpenCreateCardForGame?: () => void;
   onOpenAutoGenForGame?: () => void;
 }
 
@@ -44,10 +40,8 @@ export function FlashcardReviewEngine({
   onFlip,
   onRate,
   onToggleFavorite,
-  onDeleteCard,
   onPrevCard,
   onNextCard,
-  onOpenCreateCardForGame,
   onOpenAutoGenForGame,
 }: FlashcardReviewEngineProps) {
   const { speak } = useSpeech();
@@ -77,47 +71,25 @@ export function FlashcardReviewEngine({
   if (queue.length === 0 || !currentCard) {
     return (
       <div className="mx-auto max-w-md space-y-4">
-        {(onOpenAutoGenForGame || onOpenCreateCardForGame) && (
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {onOpenAutoGenForGame && (
-              <Button
-                size="sm"
-                onClick={onOpenAutoGenForGame}
-                className="h-8 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl"
-              >
-                <Wand2 className="size-3.5" /> Tạo Tự Động
-              </Button>
-            )}
-            {onOpenCreateCardForGame && (
-              <Button
-                size="sm"
-                onClick={onOpenCreateCardForGame}
-                className="h-8 text-xs gap-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl"
-              >
-                <Plus className="size-3.5" /> + Thẻ Lật SRS
-              </Button>
-            )}
+        <div className="rounded-3xl border border-dashed border-emerald-500/30 bg-surface/80 p-8 sm:p-10 text-center shadow-xl backdrop-blur-md space-y-4">
+          <div className="flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/20 via-teal-500/10 to-transparent text-emerald-500 mx-auto border border-emerald-500/30 shadow-md">
+            <Layers className="size-8 animate-pulse" />
           </div>
-        )}
-
-        <div className="rounded-3xl border border-dashed border-border p-10 text-center bg-surface/40 space-y-3">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mx-auto border border-emerald-500/20">
-            <Layers className="size-8" />
-          </div>
-          <h3 className="font-display text-xl font-bold text-foreground">
-            Chưa Có Thẻ Riêng Cho Trò Lật Thẻ SRS
+          <h3 className="font-display text-xl font-extrabold text-foreground">
+            Chưa Có Thẻ Trò Lật Thẻ SRS
           </h3>
-          <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-            Bấm "+ Thẻ Lật SRS" hoặc "Tạo Tự Động" ở trên để tạo bộ thẻ lưu riêng cho trò chơi lật thẻ này!
+          <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
+            Bấm "🤖 AI Tạo Tự Động" bên dưới để AI tự động trích xuất bộ thẻ riêng biệt cho trò lật thẻ này!
           </p>
 
-          <div className="flex justify-center gap-2 pt-2">
-            {onOpenCreateCardForGame && (
-              <Button onClick={onOpenCreateCardForGame} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-xs rounded-xl font-bold">
-                <Plus className="size-3.5" /> Tạo Thẻ SRS Mới
-              </Button>
-            )}
-          </div>
+          {onOpenAutoGenForGame && (
+            <Button
+              onClick={onOpenAutoGenForGame}
+              className="py-5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 text-white font-bold text-xs gap-2 shadow-lg hover:opacity-95 active:scale-95"
+            >
+              <Wand2 className="size-4" /> 🤖 AI Tạo Tự Động Cho Lật Thẻ
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -157,15 +129,15 @@ export function FlashcardReviewEngine({
 
   return (
     <div className="mx-auto max-w-xl space-y-4 sm:space-y-6">
-      {/* Top Action Bar: Per-game creation + Progress & Nav */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-surface/80 p-3 text-xs">
+      {/* Action Bar: AI Auto Generate & Navigation */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-surface/80 p-3 text-xs shadow-sm backdrop-blur-md">
         <div className="flex items-center gap-2">
           {onPrevCard && (
             <Button
               variant="outline"
               size="icon"
               onClick={onPrevCard}
-              className="size-7 rounded-lg"
+              className="size-7 rounded-lg active:scale-90"
               title="Thẻ trước đó"
             >
               <ChevronLeft className="size-4" />
@@ -180,7 +152,7 @@ export function FlashcardReviewEngine({
               variant="outline"
               size="icon"
               onClick={onNextCard}
-              className="size-7 rounded-lg"
+              className="size-7 rounded-lg active:scale-90"
               title="Thẻ tiếp theo"
             >
               <ChevronRight className="size-4" />
@@ -188,26 +160,15 @@ export function FlashcardReviewEngine({
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          {onOpenAutoGenForGame && (
-            <Button
-              size="sm"
-              onClick={onOpenAutoGenForGame}
-              className="h-8 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl"
-            >
-              <Wand2 className="size-3.5" /> Tạo Tự Động
-            </Button>
-          )}
-          {onOpenCreateCardForGame && (
-            <Button
-              size="sm"
-              onClick={onOpenCreateCardForGame}
-              className="h-8 text-xs gap-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl"
-            >
-              <Plus className="size-3.5" /> + Thẻ Lật SRS
-            </Button>
-          )}
-        </div>
+        {onOpenAutoGenForGame && (
+          <Button
+            size="sm"
+            onClick={onOpenAutoGenForGame}
+            className="h-8 text-xs gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl shadow-md active:scale-95"
+          >
+            <Wand2 className="size-3.5" /> 🤖 AI Tạo Tự Động
+          </Button>
+        )}
       </div>
 
       {/* Progress Bar */}
@@ -225,7 +186,7 @@ export function FlashcardReviewEngine({
         dragConstraints={{ left: 0, right: 0 }}
         onDragEnd={handleDragEnd}
         onClick={handleCardClick}
-        className="group relative min-h-[360px] sm:min-h-[380px] w-full cursor-pointer rounded-3xl border border-border/80 bg-surface/90 p-6 sm:p-8 shadow-xl backdrop-blur-md transition-all duration-300 hover:border-emerald-500/50 hover:shadow-2xl flex flex-col justify-between overflow-hidden"
+        className="group relative min-h-[360px] sm:min-h-[380px] w-full cursor-pointer rounded-3xl border border-border/80 bg-surface/90 p-6 sm:p-8 shadow-2xl backdrop-blur-md transition-all duration-300 hover:border-emerald-500/50 flex flex-col justify-between overflow-hidden"
       >
         {/* Visual Swipe Indicators */}
         <motion.div
@@ -244,7 +205,7 @@ export function FlashcardReviewEngine({
 
         {/* Card Header */}
         <div className="flex items-center justify-between">
-          <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
+          <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide border border-emerald-500/20">
             {currentCard.language === "en"
               ? "🇬🇧 Tiếng Anh"
               : currentCard.language === "ko"
@@ -255,7 +216,7 @@ export function FlashcardReviewEngine({
           <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => speak(currentCard.front_text, currentCard.language, currentCard.audio_url)}
-              className="rounded-xl bg-background border border-border p-2 text-muted-foreground hover:text-emerald-600 transition-colors"
+              className="rounded-xl bg-background border border-border p-2 text-muted-foreground hover:text-emerald-600 transition-colors active:scale-90"
               title="Phát âm"
             >
               <Volume2 className="size-4" />
@@ -263,7 +224,7 @@ export function FlashcardReviewEngine({
 
             <button
               onClick={() => onToggleFavorite(currentCard.id)}
-              className="rounded-xl bg-background border border-border p-2 text-muted-foreground hover:text-amber-500 transition-colors"
+              className="rounded-xl bg-background border border-border p-2 text-muted-foreground hover:text-amber-500 transition-colors active:scale-90"
               title="Yêu thích"
             >
               <Star
@@ -272,16 +233,6 @@ export function FlashcardReviewEngine({
                 }`}
               />
             </button>
-
-            {onDeleteCard && (
-              <button
-                onClick={() => onDeleteCard(currentCard.id)}
-                className="rounded-xl bg-background border border-border p-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
-                title="Xóa thẻ này khỏi Supabase"
-              >
-                <Trash2 className="size-4" />
-              </button>
-            )}
           </div>
         </div>
 
@@ -332,7 +283,7 @@ export function FlashcardReviewEngine({
         </div>
       </motion.div>
 
-      {/* SRS Rating Buttons (Visible when card is flipped) */}
+      {/* SRS Rating Buttons */}
       {isFlipped ? (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 animate-in fade-in">
           {/* Again */}

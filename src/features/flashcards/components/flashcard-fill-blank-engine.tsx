@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Puzzle, CheckCircle2, XCircle, RotateCcw, Trophy, ArrowRight, Flame, Volume2, Plus, Wand2, Trash2 } from "lucide-react";
+import { Puzzle, CheckCircle2, XCircle, RotateCcw, Trophy, ArrowRight, Flame, Volume2, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Flashcard } from "../types";
 import { useSpeech } from "@/features/vocabulary/hooks/use-speech";
 import { cn } from "@/lib/utils/cn";
@@ -11,9 +11,7 @@ import { cn } from "@/lib/utils/cn";
 interface FlashcardFillBlankEngineProps {
   queue: Flashcard[];
   aiItems?: any[];
-  onOpenCreateCardForGame?: () => void;
   onOpenAutoGenForGame?: () => void;
-  onDeleteCard?: (id: string) => void;
 }
 
 interface BlankQuestion {
@@ -26,9 +24,7 @@ interface BlankQuestion {
 export function FlashcardFillBlankEngine({
   queue,
   aiItems,
-  onOpenCreateCardForGame,
   onOpenAutoGenForGame,
-  onDeleteCard,
 }: FlashcardFillBlankEngineProps) {
   const { speak } = useSpeech();
   const [questions, setQuestions] = useState<BlankQuestion[]>([]);
@@ -45,7 +41,6 @@ export function FlashcardFillBlankEngine({
       const missingWord = card.front_text;
       let example = card.back_explanation || "";
 
-      // Check if example contains the front_text, replace with blank
       let sentenceWithBlank = "";
       if (example && example.toLowerCase().includes(missingWord.toLowerCase())) {
         const regex = new RegExp(missingWord, "gi");
@@ -54,7 +49,6 @@ export function FlashcardFillBlankEngine({
         sentenceWithBlank = `___ : (${card.back_text})`;
       }
 
-      // Pick 3 distractors from queue
       const distractors = queue
         .filter((c) => c.id !== card.id && c.front_text !== missingWord)
         .map((c) => c.front_text);
@@ -80,27 +74,24 @@ export function FlashcardFillBlankEngine({
 
   if (queue.length === 0 || questions.length === 0) {
     return (
-      <div className="mx-auto max-w-md space-y-3">
-        {(onOpenAutoGenForGame || onOpenCreateCardForGame) && (
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {onOpenAutoGenForGame && (
-              <Button size="sm" onClick={onOpenAutoGenForGame} className="h-8 text-xs gap-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl">
-                <Wand2 className="size-3.5" /> Tạo Tự Động
-              </Button>
-            )}
-            {onOpenCreateCardForGame && (
-              <Button size="sm" onClick={onOpenCreateCardForGame} className="h-8 text-xs gap-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl">
-                <Plus className="size-3.5" /> + Thẻ Điền Từ
-              </Button>
-            )}
+      <div className="mx-auto max-w-md space-y-4">
+        <div className="rounded-3xl border border-dashed border-indigo-500/30 bg-surface/80 p-8 text-center shadow-xl backdrop-blur-md space-y-4">
+          <div className="flex size-16 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500 mx-auto border border-indigo-500/30 shadow-md">
+            <Puzzle className="size-8 animate-pulse" />
           </div>
-        )}
-        <div className="rounded-2xl border border-dashed border-border p-12 text-center bg-surface/40">
-          <div className="flex size-14 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500 mx-auto mb-3">
-            <Puzzle className="size-8" />
-          </div>
-          <h3 className="font-display text-xl font-bold text-foreground">Chưa Có Thẻ Để Điền Từ</h3>
-          <p className="mt-2 text-sm text-muted-foreground">Tạo thêm thẻ từ vựng để bắt đầu trò chơi điền từ còn thiếu!</p>
+          <h3 className="font-display text-xl font-bold text-foreground">Chưa Có Thẻ Điền Từ</h3>
+          <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
+            Bấm "🤖 AI Tạo Tự Động" để AI tự động trích xuất bộ thẻ điền từ còn thiếu riêng biệt cho bạn!
+          </p>
+
+          {onOpenAutoGenForGame && (
+            <Button
+              onClick={onOpenAutoGenForGame}
+              className="py-5 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-teal-600 text-white font-bold text-xs gap-2 shadow-lg hover:opacity-95 active:scale-95"
+            >
+              <Wand2 className="size-4" /> 🤖 AI Tạo Tự Động Điền Từ
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -150,7 +141,7 @@ export function FlashcardFillBlankEngine({
         animate={{ opacity: 1, scale: 1 }}
         className="mx-auto max-w-lg rounded-3xl border border-indigo-500/30 bg-surface/90 p-8 text-center shadow-2xl backdrop-blur-xl space-y-6"
       >
-        <div className="flex size-20 items-center justify-center rounded-3xl bg-indigo-500/10 text-indigo-500 mx-auto border border-indigo-500/30">
+        <div className="flex size-20 items-center justify-center rounded-3xl bg-indigo-500/10 text-indigo-500 mx-auto border border-indigo-500/30 shadow-md">
           <Trophy className="size-10" />
         </div>
         <h2 className="font-display text-2xl font-extrabold text-foreground">Hoàn Thành Bài Điền Từ!</h2>
@@ -164,7 +155,7 @@ export function FlashcardFillBlankEngine({
             <p className="font-display text-2xl font-bold text-teal-600">{accuracy}%</p>
           </div>
         </div>
-        <Button onClick={handleRestart} className="w-full gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white py-6">
+        <Button onClick={handleRestart} className="w-full gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white py-6 font-bold shadow-lg">
           <RotateCcw className="size-4" /> Làm Lại
         </Button>
       </motion.div>
@@ -172,10 +163,22 @@ export function FlashcardFillBlankEngine({
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="mx-auto max-w-xl space-y-4">
+      {/* Top Action Bar */}
+      <div className="flex items-center justify-between gap-2 rounded-2xl border border-border bg-surface/80 p-3 text-xs shadow-sm backdrop-blur-md">
+        <div className="flex items-center gap-2 font-bold text-foreground">
+          <Puzzle className="size-4 text-indigo-500" /> Điền Từ ({questions.length} thẻ):
+        </div>
+
+        {onOpenAutoGenForGame && (
+          <Button size="sm" onClick={onOpenAutoGenForGame} className="h-8 text-xs gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl shadow-md active:scale-95">
+            <Wand2 className="size-3.5" /> 🤖 AI Tạo Tự Động
+          </Button>
+        )}
+      </div>
+
       <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <Puzzle className="size-4 text-indigo-500" />
           <span>Câu {currentIndex + 1} / {questions.length}</span>
         </span>
         {streak > 1 && (
@@ -192,28 +195,17 @@ export function FlashcardFillBlankEngine({
         />
       </div>
 
-      <div className="rounded-3xl border border-border/80 bg-surface/90 p-6 sm:p-8 text-center shadow-xl backdrop-blur-md space-y-6">
+      <div className="rounded-3xl border border-border/80 bg-surface/90 p-6 sm:p-8 text-center shadow-2xl backdrop-blur-md space-y-6">
         <div className="flex justify-between items-center">
-          <span className="rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-600 uppercase">
+          <span className="rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-600 uppercase border border-indigo-500/20">
             🧩 Điền Từ Vào Chỗ Trống
           </span>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => speak(currentQ.card.front_text, currentQ.card.language)}
-              className="p-2 rounded-full border border-border bg-background text-muted-foreground hover:text-indigo-600"
-            >
-              <Volume2 className="size-4" />
-            </button>
-            {onDeleteCard && (
-              <button
-                onClick={() => onDeleteCard(currentQ.card.id)}
-                className="p-2 rounded-full border border-border bg-background text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
-                title="Xóa thẻ này khỏi Supabase"
-              >
-                <Trash2 className="size-4" />
-              </button>
-            )}
-          </div>
+          <button
+            onClick={() => speak(currentQ.card.front_text, currentQ.card.language)}
+            className="p-2 rounded-full border border-border bg-background text-muted-foreground hover:text-indigo-600 active:scale-90"
+          >
+            <Volume2 className="size-4" />
+          </button>
         </div>
 
         <div className="py-4 space-y-3">
@@ -266,7 +258,7 @@ export function FlashcardFillBlankEngine({
         {isAnswered && (
           <Button
             onClick={handleNext}
-            className="w-full py-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-md"
+            className="w-full py-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg active:scale-98"
           >
             <span>{currentIndex < questions.length - 1 ? "Câu Tiếp Theo" : "Xem Kết Quả"}</span>
             <ArrowRight className="size-4" />
