@@ -28,45 +28,45 @@ export function FlashcardHeader({
   onOpenAiGameAgent,
 }: FlashcardHeaderProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Title Bar */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-transparent text-emerald-600 dark:text-emerald-400 shadow-sm border border-emerald-500/20">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-transparent text-emerald-600 dark:text-emerald-400 shadow-sm border border-emerald-500/20">
             <Layers className="size-5" />
           </div>
           <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              Trung Tâm Ôn Tập & Trò Chơi VIP
+            <h1 className="font-display text-xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+              Trung Tâm Ôn Tập & Trò Chơi
             </h1>
-            <p className="text-xs text-muted-foreground sm:text-sm">
-              Mỗi trò chơi được lưu trữ bộ thẻ riêng biệt · AI Agent Tạo Game Thông Minh
+            <p className="text-[11px] sm:text-xs text-muted-foreground">
+              Trò chơi ôn tập riêng biệt · AI Agent Tạo Game Thông Minh
             </p>
           </div>
         </div>
 
-        {/* Action Buttons: ONLY AI AGENT GAME CREATOR (Req 1) */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Action Button: AI AGENT GAME CREATOR */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <Button
             onClick={onOpenAiGameAgent}
-            className="gap-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-600 font-bold shadow-md transition-all hover:opacity-95 text-white py-5 rounded-2xl"
+            className="w-full sm:w-auto gap-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-600 font-bold shadow-lg transition-all hover:opacity-95 text-white py-5 rounded-2xl text-xs sm:text-sm active:scale-98"
           >
-            <Bot className="size-5 animate-pulse" />
+            <Bot className="size-4.5 animate-pulse" />
             <span>🤖 AI Agent Tạo Game</span>
           </Button>
         </div>
       </div>
 
-      {/* Main Tab Navigation: ONLY 6 DISTINCT GAME MODES (Req 2) */}
-      <div className="flex items-center justify-between border-b border-border pb-1 overflow-x-auto no-scrollbar">
-        <div className="flex gap-1.5 min-w-max pb-1">
+      {/* Main Tab Navigation: 6 DISTINCT GAME MODES */}
+      <div className="relative border-b border-border/80 pb-1">
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1 scroll-smooth">
           {(
             [
               { id: "review", label: `Lật Thẻ SRS`, icon: Clock },
               { id: "quiz", label: "Quiz VIP", icon: HelpCircle },
-              { id: "spelling", label: "Chính Tả / Viết", icon: PenTool },
-              { id: "reflex", label: "Tốc Độ Phản Xạ", icon: Zap },
-              { id: "blank", label: "Điền Từ Còn Thiếu", icon: Puzzle },
+              { id: "spelling", label: "Chính Tả", icon: PenTool },
+              { id: "reflex", label: "Phản Xạ Tốc Độ", icon: Zap },
+              { id: "blank", label: "Điền Từ", icon: Puzzle },
               { id: "listening", label: "Luyện Nghe AI", icon: Headphones },
             ] as const
           ).map((tab) => {
@@ -76,13 +76,13 @@ export function FlashcardHeader({
               <button
                 key={tab.id}
                 onClick={() => onSetActiveTab(tab.id as ActiveTab)}
-                className={`flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs sm:text-sm font-bold transition-all rounded-t-xl ${
+                className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs sm:text-sm font-bold transition-all rounded-t-xl shrink-0 whitespace-nowrap active:scale-95 ${
                   isActive
-                    ? "border-emerald-600 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-xs"
+                    ? "border-emerald-500 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shadow-xs"
                     : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 }`}
               >
-                <Icon className="size-4" />
+                <Icon className="size-3.5 sm:size-4" />
                 <span>{tab.label}</span>
               </button>
             );

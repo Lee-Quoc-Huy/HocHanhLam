@@ -254,54 +254,54 @@ export function FlashcardReviewEngine({
 
       {/* SRS Rating Buttons (Visible when card is flipped) */}
       {isFlipped ? (
-        <div className="grid grid-cols-4 gap-2 animate-in fade-in">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 animate-in fade-in">
           {/* Again */}
           <Button
             onClick={() => handleRatingClick("again")}
             disabled={isSubmitting}
-            className="flex flex-col items-center py-6 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm"
+            className="flex flex-col items-center py-5 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl shadow-md active:scale-95"
           >
-            <span className="font-bold text-sm">Ôn Lại (1)</span>
-            <span className="text-[10px] opacity-80">{previews.again.formattedInterval}</span>
+            <span className="font-bold text-xs sm:text-sm">Ôn Lại (1)</span>
+            <span className="text-[10px] opacity-90 font-mono mt-0.5">{previews.again.formattedInterval}</span>
           </Button>
 
           {/* Hard */}
           <Button
             onClick={() => handleRatingClick("hard")}
             disabled={isSubmitting}
-            className="flex flex-col items-center py-6 bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-sm"
+            className="flex flex-col items-center py-5 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl shadow-md active:scale-95"
           >
-            <span className="font-bold text-sm">Khó (2)</span>
-            <span className="text-[10px] opacity-80">{previews.hard.formattedInterval}</span>
+            <span className="font-bold text-xs sm:text-sm">Khó (2)</span>
+            <span className="text-[10px] opacity-90 font-mono mt-0.5">{previews.hard.formattedInterval}</span>
           </Button>
 
           {/* Good */}
           <Button
             onClick={() => handleRatingClick("good")}
             disabled={isSubmitting}
-            className="flex flex-col items-center py-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm"
+            className="flex flex-col items-center py-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl shadow-md active:scale-95"
           >
-            <span className="font-bold text-sm">Tốt (3)</span>
-            <span className="text-[10px] opacity-80">{previews.good.formattedInterval}</span>
+            <span className="font-bold text-xs sm:text-sm">Tốt (3)</span>
+            <span className="text-[10px] opacity-90 font-mono mt-0.5">{previews.good.formattedInterval}</span>
           </Button>
 
           {/* Easy */}
           <Button
             onClick={() => handleRatingClick("easy")}
             disabled={isSubmitting}
-            className="flex flex-col items-center py-6 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm"
+            className="flex flex-col items-center py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl shadow-md active:scale-95"
           >
-            <span className="font-bold text-sm">Dễ (4)</span>
-            <span className="text-[10px] opacity-80">{previews.easy.formattedInterval}</span>
+            <span className="font-bold text-xs sm:text-sm">Dễ (4)</span>
+            <span className="text-[10px] opacity-90 font-mono mt-0.5">{previews.easy.formattedInterval}</span>
           </Button>
         </div>
       ) : (
         <Button
           onClick={onFlip}
           size="lg"
-          className="w-full py-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 font-medium text-white shadow-md"
+          className="w-full py-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 font-bold text-white shadow-lg active:scale-98"
         >
-          Hiện Đáp Án (Phím Space)
+          Lật Mặt Đáp Án (Hoặc Nhấp Vào Thẻ)
         </Button>
       )}
 
