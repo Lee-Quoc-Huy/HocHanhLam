@@ -13,7 +13,15 @@ import {
 import { flashcardService } from "../api/flashcard-service";
 import { SRSRating } from "../lib/srs-algorithm";
 
-export type ActiveTab = "review" | "quiz" | "browse" | "decks";
+export type ActiveTab =
+  | "review"
+  | "quiz"
+  | "spelling"
+  | "reflex"
+  | "blank"
+  | "listening"
+  | "browse"
+  | "decks";
 
 interface FlashcardState {
   cards: Flashcard[];

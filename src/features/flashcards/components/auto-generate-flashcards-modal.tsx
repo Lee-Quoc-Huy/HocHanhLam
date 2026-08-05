@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Wand2, Loader2, Sparkles, BookOpen, Layers, CheckCircle2, RefreshCw } from "lucide-react";
+import { X, Wand2, Loader2, BookOpen, BookMarked, Layers, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { vocabularyService } from "@/features/vocabulary/api/vocabulary-service";
+import { grammarService } from "@/features/grammar/api/grammar-service";
 import type { VocabularyItem } from "@/features/vocabulary/types";
+import type { GrammarItem } from "@/features/grammar/types";
 import type { CreateFlashcardInput } from "../types";
 import { cn } from "@/lib/utils/cn";
 
@@ -16,140 +18,68 @@ interface AutoGenerateFlashcardsModalProps {
   onCreateCard: (input: CreateFlashcardInput) => Promise<unknown>;
 }
 
-const PRESET_TOPICS = [
-  { label: "🏢 Công Sở & Giao Tiếp", topic: "Giao tiếp công sở & Văn phòng", lang: "en" },
-  { label: "✈️ Du Lịch & Sân Bay", topic: "Du lịch, Khách sạn & Sân bay", lang: "en" },
-  { label: "🎓 TOPIK II Từ Vựng", topic: "Từ vựng quan trọng thi TOPIK II", lang: "ko" },
-  { label: "🧧 HSK 4 Động Từ", topic: "Động từ hay gặp trong HSK 4", lang: "zh" },
-  { label: "🍔 Ẩm Thực & Mua Sắm", topic: "Gọi món ẩm thực & Mua sắm", lang: "ko" },
-  { label: "💼 Phỏng Vấn Xin Việc", topic: "Phỏng vấn xin việc & CV", lang: "en" },
-];
-
 export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: AutoGenerateFlashcardsModalProps) {
-  const [generateMode, setGenerateMode] = useState<"ai" | "vocabulary">("ai");
+  const [sourceType, setSourceType] = useState<"vocabulary" | "grammar">("vocabulary");
 
-  // AI Generation State
-  const [topic, setTopic] = useState("Giao tiếp công sở & Văn phòng");
-  const [aiLanguage, setAiLanguage] = useState<"en" | "ko" | "zh">("en");
-  const [level, setLevel] = useState<"beginner" | "intermediate" | "advanced">("intermediate");
-  const [aiCount, setAiCount] = useState(10);
-  const [isAiGenerating, setIsAiGenerating] = useState(false);
-  const [previewItems, setPreviewItems] = useState<any[]>([]);
-
-  // Vocabulary Extraction State
+  // Vocabulary State
   const [allWords, setAllWords] = useState<VocabularyItem[]>([]);
-  const [isLoadingWords, setIsLoadingWords] = useState(false);
-  const [count, setCount] = useState(20);
-  const [language, setLanguage] = useState<"all" | "en" | "ko" | "zh">("all");
-  const [partOfSpeech, setPartOfSpeech] = useState<string>("all");
-  const [collection, setCollection] = useState<string>("all");
+  const [vocabCount, setVocabCount] = useState(20);
+  const [vocabLang, setVocabLang] = useState<"all" | "en" | "ko" | "zh">("all");
+  const [vocabCollection, setVocabCollection] = useState<string>("all");
+
+  // Grammar State
+  const [allGrammar, setAllGrammar] = useState<GrammarItem[]>([]);
+  const [grammarCount, setGrammarCount] = useState(15);
+  const [grammarLang, setGrammarLang] = useState<"all" | "en" | "ko" | "zh">("all");
+  const [grammarCategory, setGrammarCategory] = useState<string>("all");
+
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    setPreviewItems([]);
-    setIsLoadingWords(true);
-    vocabularyService
-      .fetchVocabulary()
-      .then(setAllWords)
-      .catch(() => toast.error("Không thể tải danh sách từ vựng."))
-      .finally(() => setIsLoadingWords(false));
+    setIsLoadingData(true);
+    Promise.all([vocabularyService.fetchVocabulary(), grammarService.fetchGrammar()])
+      .then(([words, grammar]) => {
+        setAllWords(words || []);
+        setAllGrammar(grammar || []);
+      })
+      .catch(() => toast.error("Không thể tải dữ liệu từ vựng/ngữ pháp."))
+      .finally(() => setIsLoadingData(false));
   }, [open]);
 
-  const availablePartsOfSpeech = useMemo(
-    () => Array.from(new Set(allWords.map((w) => w.part_of_speech).filter(Boolean))),
-    [allWords]
-  );
+  // Vocab Filters
   const availableCollections = useMemo(
     () => Array.from(new Set(allWords.map((w) => w.collection).filter(Boolean))),
     [allWords]
   );
-
   const matchingWords = useMemo(() => {
     return allWords.filter((w) => {
-      if (language !== "all" && w.language !== language) return false;
-      if (partOfSpeech !== "all" && w.part_of_speech !== partOfSpeech) return false;
-      if (collection !== "all" && w.collection !== collection) return false;
+      if (vocabLang !== "all" && w.language !== vocabLang) return false;
+      if (vocabCollection !== "all" && w.collection !== vocabCollection) return false;
       return true;
     });
-  }, [allWords, language, partOfSpeech, collection]);
+  }, [allWords, vocabLang, vocabCollection]);
+
+  // Grammar Filters
+  const availableCategories = useMemo(
+    () => Array.from(new Set(allGrammar.map((g) => g.category).filter(Boolean))),
+    [allGrammar]
+  );
+  const matchingGrammar = useMemo(() => {
+    return allGrammar.filter((g) => {
+      if (grammarLang !== "all" && g.language !== grammarLang) return false;
+      if (grammarCategory !== "all" && g.category !== grammarCategory) return false;
+      return true;
+    });
+  }, [allGrammar, grammarLang, grammarCategory]);
 
   function handleClose() {
-    setPreviewItems([]);
     onClose();
   }
 
-  // Generate Flashcards / Quiz items via AI API
-  async function handleAiGenerate() {
-    if (!topic.trim()) {
-      toast.error("Vui lòng nhập chủ đề muốn tạo.");
-      return;
-    }
-
-    setIsAiGenerating(true);
-    try {
-      const res = await fetch("/api/ai/generate-flashcards", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          topic: topic.trim(),
-          language: aiLanguage,
-          level,
-          count: aiCount,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Không thể tạo bộ thẻ từ AI.");
-
-      const generated = data.items || [];
-      setPreviewItems(generated);
-      toast.success(`AI đã tạo xong ${generated.length} thẻ cho chủ đề "${topic}".`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Đã có lỗi xảy ra khi gọi AI.");
-    } finally {
-      setIsAiGenerating(false);
-    }
-  }
-
-  // Save generated AI items to Flashcard store with safe batch error handling
-  async function handleSavePreviewItems() {
-    if (previewItems.length === 0) return;
-    setIsSaving(true);
-    let savedCount = 0;
-
-    try {
-      for (const item of previewItems) {
-        try {
-          await onCreateCard({
-            language: aiLanguage,
-            collection_id: null,
-            front_text: item.front_text || "Term",
-            front_subtext: item.front_subtext || "",
-            back_text: item.back_text || "Meaning",
-            back_explanation: item.back_explanation || item.english_hint || "",
-            audio_url: "",
-            image_url: "",
-            tags: item.tags || [topic],
-            is_favorite: false,
-          });
-          savedCount++;
-        } catch (e) {
-          console.error("Failed to save single card:", e);
-        }
-      }
-
-      toast.success(`Đã lưu thành công ${savedCount} thẻ mới vào hệ thống!`);
-      handleClose();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Không thể lưu thẻ.");
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  // Bulk extract from local vocabulary
-  async function handleVocabExtract() {
+  // Extract Flashcards from Vocabulary Vault
+  async function handleExtractVocab() {
     if (matchingWords.length === 0) {
       toast.error("Không có từ vựng nào khớp với bộ lọc đã chọn.");
       return;
@@ -160,7 +90,7 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
 
     try {
       const shuffled = [...matchingWords].sort(() => Math.random() - 0.5);
-      const picked = shuffled.slice(0, count);
+      const picked = shuffled.slice(0, vocabCount);
 
       for (const word of picked) {
         try {
@@ -184,10 +114,57 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
         }
       }
 
-      toast.success(`Đã trích xuất ${savedCount} flashcard từ Kho Từ Vựng.`);
+      toast.success(`Đã trích xuất ${savedCount} thẻ từ Kho Từ Vựng!`);
       handleClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Không thể tạo flashcard tự động.");
+      toast.error(err instanceof Error ? err.message : "Không thể tạo thẻ tự động.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  // Extract Flashcards from Grammar Vault
+  async function handleExtractGrammar() {
+    if (matchingGrammar.length === 0) {
+      toast.error("Không có cấu trúc ngữ pháp nào khớp với bộ lọc.");
+      return;
+    }
+
+    setIsSaving(true);
+    let savedCount = 0;
+
+    try {
+      const shuffled = [...matchingGrammar].sort(() => Math.random() - 0.5);
+      const picked = shuffled.slice(0, grammarCount);
+
+      for (const g of picked) {
+        try {
+          const exText = g.examples && g.examples.length > 0
+            ? `Ví dụ: ${g.examples[0].example}\n(${g.examples[0].translation})`
+            : "";
+
+          await onCreateCard({
+            language: g.language,
+            collection_id: null,
+            front_text: g.title,
+            front_subtext: g.category || "Ngữ pháp",
+            back_text: g.meaning,
+            back_explanation: `${g.explanation}\n\n${exText}`,
+            audio_url: "",
+            image_url: "",
+            tags: [g.category, "Grammar"].filter(Boolean) as string[],
+            is_favorite: false,
+          });
+          savedCount++;
+        } catch (e) {
+          console.error("Failed to extract single grammar:", e);
+        }
+      }
+
+      toast.success(`Đã trích xuất ${savedCount} thẻ từ Kho Ngữ Pháp!`);
+      handleClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Không thể tạo thẻ tự động.");
     } finally {
       setIsSaving(false);
     }
@@ -206,13 +183,10 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
               </div>
               <div>
                 <Dialog.Title className="font-display text-lg font-bold text-foreground flex items-center gap-2">
-                  <span>Tạo Flashcard & Quiz AI VIP</span>
-                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                    Tự Động 100%
-                  </span>
+                  <span>Tạo Thẻ Tự Động Từ Hệ Thống</span>
                 </Dialog.Title>
                 <Dialog.Description className="text-xs text-muted-foreground">
-                  Soạn bộ thẻ học và câu hỏi Quiz thông minh bằng AI hoặc trích xuất từ Kho Từ Vựng.
+                  Trích xuất dữ liệu sẵn có từ Kho Từ Vựng hoặc Kho Ngữ Pháp để tạo thẻ ôn tập.
                 </Dialog.Description>
               </div>
             </div>
@@ -223,253 +197,178 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
             </Dialog.Close>
           </div>
 
-          {/* Generator Mode Switcher */}
+          {/* Source Vault Switcher */}
           <div className="mb-5 flex rounded-xl border border-border bg-background p-1 text-xs font-semibold">
             <button
-              onClick={() => setGenerateMode("ai")}
+              onClick={() => setSourceType("vocabulary")}
               className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 py-2 rounded-lg transition-all",
-                generateMode === "ai"
+                "flex flex-1 items-center justify-center gap-1.5 py-2.5 rounded-lg transition-all",
+                sourceType === "vocabulary"
                   ? "bg-emerald-600 text-white shadow-xs font-bold"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Sparkles className="size-3.5" />
-              <span>Tạo Chủ Đề Bằng AI</span>
+              <BookOpen className="size-4" />
+              <span>Kho Từ Vựng ({allWords.length})</span>
             </button>
+
             <button
-              onClick={() => setGenerateMode("vocabulary")}
+              onClick={() => setSourceType("grammar")}
               className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 py-2 rounded-lg transition-all",
-                generateMode === "vocabulary"
-                  ? "bg-emerald-600 text-white shadow-xs font-bold"
+                "flex flex-1 items-center justify-center gap-1.5 py-2.5 rounded-lg transition-all",
+                sourceType === "grammar"
+                  ? "bg-indigo-600 text-white shadow-xs font-bold"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <BookOpen className="size-3.5" />
-              <span>Trích Xuất Kho Từ Vựng</span>
+              <BookMarked className="size-4" />
+              <span>Kho Ngữ Pháp ({allGrammar.length})</span>
             </button>
           </div>
 
-          {/* MODE 1: AI Topic Generator */}
-          {generateMode === "ai" && (
+          {isLoadingData ? (
+            <div className="flex items-center justify-center py-10 text-muted-foreground">
+              <Loader2 className="size-6 animate-spin text-emerald-600" />
+            </div>
+          ) : sourceType === "vocabulary" ? (
+            /* VOCABULARY EXTRACTION FORM */
             <div className="space-y-4">
-              {/* Preset Topics Badges */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Gợi ý chủ đề hay:</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {PRESET_TOPICS.map((p, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setTopic(p.topic);
-                        setAiLanguage(p.lang as any);
-                      }}
-                      className="rounded-xl border border-border/80 bg-background px-2.5 py-1 text-[11px] font-medium text-foreground hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-colors"
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Topic Input */}
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-foreground">
-                  Chủ đề mong muốn:
+                  Số lượng thẻ cần tạo: <span className="text-emerald-600 font-bold">{vocabCount}</span>
                 </label>
                 <input
-                  type="text"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  placeholder="Nhập chủ đề (VD: Giao tiếp sân bay, Phỏng vấn IT...)"
-                  className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs font-medium outline-none focus:ring-1 focus:ring-emerald-600"
+                  type="range"
+                  min={10}
+                  max={50}
+                  step={5}
+                  value={vocabCount}
+                  onChange={(e) => setVocabCount(Number(e.target.value))}
+                  className="w-full accent-emerald-600"
                 />
               </div>
 
-              {/* Language & Level & Count */}
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-foreground">Ngôn ngữ</label>
                   <select
-                    value={aiLanguage}
-                    onChange={(e) => setAiLanguage(e.target.value as any)}
-                    className="w-full rounded-xl border border-border bg-background px-2.5 py-2 text-xs font-medium outline-none"
+                    value={vocabLang}
+                    onChange={(e) => setVocabLang(e.target.value as any)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-medium outline-none"
                   >
-                    <option value="en">🇬🇧 Anh</option>
-                    <option value="ko">🇰🇷 Hàn</option>
-                    <option value="zh">🇨🇳 Trung</option>
+                    <option value="all">Tất cả ngôn ngữ</option>
+                    <option value="en">🇬🇧 Tiếng Anh</option>
+                    <option value="ko">🇰🇷 Tiếng Hàn</option>
+                    <option value="zh">🇨🇳 Tiếng Trung</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-foreground">Trình độ</label>
+                  <label className="mb-1 block text-xs font-semibold text-foreground">Bộ sưu tập / Chủ đề</label>
                   <select
-                    value={level}
-                    onChange={(e) => setLevel(e.target.value as any)}
-                    className="w-full rounded-xl border border-border bg-background px-2.5 py-2 text-xs font-medium outline-none"
+                    value={vocabCollection}
+                    onChange={(e) => setVocabCollection(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-medium outline-none"
                   >
-                    <option value="beginner">Sơ cấp</option>
-                    <option value="intermediate">Trung cấp</option>
-                    <option value="advanced">Cao cấp</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-foreground">Số lượng</label>
-                  <select
-                    value={aiCount}
-                    onChange={(e) => setAiCount(Number(e.target.value))}
-                    className="w-full rounded-xl border border-border bg-background px-2.5 py-2 text-xs font-medium outline-none"
-                  >
-                    <option value={5}>5 thẻ</option>
-                    <option value={10}>10 thẻ</option>
-                    <option value={15}>15 thẻ</option>
-                    <option value={20}>20 thẻ</option>
+                    <option value="all">Tất cả bộ sưu tập</option>
+                    {availableCollections.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
 
-              {/* AI Generate Button */}
+              <p className="text-xs text-muted-foreground">
+                Đang tìm thấy <span className="font-bold text-foreground">{matchingWords.length}</span> từ vựng phù hợp.
+              </p>
+
               <Button
-                onClick={handleAiGenerate}
-                disabled={isAiGenerating || !topic.trim()}
-                className="w-full py-5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 font-bold text-white shadow-md hover:opacity-95"
+                onClick={handleExtractVocab}
+                disabled={isSaving || matchingWords.length === 0}
+                className="w-full py-5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold shadow-md hover:opacity-95"
               >
-                {isAiGenerating ? (
+                {isSaving ? (
                   <>
-                    <Loader2 className="size-4 animate-spin" /> AI Đang Soạn Bài...
+                    <Loader2 className="size-4 animate-spin" /> Đang trích xuất từ vựng...
                   </>
                 ) : (
                   <>
-                    <Wand2 className="size-4" /> Bắt Đầu Soạn {aiCount} Thẻ Với AI
+                    <Layers className="size-4" /> Tạo {Math.min(vocabCount, matchingWords.length)} Thẻ Từ Vựng
                   </>
                 )}
               </Button>
-
-              {/* Live AI Generation Preview Cards */}
-              {previewItems.length > 0 && (
-                <div className="mt-4 space-y-3 border-t border-border/60 pt-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                      <CheckCircle2 className="size-4" /> Kết quả preview ({previewItems.length} thẻ)
-                    </span>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleAiGenerate}
-                      disabled={isAiGenerating}
-                      className="h-7 text-[11px] gap-1"
-                    >
-                      <RefreshCw className="size-3" /> Soạn Lại
-                    </Button>
-                  </div>
-
-                  <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
-                    {previewItems.map((item, idx) => (
-                      <div key={idx} className="rounded-xl border border-border bg-background p-3 text-xs space-y-1">
-                        <div className="flex justify-between font-bold text-foreground">
-                          <span>{item.front_text} <span className="font-mono text-[10px] text-emerald-500">[{item.front_subtext}]</span></span>
-                          <span className="text-emerald-600 font-semibold">{item.back_text}</span>
-                        </div>
-                        {item.back_explanation && (
-                          <p className="text-[11px] text-muted-foreground truncate">{item.back_explanation}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  <Button
-                    onClick={handleSavePreviewItems}
-                    disabled={isSaving}
-                    className="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md"
-                  >
-                    {isSaving ? <Loader2 className="size-4 animate-spin" /> : `Lưu ${previewItems.length} Thẻ Vào Kho`}
-                  </Button>
-                </div>
-              )}
             </div>
-          )}
-
-          {/* MODE 2: Bulk Extract from Local Vocabulary Vault */}
-          {generateMode === "vocabulary" && (
+          ) : (
+            /* GRAMMAR EXTRACTION FORM */
             <div className="space-y-4">
-              {isLoadingWords ? (
-                <div className="flex items-center justify-center py-10 text-muted-foreground">
-                  <Loader2 className="size-5 animate-spin" />
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-foreground">
-                      Số lượng thẻ: <span className="text-emerald-600 dark:text-emerald-400">{count}</span>
-                    </label>
-                    <input
-                      type="range"
-                      min={10}
-                      max={50}
-                      step={5}
-                      value={count}
-                      onChange={(e) => setCount(Number(e.target.value))}
-                      className="w-full accent-emerald-600"
-                    />
-                  </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-foreground">
+                  Số lượng thẻ cần tạo: <span className="text-indigo-600 font-bold">{grammarCount}</span>
+                </label>
+                <input
+                  type="range"
+                  min={5}
+                  max={30}
+                  step={5}
+                  value={grammarCount}
+                  onChange={(e) => setGrammarCount(Number(e.target.value))}
+                  className="w-full accent-indigo-600"
+                />
+              </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="mb-1 block text-xs font-semibold text-foreground">Ngôn ngữ</label>
-                      <select
-                        value={language}
-                        onChange={(e) => setLanguage(e.target.value as any)}
-                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-medium outline-none"
-                      >
-                        <option value="all">Tất cả ngôn ngữ</option>
-                        <option value="en">Tiếng Anh</option>
-                        <option value="ko">Tiếng Hàn</option>
-                        <option value="zh">Tiếng Trung</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="mb-1 block text-xs font-semibold text-foreground">Chủ đề</label>
-                      <select
-                        value={collection}
-                        onChange={(e) => setCollection(e.target.value)}
-                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-medium outline-none"
-                      >
-                        <option value="all">Tất cả chủ đề</option>
-                        {availableCollections.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-muted-foreground">
-                    Đang khớp <span className="font-semibold text-foreground">{matchingWords.length}</span> từ vựng khả dụng.
-                  </p>
-
-                  <Button
-                    onClick={handleVocabExtract}
-                    disabled={isSaving || matchingWords.length === 0}
-                    className="w-full py-5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold hover:opacity-95"
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-foreground">Ngôn ngữ</label>
+                  <select
+                    value={grammarLang}
+                    onChange={(e) => setGrammarLang(e.target.value as any)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-medium outline-none"
                   >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="size-4 animate-spin" /> Đang trích xuất...
-                      </>
-                    ) : (
-                      <>
-                        <Layers className="size-4" /> Trích Xuất {Math.min(count, matchingWords.length)} Thẻ
-                      </>
-                    )}
-                  </Button>
+                    <option value="all">Tất cả ngôn ngữ</option>
+                    <option value="en">🇬🇧 Tiếng Anh</option>
+                    <option value="ko">🇰🇷 Tiếng Hàn</option>
+                    <option value="zh">🇨🇳 Tiếng Trung</option>
+                  </select>
                 </div>
-              )}
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-foreground">Danh mục ngữ pháp</label>
+                  <select
+                    value={grammarCategory}
+                    onChange={(e) => setGrammarCategory(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-medium outline-none"
+                  >
+                    <option value="all">Tất cả danh mục</option>
+                    {availableCategories.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Đang tìm thấy <span className="font-bold text-foreground">{matchingGrammar.length}</span> cấu trúc ngữ pháp phù hợp.
+              </p>
+
+              <Button
+                onClick={handleExtractGrammar}
+                disabled={isSaving || matchingGrammar.length === 0}
+                className="w-full py-5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold shadow-md hover:opacity-95"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" /> Đang trích xuất ngữ pháp...
+                  </>
+                ) : (
+                  <>
+                    <Layers className="size-4" /> Tạo {Math.min(grammarCount, matchingGrammar.length)} Thẻ Ngữ Pháp
+                  </>
+                )}
+              </Button>
             </div>
           )}
         </Dialog.Content>

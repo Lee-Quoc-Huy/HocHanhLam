@@ -23,7 +23,7 @@ export const navConfig = {
   primary: [
     { title: "Từ Vựng", href: "/vocabulary", icon: "BookOpenText" },
     { title: "Ngữ Pháp", href: "/grammar", icon: "BookMarked" },
-    { title: "Thẻ Ghi Nhớ", href: "/flashcards", icon: "Layers" },
+    { title: "Ôn Tập", href: "/flashcards", icon: "Layers" },
     { title: "Tài Liệu", href: "/documents", icon: "FolderKanban" },
     { title: "Trợ Lý AI Center", href: "/ai-tutor", icon: "Sparkles" },
   ],

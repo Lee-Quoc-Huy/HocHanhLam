@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils/cn";
 const TAB_ITEMS = [
   { title: "Trang Chủ", href: "/dashboard", icon: LayoutDashboard },
   { title: "Từ Vựng", href: "/vocabulary", icon: BookOpenText },
-  { title: "Flashcard", href: "/flashcards", icon: Layers },
+  { title: "Ôn Tập", href: "/flashcards", icon: Layers },
   { title: "AI Tutor", href: "/ai-tutor", icon: Sparkles },
   { title: "Thư Viện", href: "/library", icon: FolderKanban },
 ] as const;

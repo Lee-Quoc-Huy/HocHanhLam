@@ -5,6 +5,10 @@ import { FlashcardHeader } from "@/features/flashcards/components/flashcard-head
 import { AutoGenerateFlashcardsModal } from "@/features/flashcards/components/auto-generate-flashcards-modal";
 import { FlashcardReviewEngine } from "@/features/flashcards/components/flashcard-review-engine";
 import { FlashcardQuizEngine } from "@/features/flashcards/components/flashcard-quiz-engine";
+import { FlashcardSpellingEngine } from "@/features/flashcards/components/flashcard-spelling-engine";
+import { FlashcardReflexEngine } from "@/features/flashcards/components/flashcard-reflex-engine";
+import { FlashcardFillBlankEngine } from "@/features/flashcards/components/flashcard-fill-blank-engine";
+import { FlashcardListeningEngine } from "@/features/flashcards/components/flashcard-listening-engine";
 import { FlashcardDeckList } from "@/features/flashcards/components/flashcard-deck-list";
 import { FlashcardFormModal } from "@/features/flashcards/components/flashcard-form-modal";
 import { FolderModal } from "@/features/flashcards/components/folder-modal";
@@ -76,6 +80,8 @@ export default function FlashcardsPage() {
     startReviewSession(deckCards);
   };
 
+  const activeQueue = reviewQueue.length > 0 ? reviewQueue : cards;
+
   return (
     <div className="space-y-6">
       {/* Header & Stats */}
@@ -89,13 +95,14 @@ export default function FlashcardsPage() {
         onOpenAutoGenerate={() => setIsAutoGenerateOpen(true)}
       />
 
+      {/* Auto Generate Modal */}
       <AutoGenerateFlashcardsModal
         open={isAutoGenerateOpen}
         onClose={() => setIsAutoGenerateOpen(false)}
         onCreateCard={createCard}
       />
 
-      {/* Mode 1: Daily SRS Review Engine */}
+      {/* Game 1: Daily SRS Flip Engine */}
       {activeTab === "review" && (
         <FlashcardReviewEngine
           queue={reviewQueue}
@@ -109,15 +116,43 @@ export default function FlashcardsPage() {
         />
       )}
 
-      {/* Mode 2: VIP Quiz Engine */}
+      {/* Game 2: VIP Quiz Engine */}
       {activeTab === "quiz" && (
         <FlashcardQuizEngine
-          queue={reviewQueue.length > 0 ? reviewQueue : cards}
+          queue={activeQueue}
           allCards={cards}
         />
       )}
 
-      {/* Mode 3: Decks & Folders Tree */}
+      {/* Game 3: Spelling & Typing Engine */}
+      {activeTab === "spelling" && (
+        <FlashcardSpellingEngine
+          queue={activeQueue}
+        />
+      )}
+
+      {/* Game 4: Speed Reflex Challenge Engine */}
+      {activeTab === "reflex" && (
+        <FlashcardReflexEngine
+          queue={activeQueue}
+        />
+      )}
+
+      {/* Game 5: Fill in the Blank Engine */}
+      {activeTab === "blank" && (
+        <FlashcardFillBlankEngine
+          queue={activeQueue}
+        />
+      )}
+
+      {/* Game 6: Listening Practice Engine */}
+      {activeTab === "listening" && (
+        <FlashcardListeningEngine
+          queue={activeQueue}
+        />
+      )}
+
+      {/* Decks & Folders Tree */}
       {activeTab === "decks" && (
         <FlashcardDeckList
           folders={folders}
@@ -129,7 +164,7 @@ export default function FlashcardsPage() {
         />
       )}
 
-      {/* Mode 4: Browse & Search All Cards Table */}
+      {/* Browse & Search All Cards Table */}
       {activeTab === "browse" && (
         <div className="space-y-4">
           {/* Search & Filter Bar */}
@@ -262,7 +297,7 @@ export default function FlashcardsPage() {
           <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs animate-in fade-in" />
           <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-surface-raised p-6 shadow-xl animate-in zoom-in-95">
             <Dialog.Title className="font-display text-lg font-bold text-foreground">
-              Xác Nhận Xóa Thẻ Flashcard
+              Xác Nhận Xóa Thẻ
             </Dialog.Title>
             <Dialog.Description className="mt-2 text-sm text-muted-foreground">
               Bạn có chắc chắn muốn xóa thẻ &quot;{selectedCardForDelete?.front_text}&quot; không? Thao tác này không thể hoàn tác.

@@ -1,6 +1,20 @@
 "use client";
 
-import { Layers, Plus, Sparkles, CheckCircle2, Clock, BookOpen, FolderPlus, Wand2, HelpCircle } from "lucide-react";
+import {
+  Layers,
+  Plus,
+  Sparkles,
+  CheckCircle2,
+  Clock,
+  BookOpen,
+  FolderPlus,
+  Wand2,
+  HelpCircle,
+  PenTool,
+  Zap,
+  Puzzle,
+  Headphones,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FlashcardStats } from "../types";
 import { ActiveTab } from "../store/flashcard-store";
@@ -34,10 +48,10 @@ export function FlashcardHeader({
           </div>
           <div>
             <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              Hệ Thống Thẻ Ghi Nhớ & Quiz VIP
+              Trung Tâm Ôn Tập & Trò Chơi VIP
             </h1>
             <p className="text-xs text-muted-foreground sm:text-sm">
-              Thuật toán lặp lại ngắt quãng SM-2 · Trắc Nghiệm Quiz Thông Minh · Tiếng Anh · Hàn · Trung
+              6 Chế độ ôn tập đa dạng: Thẻ SRS · Quiz · Viết · Phản xạ · Điền từ · Luyện nghe
             </p>
           </div>
         </div>
@@ -130,15 +144,19 @@ export function FlashcardHeader({
         </div>
       </div>
 
-      {/* Main Tab Navigation */}
-      <div className="flex items-center justify-between border-b border-border pb-1">
-        <div className="flex flex-wrap gap-2">
+      {/* Main Tab Navigation for Desktop and Mobile */}
+      <div className="flex items-center justify-between border-b border-border pb-1 overflow-x-auto no-scrollbar">
+        <div className="flex gap-1.5 min-w-max pb-1">
           {(
             [
-              { id: "review", label: `Lật Thẻ SRS (${stats.dueToday})`, icon: Clock },
-              { id: "quiz", label: "Quiz Trắc Nghiệm VIP", icon: HelpCircle },
+              { id: "review", label: `Lật Thẻ (${stats.dueToday})`, icon: Clock },
+              { id: "quiz", label: "Quiz VIP", icon: HelpCircle },
+              { id: "spelling", label: "Chính Tả", icon: PenTool },
+              { id: "reflex", label: "Tốc Độ", icon: Zap },
+              { id: "blank", label: "Điền Từ", icon: Puzzle },
+              { id: "listening", label: "Luyện Nghe", icon: Headphones },
+              { id: "decks", label: "Bộ Thẻ", icon: BookOpen },
               { id: "browse", label: "Tất Cả Thẻ", icon: Layers },
-              { id: "decks", label: "Bộ Thẻ & Thư Mục", icon: BookOpen },
             ] as const
           ).map((tab) => {
             const Icon = tab.icon;
@@ -147,13 +165,13 @@ export function FlashcardHeader({
               <button
                 key={tab.id}
                 onClick={() => onSetActiveTab(tab.id as ActiveTab)}
-                className={`flex items-center gap-2 border-b-2 px-3.5 py-2 text-xs sm:text-sm font-semibold transition-all ${
+                className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-bold transition-all rounded-t-lg ${
                   isActive
-                    ? "border-emerald-600 text-emerald-600 dark:text-emerald-400"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
+                    ? "border-emerald-600 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 }`}
               >
-                <Icon className="size-4" />
+                <Icon className="size-3.5" />
                 <span>{tab.label}</span>
               </button>
             );
