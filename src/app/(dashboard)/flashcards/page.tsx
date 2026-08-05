@@ -3,6 +3,7 @@
 import { useFlashcards } from "@/features/flashcards/hooks/use-flashcards";
 import { FlashcardHeader } from "@/features/flashcards/components/flashcard-header";
 import { AutoGenerateFlashcardsModal } from "@/features/flashcards/components/auto-generate-flashcards-modal";
+import { FlashcardAiGameAgentModal } from "@/features/flashcards/components/flashcard-ai-game-agent-modal";
 import { FlashcardReviewEngine } from "@/features/flashcards/components/flashcard-review-engine";
 import { FlashcardQuizEngine } from "@/features/flashcards/components/flashcard-quiz-engine";
 import { FlashcardSpellingEngine } from "@/features/flashcards/components/flashcard-spelling-engine";
@@ -22,6 +23,8 @@ import { useState } from "react";
 export default function FlashcardsPage() {
   const { speak } = useSpeech();
   const [isAutoGenerateOpen, setIsAutoGenerateOpen] = useState(false);
+  const [isAiGameAgentOpen, setIsAiGameAgentOpen] = useState(false);
+
   const {
     cards,
     filteredCards,
@@ -80,6 +83,14 @@ export default function FlashcardsPage() {
     startReviewSession(deckCards);
   };
 
+  const handleLaunchAiGame = (gameType: string, gameData: any) => {
+    if (gameType === "quiz") setActiveTab("quiz");
+    else if (gameType === "listening") setActiveTab("listening");
+    else if (gameType === "spelling") setActiveTab("spelling");
+    else if (gameType === "reflex") setActiveTab("reflex");
+    else if (gameType === "blank") setActiveTab("blank");
+  };
+
   const activeQueue = reviewQueue.length > 0 ? reviewQueue : cards;
 
   return (
@@ -93,6 +104,7 @@ export default function FlashcardsPage() {
         onOpenCreateDeck={openDeckModal}
         onOpenCreateFolder={openFolderModal}
         onOpenAutoGenerate={() => setIsAutoGenerateOpen(true)}
+        onOpenAiGameAgent={() => setIsAiGameAgentOpen(true)}
       />
 
       {/* Auto Generate Modal */}
@@ -100,6 +112,13 @@ export default function FlashcardsPage() {
         open={isAutoGenerateOpen}
         onClose={() => setIsAutoGenerateOpen(false)}
         onCreateCard={createCard}
+      />
+
+      {/* AI Agent Game Creation Modal */}
+      <FlashcardAiGameAgentModal
+        open={isAiGameAgentOpen}
+        onClose={() => setIsAiGameAgentOpen(false)}
+        onLaunchGame={handleLaunchAiGame}
       />
 
       {/* Game 1: Daily SRS Flip Engine */}
@@ -145,7 +164,7 @@ export default function FlashcardsPage() {
         />
       )}
 
-      {/* Game 6: Listening Practice Engine */}
+      {/* Game 6: Listening Practice Engine (With AI Dictation Sentence Generator) */}
       {activeTab === "listening" && (
         <FlashcardListeningEngine
           queue={activeQueue}

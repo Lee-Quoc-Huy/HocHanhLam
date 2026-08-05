@@ -14,6 +14,7 @@ import {
   Zap,
   Puzzle,
   Headphones,
+  Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FlashcardStats } from "../types";
@@ -27,6 +28,7 @@ interface FlashcardHeaderProps {
   onOpenCreateDeck: () => void;
   onOpenCreateFolder: () => void;
   onOpenAutoGenerate: () => void;
+  onOpenAiGameAgent: () => void;
 }
 
 export function FlashcardHeader({
@@ -37,6 +39,7 @@ export function FlashcardHeader({
   onOpenCreateDeck,
   onOpenCreateFolder,
   onOpenAutoGenerate,
+  onOpenAiGameAgent,
 }: FlashcardHeaderProps) {
   return (
     <div className="space-y-6">
@@ -51,7 +54,7 @@ export function FlashcardHeader({
               Trung Tâm Ôn Tập & Trò Chơi VIP
             </h1>
             <p className="text-xs text-muted-foreground sm:text-sm">
-              6 Chế độ ôn tập đa dạng: Thẻ SRS · Quiz · Viết · Phản xạ · Điền từ · Luyện nghe
+              Bộ thẻ riêng theo từng game · AI Agent Tạo Game · Luyện Nghe Điền Câu
             </p>
           </div>
         </div>
@@ -61,19 +64,10 @@ export function FlashcardHeader({
           <Button
             variant="outline"
             size="sm"
-            onClick={onOpenCreateFolder}
-            className="gap-1.5 text-xs"
+            onClick={onOpenAiGameAgent}
+            className="gap-1.5 text-xs border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 font-bold"
           >
-            <FolderPlus className="size-3.5 text-amber-500" /> + Thư Mục
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onOpenCreateDeck}
-            className="gap-1.5 text-xs"
-          >
-            <BookOpen className="size-3.5 text-blue-500" /> + Bộ Thẻ
+            <Bot className="size-3.5 text-purple-500" /> AI Agent Tạo Game
           </Button>
 
           <Button
@@ -83,6 +77,15 @@ export function FlashcardHeader({
             className="gap-1.5 text-xs border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
           >
             <Wand2 className="size-3.5" /> Tạo Tự Động
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenCreateDeck}
+            className="gap-1.5 text-xs"
+          >
+            <BookOpen className="size-3.5 text-blue-500" /> + Bộ Thẻ Game
           </Button>
 
           <Button
@@ -144,7 +147,7 @@ export function FlashcardHeader({
         </div>
       </div>
 
-      {/* Main Tab Navigation for Desktop and Mobile */}
+      {/* Main Tab Navigation */}
       <div className="flex items-center justify-between border-b border-border pb-1 overflow-x-auto no-scrollbar">
         <div className="flex gap-1.5 min-w-max pb-1">
           {(
@@ -154,8 +157,8 @@ export function FlashcardHeader({
               { id: "spelling", label: "Chính Tả", icon: PenTool },
               { id: "reflex", label: "Tốc Độ", icon: Zap },
               { id: "blank", label: "Điền Từ", icon: Puzzle },
-              { id: "listening", label: "Luyện Nghe", icon: Headphones },
-              { id: "decks", label: "Bộ Thẻ", icon: BookOpen },
+              { id: "listening", label: "Luyện Nghe AI", icon: Headphones },
+              { id: "decks", label: "Bộ Thẻ Game", icon: BookOpen },
               { id: "browse", label: "Tất Cả Thẻ", icon: Layers },
             ] as const
           ).map((tab) => {

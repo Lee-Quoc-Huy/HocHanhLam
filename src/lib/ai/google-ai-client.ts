@@ -9,8 +9,6 @@
 
 const GOOGLE_AI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
-// Configurable via env so the exact model string can be updated without a
-// code change if Google renames/replaces it.
 const IMAGE_READER_MODEL = process.env.GOOGLE_AI_IMAGE_MODEL || "gemini-3.5-flash-late";
 
 export interface GoogleAiImagePart {
@@ -67,6 +65,18 @@ export async function generateFromImage(params: {
   }
 
   return text;
+}
+
+export async function generateFromPrompt(params: {
+  prompt: string;
+  systemInstruction?: string;
+  temperature?: number;
+}): Promise<string> {
+  return generateFromImage({
+    systemInstruction: params.systemInstruction || "You are an AI language learning tutor.",
+    userText: params.prompt,
+    temperature: params.temperature ?? 0.3,
+  });
 }
 
 /** Splits a "data:image/jpeg;base64,AAAA..." URL into mime type + raw base64. */
