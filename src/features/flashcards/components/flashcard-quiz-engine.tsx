@@ -14,6 +14,8 @@ import {
   Globe,
   Filter,
   FilterX,
+  Plus,
+  Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -31,9 +33,12 @@ interface QuizQuestion {
 interface FlashcardQuizEngineProps {
   queue: Flashcard[];
   allCards: Flashcard[];
+  aiItems?: any[];
+  onOpenCreateCardForGame?: () => void;
+  onOpenAutoGenForGame?: () => void;
 }
 
-export function FlashcardQuizEngine({ queue, allCards }: FlashcardQuizEngineProps) {
+export function FlashcardQuizEngine({ queue, allCards, aiItems, onOpenCreateCardForGame, onOpenAutoGenForGame }: FlashcardQuizEngineProps) {
   const { speak } = useSpeech();
 
   // Custom Game Filters
@@ -276,6 +281,18 @@ export function FlashcardQuizEngine({ queue, allCards }: FlashcardQuizEngineProp
           >
             ⭐ Yêu Thích
           </Button>
+
+          {onOpenAutoGenForGame && (
+            <Button size="sm" onClick={onOpenAutoGenForGame} className="h-8 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl">
+              <Wand2 className="size-3.5" /> Tạo Tự Động
+            </Button>
+          )}
+
+          {onOpenCreateCardForGame && (
+            <Button size="sm" onClick={onOpenCreateCardForGame} className="h-8 text-xs gap-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl">
+              <Plus className="size-3.5" /> + Thẻ Quiz
+            </Button>
+          )}
         </div>
       </div>
 

@@ -37,6 +37,7 @@ create table if not exists public.flashcards (
   back_explanation text not null default '',
   audio_url text not null default '',
   image_url text not null default '',
+  game_mode text check (game_mode in ('review', 'quiz', 'spelling', 'reflex', 'blank', 'listening')),
   tags text[] not null default '{}',
   is_favorite boolean not null default false,
 

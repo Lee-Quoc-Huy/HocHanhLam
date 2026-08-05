@@ -11,6 +11,7 @@ import {
   CreateFlashcardInput,
   FlashcardCollection,
   FlashcardLanguage,
+  GameModeType,
 } from "../types";
 import { useSpeech } from "@/features/vocabulary/hooks/use-speech";
 
@@ -18,6 +19,8 @@ interface FlashcardFormModalProps {
   isOpen: boolean;
   itemToEdit: Flashcard | null;
   collections: FlashcardCollection[];
+  gameModeTarget?: GameModeType;
+  targetGameMode?: GameModeType;
   onClose: () => void;
   onSubmit: (input: CreateFlashcardInput) => Promise<void>;
 }
@@ -26,9 +29,12 @@ export function FlashcardFormModal({
   isOpen,
   itemToEdit,
   collections,
+  gameModeTarget,
+  targetGameMode,
   onClose,
   onSubmit,
 }: FlashcardFormModalProps) {
+  const actualGameModeTarget = targetGameMode || gameModeTarget;
   const { speak } = useSpeech();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -64,10 +70,10 @@ export function FlashcardFormModal({
       setBackExplanation("");
       setAudioUrl("");
       setImageUrl("");
-      setTagsInput("");
+      setTagsInput(actualGameModeTarget ? actualGameModeTarget.toUpperCase() : "");
       setIsFavorite(false);
     }
-  }, [itemToEdit, collections, isOpen]);
+  }, [itemToEdit, collections, isOpen, actualGameModeTarget]);
 
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,6 +89,7 @@ export function FlashcardFormModal({
 
       const inputData: CreateFlashcardInput = {
         collection_id: collectionId || null,
+        game_mode: actualGameModeTarget || itemToEdit?.game_mode || undefined,
         language,
         front_text: frontText.trim(),
         front_subtext: frontSubtext.trim(),
@@ -103,6 +110,20 @@ export function FlashcardFormModal({
     }
   };
 
+  const gameLabel = actualGameModeTarget
+    ? actualGameModeTarget === "quiz"
+      ? "Quiz"
+      : actualGameModeTarget === "spelling"
+      ? "Chính Tả"
+      : actualGameModeTarget === "reflex"
+      ? "Tốc Độ Phản Xạ"
+      : actualGameModeTarget === "blank"
+      ? "Điền Từ"
+      : actualGameModeTarget === "listening"
+      ? "Luyện Nghe"
+      : "Lật Thẻ SRS"
+    : "";
+
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
@@ -112,7 +133,13 @@ export function FlashcardFormModal({
           <div className="flex items-center justify-between border-b border-border pb-4">
             <Dialog.Title className="font-display text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
               <Layers className="size-5 text-emerald-600 dark:text-emerald-400" />
-              <span>{itemToEdit ? "Chỉnh Sửa Thẻ Flashcard" : "Tạo Thẻ Flashcard Mới"}</span>
+              <span>
+                {itemToEdit
+                  ? "Chỉnh Sửa Thẻ Flashcard"
+                  : gameLabel
+                  ? `Tạo Thẻ Riêng Cho Trò Chơi ${gameLabel}`
+                  : "Tạo Thẻ Flashcard Mới"}
+              </span>
             </Dialog.Title>
             <Dialog.Close asChild>
               <Button variant="ghost" size="icon" className="size-8 rounded-full">
@@ -244,7 +271,7 @@ export function FlashcardFormModal({
                 id="tags"
                 value={tagsInput}
                 onChange={(e) => setTagsInput(e.target.value)}
-                placeholder="Ví dụ: IELTS, Từ Vựng, TOPIK2, HSK4"
+                placeholder="Ví dụ: IELTS, TOPIK2, HSK4"
               />
             </div>
 
@@ -275,7 +302,7 @@ export function FlashcardFormModal({
                   ? "Đang lưu…"
                   : itemToEdit
                   ? "Cập Nhật Thẻ"
-                  : "Tạo Thẻ Mới"}
+                  : `Tạo Thẻ ${gameLabel || "Mới"}`}
               </Button>
             </div>
           </form>

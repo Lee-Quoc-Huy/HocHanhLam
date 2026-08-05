@@ -9,19 +9,12 @@ import {
   CreateFlashcardInput,
   UpdateFlashcardInput,
   FlashcardStats,
+  GameModeType,
 } from "../types";
 import { flashcardService } from "../api/flashcard-service";
 import { SRSRating } from "../lib/srs-algorithm";
 
-export type ActiveTab =
-  | "review"
-  | "quiz"
-  | "spelling"
-  | "reflex"
-  | "blank"
-  | "listening"
-  | "browse"
-  | "decks";
+export type ActiveTab = GameModeType;
 
 interface FlashcardState {
   cards: Flashcard[];
@@ -37,11 +30,12 @@ interface FlashcardState {
   reviewQueue: Flashcard[];
   currentReviewIndex: number;
   isCardFlipped: boolean;
-  isProcessingReview: boolean; // Atomic lock against card jump bugs
+  isProcessingReview: boolean;
   reviewedCountToday: number;
 
   // Modals
   isCardFormOpen: boolean;
+  createGameModeTarget?: GameModeType;
   selectedCardForEdit: Flashcard | null;
   selectedCardForDelete: Flashcard | null;
   isFolderModalOpen: boolean;
@@ -66,7 +60,7 @@ interface FlashcardState {
   setFilter: (updates: Partial<FlashcardFilter>) => void;
   resetFilter: () => void;
 
-  openCreateCardModal: () => void;
+  openCreateCardModal: (targetGameMode?: GameModeType) => void;
   openEditCardModal: (card: Flashcard) => void;
   openDeleteCardModal: (card: Flashcard) => void;
   openFolderModal: () => void;
@@ -79,6 +73,7 @@ const initialFilter: FlashcardFilter = {
   language: "all",
   folderId: "all",
   collectionId: "all",
+  gameMode: "all",
   dueOnly: false,
   onlyFavorites: false,
 };
@@ -100,6 +95,7 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
   reviewedCountToday: 0,
 
   isCardFormOpen: false,
+  createGameModeTarget: undefined,
   selectedCardForEdit: null,
   selectedCardForDelete: null,
   isFolderModalOpen: false,
@@ -116,7 +112,6 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
 
       set({ cards, collections, folders, isLoading: false });
 
-      // Auto populate review queue with due cards if empty
       const now = new Date().toISOString();
       const dueCards = cards.filter((c) => c.due_date <= now || c.status === "new");
       set({ reviewQueue: dueCards.length > 0 ? dueCards : cards });
@@ -166,7 +161,7 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
 
   submitReview: async (rating) => {
     const { reviewQueue, currentReviewIndex, isProcessingReview } = get();
-    if (isProcessingReview) return; // Prevent double execution / card jump bug
+    if (isProcessingReview) return;
 
     const currentCard = reviewQueue[currentReviewIndex];
     if (!currentCard) return;
@@ -232,7 +227,8 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
 
   resetFilter: () => set({ filter: initialFilter }),
 
-  openCreateCardModal: () => set({ isCardFormOpen: true, selectedCardForEdit: null }),
+  openCreateCardModal: (targetGameMode) =>
+    set({ isCardFormOpen: true, createGameModeTarget: targetGameMode, selectedCardForEdit: null }),
   openEditCardModal: (card) => set({ isCardFormOpen: true, selectedCardForEdit: card }),
   openDeleteCardModal: (card) => set({ selectedCardForDelete: card }),
   openFolderModal: () => set({ isFolderModalOpen: true }),
@@ -241,6 +237,7 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
   closeModals: () =>
     set({
       isCardFormOpen: false,
+      createGameModeTarget: undefined,
       selectedCardForEdit: null,
       selectedCardForDelete: null,
       isFolderModalOpen: false,
@@ -248,7 +245,6 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
     }),
 }));
 
-// Helper selector to compute stats
 export function selectFlashcardStats(cards: Flashcard[], collections: FlashcardCollection[]): FlashcardStats {
   const now = new Date().toISOString();
   return {
@@ -262,7 +258,6 @@ export function selectFlashcardStats(cards: Flashcard[], collections: FlashcardC
   };
 }
 
-// Selector to filter flashcards
 export function selectFilteredFlashcards(cards: Flashcard[], filter: FlashcardFilter): Flashcard[] {
   const now = new Date().toISOString();
   return cards.filter((card) => {
@@ -278,6 +273,7 @@ export function selectFilteredFlashcards(cards: Flashcard[], filter: FlashcardFi
 
     if (filter.language !== "all" && card.language !== filter.language) return false;
     if (filter.collectionId !== "all" && card.collection_id !== filter.collectionId) return false;
+    if (filter.gameMode && filter.gameMode !== "all" && card.game_mode !== filter.gameMode) return false;
     if (filter.dueOnly && card.due_date > now && card.status !== "new") return false;
     if (filter.onlyFavorites && !card.is_favorite) return false;
 

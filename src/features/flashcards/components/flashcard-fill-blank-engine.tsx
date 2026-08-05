@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Puzzle, CheckCircle2, XCircle, RotateCcw, Trophy, ArrowRight, Flame, Volume2 } from "lucide-react";
+import { Puzzle, CheckCircle2, XCircle, RotateCcw, Trophy, ArrowRight, Flame, Volume2, Plus, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flashcard } from "../types";
@@ -10,6 +10,9 @@ import { cn } from "@/lib/utils/cn";
 
 interface FlashcardFillBlankEngineProps {
   queue: Flashcard[];
+  aiItems?: any[];
+  onOpenCreateCardForGame?: () => void;
+  onOpenAutoGenForGame?: () => void;
 }
 
 interface BlankQuestion {
@@ -19,7 +22,7 @@ interface BlankQuestion {
   options: string[];
 }
 
-export function FlashcardFillBlankEngine({ queue }: FlashcardFillBlankEngineProps) {
+export function FlashcardFillBlankEngine({ queue, aiItems, onOpenCreateCardForGame, onOpenAutoGenForGame }: FlashcardFillBlankEngineProps) {
   const { speak } = useSpeech();
   const [questions, setQuestions] = useState<BlankQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -70,12 +73,28 @@ export function FlashcardFillBlankEngine({ queue }: FlashcardFillBlankEngineProp
 
   if (queue.length === 0 || questions.length === 0) {
     return (
-      <div className="mx-auto max-w-md rounded-2xl border border-dashed border-border p-12 text-center bg-surface/40">
-        <div className="flex size-14 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500 mx-auto mb-3">
-          <Puzzle className="size-8" />
+      <div className="mx-auto max-w-md space-y-3">
+        {(onOpenAutoGenForGame || onOpenCreateCardForGame) && (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {onOpenAutoGenForGame && (
+              <Button size="sm" onClick={onOpenAutoGenForGame} className="h-8 text-xs gap-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl">
+                <Wand2 className="size-3.5" /> Tạo Tự Động
+              </Button>
+            )}
+            {onOpenCreateCardForGame && (
+              <Button size="sm" onClick={onOpenCreateCardForGame} className="h-8 text-xs gap-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl">
+                <Plus className="size-3.5" /> + Thẻ Điền Từ
+              </Button>
+            )}
+          </div>
+        )}
+        <div className="rounded-2xl border border-dashed border-border p-12 text-center bg-surface/40">
+          <div className="flex size-14 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500 mx-auto mb-3">
+            <Puzzle className="size-8" />
+          </div>
+          <h3 className="font-display text-xl font-bold text-foreground">Chưa Có Thẻ Để Điền Từ</h3>
+          <p className="mt-2 text-sm text-muted-foreground">Tạo thêm thẻ từ vựng để bắt đầu trò chơi điền từ còn thiếu!</p>
         </div>
-        <h3 className="font-display text-xl font-bold text-foreground">Chưa Có Thẻ Để Điền Từ</h3>
-        <p className="mt-2 text-sm text-muted-foreground">Tạo thêm thẻ vựng để bắt đầu trò chơi điền từ còn thiếu!</p>
       </div>
     );
   }

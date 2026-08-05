@@ -13,6 +13,8 @@ import {
   KeyRound,
   HelpCircle,
   Filter,
+  Plus,
+  Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -21,9 +23,12 @@ import { useSpeech } from "@/features/vocabulary/hooks/use-speech";
 
 interface FlashcardSpellingEngineProps {
   queue: Flashcard[];
+  aiItems?: any[];
+  onOpenCreateCardForGame?: () => void;
+  onOpenAutoGenForGame?: () => void;
 }
 
-export function FlashcardSpellingEngine({ queue }: FlashcardSpellingEngineProps) {
+export function FlashcardSpellingEngine({ queue, aiItems, onOpenCreateCardForGame, onOpenAutoGenForGame }: FlashcardSpellingEngineProps) {
   const { speak } = useSpeech();
 
   // Custom Game Filters
@@ -106,6 +111,16 @@ export function FlashcardSpellingEngine({ queue }: FlashcardSpellingEngineProps)
             >
               ⭐ Yêu Thích
             </Button>
+            {onOpenAutoGenForGame && (
+              <Button size="sm" onClick={onOpenAutoGenForGame} className="h-8 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl">
+                <Wand2 className="size-3.5" /> Tạo Tự Động
+              </Button>
+            )}
+            {onOpenCreateCardForGame && (
+              <Button size="sm" onClick={onOpenCreateCardForGame} className="h-8 text-xs gap-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl">
+                <Plus className="size-3.5" /> + Thẻ Viết
+              </Button>
+            )}
           </div>
         </div>
 
@@ -226,6 +241,16 @@ export function FlashcardSpellingEngine({ queue }: FlashcardSpellingEngineProps)
           >
             ⭐ Yêu Thích
           </Button>
+          {onOpenAutoGenForGame && (
+            <Button size="sm" onClick={onOpenAutoGenForGame} className="h-8 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl">
+              <Wand2 className="size-3.5" /> Tạo Tự Động
+            </Button>
+          )}
+          {onOpenCreateCardForGame && (
+            <Button size="sm" onClick={onOpenCreateCardForGame} className="h-8 text-xs gap-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl">
+              <Plus className="size-3.5" /> + Thẻ Viết
+            </Button>
+          )}
         </div>
       </div>
 

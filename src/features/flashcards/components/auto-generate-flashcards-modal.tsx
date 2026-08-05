@@ -16,9 +16,10 @@ interface AutoGenerateFlashcardsModalProps {
   open: boolean;
   onClose: () => void;
   onCreateCard: (input: CreateFlashcardInput) => Promise<unknown>;
+  targetGameMode?: string;
 }
 
-export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: AutoGenerateFlashcardsModalProps) {
+export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard, targetGameMode }: AutoGenerateFlashcardsModalProps) {
   const [sourceType, setSourceType] = useState<"vocabulary" | "grammar">("vocabulary");
 
   // Vocabulary State & Extended Filters
@@ -103,6 +104,7 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
           await onCreateCard({
             language: word.language,
             collection_id: null,
+            game_mode: (targetGameMode as any) || undefined,
             front_text: word.word,
             front_subtext: word.ipa || "",
             back_text: word.vietnamese,
@@ -152,6 +154,7 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
           await onCreateCard({
             language: g.language,
             collection_id: null,
+            game_mode: (targetGameMode as any) || undefined,
             front_text: g.title,
             front_subtext: g.category || "Ngữ pháp",
             back_text: g.meaning,

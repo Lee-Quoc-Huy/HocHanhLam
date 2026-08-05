@@ -10,24 +10,28 @@ import { FlashcardSpellingEngine } from "@/features/flashcards/components/flashc
 import { FlashcardReflexEngine } from "@/features/flashcards/components/flashcard-reflex-engine";
 import { FlashcardFillBlankEngine } from "@/features/flashcards/components/flashcard-fill-blank-engine";
 import { FlashcardListeningEngine } from "@/features/flashcards/components/flashcard-listening-engine";
-import { FlashcardDeckList } from "@/features/flashcards/components/flashcard-deck-list";
 import { FlashcardFormModal } from "@/features/flashcards/components/flashcard-form-modal";
-import { FolderModal } from "@/features/flashcards/components/folder-modal";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, Star, Edit, Trash2, Volume2, RotateCcw } from "lucide-react";
-import { useSpeech } from "@/features/vocabulary/hooks/use-speech";
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import type { GameModeType } from "@/features/flashcards/types";
 
 export default function FlashcardsPage() {
-  const { speak } = useSpeech();
   const [isAutoGenerateOpen, setIsAutoGenerateOpen] = useState(false);
   const [isAiGameAgentOpen, setIsAiGameAgentOpen] = useState(false);
 
+  // Store AI Agent generated items per game type
+  const [aiQuizItems, setAiQuizItems] = useState<any[]>([]);
+  const [aiListeningItems, setAiListeningItems] = useState<any[]>([]);
+  const [aiSpellingItems, setAiSpellingItems] = useState<any[]>([]);
+  const [aiReflexItems, setAiReflexItems] = useState<any[]>([]);
+  const [aiBlankItems, setAiBlankItems] = useState<any[]>([]);
+
+  // Per-game auto-generate target
+  const [autoGenTargetGame, setAutoGenTargetGame] = useState<GameModeType | undefined>(undefined);
+
   const {
     cards,
-    filteredCards,
     collections,
     folders,
     stats,
@@ -39,8 +43,7 @@ export default function FlashcardsPage() {
     isCardFormOpen,
     selectedCardForEdit,
     selectedCardForDelete,
-    isFolderModalOpen,
-    isDeckModalOpen,
+    createGameModeTarget,
     createCard,
     updateCard,
     deleteCard,
@@ -78,18 +81,51 @@ export default function FlashcardsPage() {
     }
   };
 
-  const handleStartDeckStudy = (deckId: string) => {
-    const deckCards = cards.filter((c) => c.collection_id === deckId);
-    startReviewSession(deckCards);
-  };
+  // AI Agent creates game → store data + switch tab
+  const handleLaunchAiGame = useCallback((gameType: string, gameData: any) => {
+    const items = gameData?.items || [];
 
-  const handleLaunchAiGame = (gameType: string, gameData: any) => {
-    if (gameType === "quiz") setActiveTab("quiz");
-    else if (gameType === "listening") setActiveTab("listening");
-    else if (gameType === "spelling") setActiveTab("spelling");
-    else if (gameType === "reflex") setActiveTab("reflex");
-    else if (gameType === "blank") setActiveTab("blank");
-  };
+    switch (gameType) {
+      case "quiz":
+        setAiQuizItems(items);
+        setActiveTab("quiz");
+        break;
+      case "listening":
+        setAiListeningItems(items);
+        setActiveTab("listening");
+        break;
+      case "spelling":
+        setAiSpellingItems(items);
+        setActiveTab("spelling");
+        break;
+      case "reflex":
+        setAiReflexItems(items);
+        setActiveTab("reflex");
+        break;
+      case "blank":
+        setAiBlankItems(items);
+        setActiveTab("blank");
+        break;
+      default:
+        setActiveTab(gameType as any);
+    }
+  }, [setActiveTab]);
+
+  // Per-game create card handlers
+  const handleOpenCreateForGame = useCallback((gameMode: GameModeType) => {
+    openCreateCardModal(gameMode);
+  }, [openCreateCardModal]);
+
+  // Per-game auto-generate handler
+  const handleOpenAutoGenForGame = useCallback((gameMode: GameModeType) => {
+    setAutoGenTargetGame(gameMode);
+    setIsAutoGenerateOpen(true);
+  }, []);
+
+  // Cards filtered by game_mode for each engine
+  const getGameCards = useCallback((mode: GameModeType) => {
+    return cards.filter((c) => c.game_mode === mode || (!c.game_mode && mode === "review"));
+  }, [cards]);
 
   const activeQueue = reviewQueue.length > 0 ? reviewQueue : cards;
 
@@ -100,18 +136,18 @@ export default function FlashcardsPage() {
         stats={stats}
         activeTab={activeTab}
         onSetActiveTab={setActiveTab}
-        onOpenCreateCard={openCreateCardModal}
-        onOpenCreateDeck={openDeckModal}
-        onOpenCreateFolder={openFolderModal}
-        onOpenAutoGenerate={() => setIsAutoGenerateOpen(true)}
         onOpenAiGameAgent={() => setIsAiGameAgentOpen(true)}
       />
 
-      {/* Auto Generate Modal */}
+      {/* Auto Generate Modal (with optional game target) */}
       <AutoGenerateFlashcardsModal
         open={isAutoGenerateOpen}
-        onClose={() => setIsAutoGenerateOpen(false)}
+        onClose={() => {
+          setIsAutoGenerateOpen(false);
+          setAutoGenTargetGame(undefined);
+        }}
         onCreateCard={createCard}
+        targetGameMode={autoGenTargetGame}
       />
 
       {/* AI Agent Game Creation Modal */}
@@ -138,176 +174,62 @@ export default function FlashcardsPage() {
       {/* Game 2: VIP Quiz Engine */}
       {activeTab === "quiz" && (
         <FlashcardQuizEngine
-          queue={activeQueue}
+          queue={getGameCards("quiz").length > 0 ? getGameCards("quiz") : activeQueue}
           allCards={cards}
+          aiItems={aiQuizItems}
+          onOpenCreateCardForGame={() => handleOpenCreateForGame("quiz")}
+          onOpenAutoGenForGame={() => handleOpenAutoGenForGame("quiz")}
         />
       )}
 
       {/* Game 3: Spelling & Typing Engine */}
       {activeTab === "spelling" && (
         <FlashcardSpellingEngine
-          queue={activeQueue}
+          queue={getGameCards("spelling").length > 0 ? getGameCards("spelling") : activeQueue}
+          aiItems={aiSpellingItems}
+          onOpenCreateCardForGame={() => handleOpenCreateForGame("spelling")}
+          onOpenAutoGenForGame={() => handleOpenAutoGenForGame("spelling")}
         />
       )}
 
       {/* Game 4: Speed Reflex Challenge Engine */}
       {activeTab === "reflex" && (
         <FlashcardReflexEngine
-          queue={activeQueue}
+          queue={getGameCards("reflex").length > 0 ? getGameCards("reflex") : activeQueue}
+          aiItems={aiReflexItems}
+          onOpenCreateCardForGame={() => handleOpenCreateForGame("reflex")}
+          onOpenAutoGenForGame={() => handleOpenAutoGenForGame("reflex")}
         />
       )}
 
       {/* Game 5: Fill in the Blank Engine */}
       {activeTab === "blank" && (
         <FlashcardFillBlankEngine
-          queue={activeQueue}
+          queue={getGameCards("blank").length > 0 ? getGameCards("blank") : activeQueue}
+          aiItems={aiBlankItems}
+          onOpenCreateCardForGame={() => handleOpenCreateForGame("blank")}
+          onOpenAutoGenForGame={() => handleOpenAutoGenForGame("blank")}
         />
       )}
 
-      {/* Game 6: Listening Practice Engine (With AI Dictation Sentence Generator) */}
+      {/* Game 6: Listening Practice Engine */}
       {activeTab === "listening" && (
         <FlashcardListeningEngine
-          queue={activeQueue}
+          queue={getGameCards("listening").length > 0 ? getGameCards("listening") : activeQueue}
+          aiCustomItems={aiListeningItems}
+          onOpenCreateCardForGame={() => handleOpenCreateForGame("listening")}
+          onOpenAutoGenForGame={() => handleOpenAutoGenForGame("listening")}
         />
       )}
 
-      {/* Decks & Folders Tree */}
-      {activeTab === "decks" && (
-        <FlashcardDeckList
-          folders={folders}
-          collections={collections}
-          cards={cards}
-          onStartStudyDeck={handleStartDeckStudy}
-          onOpenCreateDeck={openDeckModal}
-          onOpenCreateFolder={openFolderModal}
-        />
-      )}
-
-      {/* Browse & Search All Cards Table */}
-      {activeTab === "browse" && (
-        <div className="space-y-4">
-          {/* Search & Filter Bar */}
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between rounded-xl border border-border/80 bg-surface/80 p-4 shadow-xs">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={filter.search}
-                onChange={(e) => setFilter({ search: e.target.value })}
-                placeholder="Tìm kiếm từ vựng, phiên âm, nghĩa tiếng Việt, thẻ..."
-                className="pl-9 bg-background/80"
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={filter.language}
-                onChange={(e) => setFilter({ language: e.target.value as any })}
-                className="h-9 rounded-md border border-border bg-background px-3 text-xs font-medium text-foreground outline-none"
-              >
-                <option value="all">Tất Cả Ngôn Ngữ</option>
-                <option value="en">🇬🇧 Tiếng Anh</option>
-                <option value="ko">🇰🇷 Tiếng Hàn</option>
-                <option value="zh">🇨🇳 Tiếng Trung</option>
-              </select>
-
-              <Button
-                variant={filter.onlyFavorites ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilter({ onlyFavorites: !filter.onlyFavorites })}
-                className="gap-1.5"
-              >
-                <Star className={`size-4 ${filter.onlyFavorites ? "fill-amber-400 text-amber-400" : "text-amber-500"}`} />
-                Yêu Thích
-              </Button>
-
-              {(filter.search || filter.language !== "all" || filter.onlyFavorites) && (
-                <Button variant="ghost" size="sm" onClick={resetFilter} className="gap-1 text-xs">
-                  <RotateCcw className="size-3" /> Đặt Lại
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Cards Data Table */}
-          <div className="overflow-hidden rounded-xl border border-border/80 bg-surface/80 shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="border-b border-border bg-muted/50 font-semibold uppercase tracking-wider text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-3">Thích</th>
-                    <th className="px-4 py-3">Mặt Trước (Từ/Câu Hỏi)</th>
-                    <th className="px-4 py-3">Mặt Sau (Nghĩa/Đáp Án)</th>
-                    <th className="px-4 py-3">Ngôn Ngữ</th>
-                    <th className="px-4 py-3">Chu Kỳ SRS</th>
-                    <th className="px-4 py-3">Trạng Thái</th>
-                    <th className="px-4 py-3 text-right">Thao Tác</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  {filteredCards.map((card) => (
-                    <tr key={card.id} className="transition-colors hover:bg-muted/30">
-                      <td className="px-4 py-3">
-                        <button onClick={() => toggleFavorite(card.id)} className="text-muted-foreground hover:text-amber-500">
-                          <Star className={`size-4 ${card.is_favorite ? "fill-amber-400 text-amber-400" : ""}`} />
-                        </button>
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-foreground text-sm">
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => speak(card.front_text, card.language, card.audio_url)} className="text-muted-foreground hover:text-emerald-600">
-                            <Volume2 className="size-3.5" />
-                          </button>
-                          <div>
-                            <span>{card.front_text}</span>
-                            {card.front_subtext && <span className="ml-2 font-mono text-xs text-emerald-600 dark:text-emerald-400">[{card.front_subtext}]</span>}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 font-medium text-foreground">{card.back_text}</td>
-                      <td className="px-4 py-3 uppercase font-semibold text-[10px]">{card.language}</td>
-                      <td className="px-4 py-3 font-mono text-muted-foreground">{card.interval} ngày (EF: {card.ease_factor})</td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                          card.status === "mastered" ? "bg-emerald-500/10 text-emerald-600" : card.status === "learning" ? "bg-amber-500/10 text-amber-600" : "bg-blue-500/10 text-blue-600"
-                        }`}>
-                          {card.status === "mastered" ? "Đã Thuộc" : card.status === "learning" ? "Đang Học" : "Mới"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="size-7" onClick={() => openEditCardModal(card)} title="Sửa Thẻ">
-                            <Edit className="size-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="size-7 text-destructive hover:bg-destructive/10" onClick={() => openDeleteCardModal(card)} title="Xóa Thẻ">
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Card Form Modal */}
+      {/* Card Form Modal (with game_mode target) */}
       <FlashcardFormModal
         isOpen={isCardFormOpen}
         itemToEdit={selectedCardForEdit}
         collections={collections}
+        targetGameMode={createGameModeTarget}
         onClose={closeModals}
         onSubmit={handleCardSubmit}
-      />
-
-      {/* Folder / Deck Modal */}
-      <FolderModal
-        isOpen={isFolderModalOpen || isDeckModalOpen}
-        type={isFolderModalOpen ? "folder" : "deck"}
-        folders={folders}
-        onClose={closeModals}
-        onCreateFolder={createFolder}
-        onCreateDeck={createCollection}
       />
 
       {/* Delete Confirmation Modal */}

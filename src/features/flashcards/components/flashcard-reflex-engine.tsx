@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Zap, Check, X, RotateCcw, Trophy, Flame, Volume2 } from "lucide-react";
+import { Zap, Check, X, RotateCcw, Trophy, Flame, Volume2, Plus, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Flashcard } from "../types";
@@ -9,6 +9,9 @@ import { useSpeech } from "@/features/vocabulary/hooks/use-speech";
 
 interface FlashcardReflexEngineProps {
   queue: Flashcard[];
+  aiItems?: any[];
+  onOpenCreateCardForGame?: () => void;
+  onOpenAutoGenForGame?: () => void;
 }
 
 interface ReflexItem {
@@ -17,7 +20,7 @@ interface ReflexItem {
   isMatch: boolean;
 }
 
-export function FlashcardReflexEngine({ queue }: FlashcardReflexEngineProps) {
+export function FlashcardReflexEngine({ queue, aiItems, onOpenCreateCardForGame, onOpenAutoGenForGame }: FlashcardReflexEngineProps) {
   const { speak } = useSpeech();
   const [items, setItems] = useState<ReflexItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -107,12 +110,28 @@ export function FlashcardReflexEngine({ queue }: FlashcardReflexEngineProps) {
 
   if (queue.length === 0 || !currentItem) {
     return (
-      <div className="mx-auto max-w-md rounded-2xl border border-dashed border-border p-12 text-center bg-surface/40">
-        <div className="flex size-14 items-center justify-center rounded-full bg-amber-500/10 text-amber-500 mx-auto mb-3">
-          <Zap className="size-8" />
+      <div className="mx-auto max-w-md space-y-3">
+        {(onOpenAutoGenForGame || onOpenCreateCardForGame) && (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {onOpenAutoGenForGame && (
+              <Button size="sm" onClick={onOpenAutoGenForGame} className="h-8 text-xs gap-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl">
+                <Wand2 className="size-3.5" /> Tạo Tự Động
+              </Button>
+            )}
+            {onOpenCreateCardForGame && (
+              <Button size="sm" onClick={onOpenCreateCardForGame} className="h-8 text-xs gap-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl">
+                <Plus className="size-3.5" /> + Thẻ Phản Xạ
+              </Button>
+            )}
+          </div>
+        )}
+        <div className="rounded-2xl border border-dashed border-border p-12 text-center bg-surface/40">
+          <div className="flex size-14 items-center justify-center rounded-full bg-amber-500/10 text-amber-500 mx-auto mb-3">
+            <Zap className="size-8" />
+          </div>
+          <h3 className="font-display text-xl font-bold text-foreground">Chưa Có Thẻ Để Thử Phản Xạ</h3>
+          <p className="mt-2 text-sm text-muted-foreground">Tạo thêm thẻ từ vựng để bắt đầu thử thách phản xạ tốc độ!</p>
         </div>
-        <h3 className="font-display text-xl font-bold text-foreground">Chưa Có Thẻ Để Thử Phản Xạ</h3>
-        <p className="mt-2 text-sm text-muted-foreground">Tạo thêm thẻ vựng để bắt đầu thử thách phản xạ tốc độ!</p>
       </div>
     );
   }
