@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send, Bot, User, Sparkles, Loader2, Volume2, History, RotateCcw, Paperclip, Globe, X } from "lucide-react";
+import {
+  Send, Bot, User, Sparkles, Loader2, Volume2, History, RotateCcw,
+  Paperclip, Globe, X, AlignLeft, BookOpen,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AiMessage, AgentType, TargetLanguage } from "../types";
+import { AiMessage, AgentType, TargetLanguage, ResponseMode } from "../types";
 import { AGENT_TEMPLATES } from "../lib/prompt-templates";
 import { useSpeech } from "@/features/vocabulary/hooks/use-speech";
 import { ExtractionConfirmCard } from "./extraction-confirm-card";
+import { cn } from "@/lib/utils/cn";
 
 interface ChatInterfaceProps {
   activeAgent: AgentType;
@@ -14,11 +18,13 @@ interface ChatInterfaceProps {
   messages: AiMessage[];
   isStreaming: boolean;
   streamingContent: string;
+  responseMode: ResponseMode;
   onSendMessage: (text: string) => Promise<void>;
   onSendAttachment: (file: File) => Promise<void>;
   useWebSearch: boolean;
   onToggleWebSearch: () => void;
   onSetTargetLanguage: (lang: TargetLanguage) => void;
+  onSetResponseMode: (mode: ResponseMode) => void;
   onToggleHistoryDrawer: () => void;
   onNewChat: () => void;
 }
@@ -29,11 +35,13 @@ export function ChatInterface({
   messages,
   isStreaming,
   streamingContent,
+  responseMode,
   onSendMessage,
   onSendAttachment,
   useWebSearch,
   onToggleWebSearch,
   onSetTargetLanguage,
+  onSetResponseMode,
   onToggleHistoryDrawer,
   onNewChat,
 }: ChatInterfaceProps) {
@@ -92,8 +100,8 @@ export function ChatInterface({
   return (
     <div className="flex flex-col h-[640px] rounded-2xl border border-border/80 bg-surface/90 shadow-xl backdrop-blur-md overflow-hidden">
       {/* Header Bar */}
-      <div className="flex items-center justify-between border-b border-border/80 bg-surface-raised/80 px-5 py-3.5">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between border-b border-border/80 bg-surface-raised/80 px-4 py-3 gap-2 flex-wrap">
+        <div className="flex items-center gap-2.5">
           <div className={`flex size-9 items-center justify-center rounded-xl border ${activeTemplate.badgeColor}`}>
             <Bot className="size-4" />
           </div>
@@ -109,7 +117,7 @@ export function ChatInterface({
         </div>
 
         {/* Right Header Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {/* Target Language selector */}
           <div className="flex items-center rounded-lg border border-border bg-background p-0.5 text-xs font-semibold">
             {[
@@ -131,6 +139,37 @@ export function ChatInterface({
             ))}
           </div>
 
+          {/* Response Mode Toggle */}
+          <div
+            className="flex items-center rounded-lg border border-border bg-background p-0.5 text-xs font-semibold"
+            title="Chọn độ dài câu trả lời của AI"
+          >
+            <button
+              onClick={() => onSetResponseMode("short")}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded-md transition-all",
+                responseMode === "short"
+                  ? "bg-emerald-600 text-white shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              title="Trả lời ngắn — đúng trọng tâm, tiết kiệm token"
+            >
+              <AlignLeft className="size-3" /> Ngắn
+            </button>
+            <button
+              onClick={() => onSetResponseMode("explain")}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded-md transition-all",
+                responseMode === "explain"
+                  ? "bg-indigo-600 text-white shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              title="Giải thích — câu trả lời chi tiết, có ví dụ"
+            >
+              <BookOpen className="size-3" /> Giải thích
+            </button>
+          </div>
+
           <Button
             variant={useWebSearch ? "default" : "outline"}
             size="sm"
@@ -142,13 +181,27 @@ export function ChatInterface({
           </Button>
 
           <Button variant="outline" size="sm" onClick={onNewChat} className="h-8 gap-1 text-xs">
-            <RotateCcw className="size-3" /> Trò Chuyện Mới
+            <RotateCcw className="size-3" /> Mới
           </Button>
 
           <Button variant="outline" size="icon" onClick={onToggleHistoryDrawer} className="size-8" title="Lịch sử trò chuyện">
             <History className="size-4" />
           </Button>
         </div>
+      </div>
+
+      {/* Response mode indicator */}
+      <div className={cn(
+        "flex items-center gap-1.5 px-4 py-1.5 text-[11px] font-semibold border-b border-border/40",
+        responseMode === "short"
+          ? "bg-emerald-500/5 text-emerald-700 dark:text-emerald-400"
+          : "bg-indigo-500/5 text-indigo-700 dark:text-indigo-400"
+      )}>
+        {responseMode === "short" ? (
+          <><AlignLeft className="size-3" /> Chế độ <strong>Trả lời ngắn</strong> — AI chỉ trả lời đúng trọng tâm, tiết kiệm token.</>
+        ) : (
+          <><BookOpen className="size-3" /> Chế độ <strong>Giải thích</strong> — AI sẽ phân tích chi tiết và đưa ví dụ đầy đủ.</>
+        )}
       </div>
 
       {/* Messages Stream Container */}
@@ -234,7 +287,7 @@ export function ChatInterface({
               ) : (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Loader2 className="size-4 animate-spin text-emerald-600" />
-                  <span>{activeTemplate.name} đang suy nghĩ...</span>
+                  <span>{activeTemplate.name} đang trả lời...</span>
                 </div>
               )}
             </div>
@@ -276,7 +329,7 @@ export function ChatInterface({
             onClick={() => fileInputRef.current?.click()}
             disabled={isStreaming || isAttaching}
             className="size-9 shrink-0 rounded-lg text-muted-foreground hover:text-emerald-600"
-            title="Gửi ảnh hoặc tài liệu (AI sẽ đọc và đề xuất thêm vào Từ Vựng/Ngữ Pháp/Flashcard)"
+            title="Gửi ảnh hoặc tài liệu"
           >
             <Paperclip className="size-4" />
           </Button>

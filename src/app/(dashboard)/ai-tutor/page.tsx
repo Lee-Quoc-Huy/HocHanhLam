@@ -13,18 +13,21 @@ export default function AiTutorPage() {
     messages,
     activeAgent,
     targetLanguage,
+    responseMode,
     isStreaming,
     streamingContent,
     isHistoryOpen,
     selectConversation,
     setActiveAgent,
     setTargetLanguage,
+    setResponseMode,
     toggleHistoryDrawer,
     sendMessage,
     sendAttachment,
     useWebSearch,
     toggleWebSearch,
     resetActiveChat,
+    deleteConversation,
   } = useAiCenter();
 
   const handleSelectPresetPrompt = async (prompt: string) => {
@@ -68,11 +71,13 @@ export default function AiTutorPage() {
         messages={messages}
         isStreaming={isStreaming}
         streamingContent={streamingContent}
+        responseMode={responseMode}
         onSendMessage={sendMessage}
         onSendAttachment={sendAttachment}
         useWebSearch={useWebSearch}
         onToggleWebSearch={toggleWebSearch}
         onSetTargetLanguage={setTargetLanguage}
+        onSetResponseMode={setResponseMode}
         onToggleHistoryDrawer={toggleHistoryDrawer}
         onNewChat={handleNewChat}
       />
@@ -85,6 +90,7 @@ export default function AiTutorPage() {
         onClose={toggleHistoryDrawer}
         onSelectConversation={selectConversation}
         onNewChat={handleNewChat}
+        onDeleteConversation={deleteConversation}
       />
     </div>
   );

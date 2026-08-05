@@ -182,12 +182,13 @@ class AiCenterService {
     targetLanguage: TargetLanguage,
     messages: { role: "system" | "user" | "assistant"; content: string }[],
     onChunk: (chunk: string) => void,
-    useWebSearch = false
+    useWebSearch = false,
+    responseMode: "short" | "explain" = "short",
   ): Promise<string> {
     const response = await fetch("/api/ai/agent-stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ agentType, targetLanguage, messages, useWebSearch }),
+      body: JSON.stringify({ agentType, targetLanguage, messages, useWebSearch, responseMode }),
     });
 
     if (!response.ok) {
@@ -253,6 +254,23 @@ class AiCenterService {
       throw new Error(data.error || "Không thể phân tích tệp đính kèm.");
     }
     return data;
+  }
+
+  // Delete a conversation and all its messages
+  async deleteConversation(conversationId: string): Promise<void> {
+    const supabase = createClient();
+    try {
+      await supabase.from("ai_messages").delete().eq("conversation_id", conversationId);
+      await supabase.from("ai_conversations").delete().eq("id", conversationId);
+    } catch {
+      // offline — still remove from local
+    }
+
+    const convs = this.getLocalConversations().filter((c) => c.id !== conversationId);
+    this.setLocalConversations(convs);
+
+    const msgs = this.getLocalMessages().filter((m) => m.conversation_id !== conversationId);
+    this.setLocalMessages(msgs);
   }
 
   subscribeToRealtime(onUpdate: () => void) {

@@ -15,6 +15,7 @@ const requestSchema = z.object({
     .array(z.object({ role: z.enum(["system", "user", "assistant"]), content: z.string() }))
     .min(1),
   useWebSearch: z.boolean().default(false),
+  responseMode: z.enum(["short", "explain"]).default("short"),
 });
 
 // Lets the person ask for content creation in plain chat ("hãy tạo 1
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { agentType, targetLanguage, messages, useWebSearch } = parsed.data;
+  const { agentType, targetLanguage, messages, useWebSearch, responseMode } = parsed.data;
 
   const template = AGENT_TEMPLATES[agentType as AgentType];
   const langLabel =
@@ -100,11 +101,18 @@ export async function POST(request: Request) {
 
   const liveDataContext = await buildLiveDataContext(agentType as AgentType, targetLanguage);
 
+  // Brevity injection — short mode forces one tight paragraph/bullets;
+  // explain mode allows full depth.
+  const brevityInstruction =
+    responseMode === "short"
+      ? `\n\n**CHẾ ĐỘ TRẢ LỜI NGẮN:** Chỉ trả lời ĐÚNG trọng tâm người dùng hỏi. Tối đa 2–3 câu hoặc 1 danh sách ngắn. KHÔNG giải thích thêm, KHÔNG lịch sự vòng vo, KHÔNG ví dụ thừa. Tiết kiệm token tối đa.`
+      : `\n\n**CHẾ ĐỘ GIẢI THÍCH:** Trả lời đầy đủ, có chiều sâu. Bao gồm: định nghĩa rõ ràng, ví dụ thực tế, phân tích ngữ pháp/ngữ nghĩa nếu cần, mẹo ghi nhớ. Định dạng Markdown với tiêu đề phân cấp.`;
+
   const systemMessage: ChatMessage = {
     role: "system",
     content: useWebSearch
-      ? `${template.systemPrompt(langLabel)}${liveDataContext}\n\nBạn có quyền truy cập Internet cho câu trả lời này — hãy tra cứu thông tin mới nhất/chính xác nhất khi cần, và nêu rõ nếu có dùng nguồn từ web.\n\n${ACTION_PROTOCOL_INSTRUCTIONS}`
-      : `${template.systemPrompt(langLabel)}${liveDataContext}\n\n${ACTION_PROTOCOL_INSTRUCTIONS}`,
+      ? `${template.systemPrompt(langLabel)}${liveDataContext}${brevityInstruction}\n\nBạn có quyền truy cập Internet cho câu trả lời này — hãy tra cứu thông tin mới nhất/chính xác nhất khi cần, và nêu rõ nếu có dùng nguồn từ web.\n\n${ACTION_PROTOCOL_INSTRUCTIONS}`
+      : `${template.systemPrompt(langLabel)}${liveDataContext}${brevityInstruction}\n\n${ACTION_PROTOCOL_INSTRUCTIONS}`,
   };
 
   const fullMessages: ChatMessage[] = [systemMessage, ...(messages as ChatMessage[])];
@@ -120,7 +128,7 @@ export async function POST(request: Request) {
     const streamResponse = await createChatStream({
       task: template.taskType,
       messages: fullMessages,
-      temperature: 0.7,
+      temperature: responseMode === "short" ? 0.4 : 0.7,
       stream: true,
       modelOverride,
     });

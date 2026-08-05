@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { AiConversation, AiMessage, AgentType, TargetLanguage } from "../types";
+import { AiConversation, AiMessage, AgentType, TargetLanguage, ResponseMode } from "../types";
 import { aiCenterService } from "../api/ai-center-service";
 
 interface AiCenterState {
@@ -11,6 +11,7 @@ interface AiCenterState {
 
   activeAgent: AgentType;
   targetLanguage: TargetLanguage;
+  responseMode: ResponseMode;
 
   isStreaming: boolean;
   streamingContent: string;
@@ -23,9 +24,11 @@ interface AiCenterState {
   fetchConversations: () => Promise<void>;
   selectConversation: (conv: AiConversation) => Promise<void>;
   createConversation: (title: string, agentType?: AgentType) => Promise<AiConversation>;
+  deleteConversation: (convId: string) => Promise<void>;
 
   setActiveAgent: (agent: AgentType) => void;
   setTargetLanguage: (lang: TargetLanguage) => void;
+  setResponseMode: (mode: ResponseMode) => void;
   toggleHistoryDrawer: () => void;
 
   sendMessage: (text: string) => Promise<void>;
@@ -42,6 +45,7 @@ export const useAiCenterStore = create<AiCenterState>((set, get) => ({
 
   activeAgent: "teacher",
   targetLanguage: "en",
+  responseMode: "short",
 
   isStreaming: false,
   streamingContent: "",
@@ -105,7 +109,29 @@ export const useAiCenterStore = create<AiCenterState>((set, get) => ({
 
   setTargetLanguage: (lang) => set({ targetLanguage: lang }),
 
+  setResponseMode: (mode) => set({ responseMode: mode }),
+
   toggleHistoryDrawer: () => set((state) => ({ isHistoryOpen: !state.isHistoryOpen })),
+
+  deleteConversation: async (convId) => {
+    await aiCenterService.deleteConversation(convId);
+    set((state) => {
+      const conversations = state.conversations.filter((c) => c.id !== convId);
+      const isActive = state.activeConversation?.id === convId;
+      return {
+        conversations,
+        ...(isActive
+          ? { activeConversation: conversations[0] ?? null, messages: [], streamingContent: "" }
+          : {}),
+      };
+    });
+    // Reload messages for the next active conv if any
+    const next = useAiCenterStore.getState().activeConversation;
+    if (next) {
+      const msgs = await aiCenterService.fetchMessages(next.id);
+      useAiCenterStore.setState({ messages: msgs });
+    }
+  },
 
   sendMessage: async (text) => {
     const { activeConversation, activeAgent, targetLanguage, messages, createConversation, useWebSearch } = get();
@@ -138,7 +164,7 @@ export const useAiCenterStore = create<AiCenterState>((set, get) => ({
         historyContext,
         (chunk) => {
           rawStreamText += chunk;
-          if (actionTagSeen) return; // JSON block is always at the very end — freeze display.
+          if (actionTagSeen) return;
           const tagStart = rawStreamText.indexOf("<ACTION_JSON>");
           if (tagStart !== -1) {
             actionTagSeen = true;
@@ -147,7 +173,8 @@ export const useAiCenterStore = create<AiCenterState>((set, get) => ({
             set({ streamingContent: rawStreamText });
           }
         },
-        useWebSearch
+        useWebSearch,
+        get().responseMode,
       );
 
       // If the model proposed vocabulary/grammar/flashcards via the

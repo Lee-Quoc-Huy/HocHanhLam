@@ -7,6 +7,9 @@ export type AgentType =
 
 export type TargetLanguage = "en" | "ko" | "zh";
 
+/** Controls AI verbosity: concise bullet-answer vs in-depth explanation */
+export type ResponseMode = "short" | "explain";
+
 export interface AiConversation {
   id: string;
   user_id?: string | null;
