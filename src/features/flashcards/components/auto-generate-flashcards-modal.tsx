@@ -102,8 +102,9 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Không thể tạo bộ thẻ từ AI.");
 
-      setPreviewItems(data.items || []);
-      toast.success(`AI đã tạo xong ${data.items?.length || 0} thẻ cho chủ đề "${topic}".`);
+      const generated = data.items || [];
+      setPreviewItems(generated);
+      toast.success(`AI đã tạo xong ${generated.length} thẻ cho chủ đề "${topic}".`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Đã có lỗi xảy ra khi gọi AI.");
     } finally {
@@ -111,26 +112,34 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
     }
   }
 
-  // Save generated AI items to Flashcard store
+  // Save generated AI items to Flashcard store with safe batch error handling
   async function handleSavePreviewItems() {
     if (previewItems.length === 0) return;
     setIsSaving(true);
+    let savedCount = 0;
+
     try {
       for (const item of previewItems) {
-        await onCreateCard({
-          language: aiLanguage,
-          collection_id: null,
-          front_text: item.front_text,
-          front_subtext: item.front_subtext || "",
-          back_text: item.back_text,
-          back_explanation: item.back_explanation || "",
-          audio_url: "",
-          image_url: "",
-          tags: item.tags || [topic],
-          is_favorite: false,
-        });
+        try {
+          await onCreateCard({
+            language: aiLanguage,
+            collection_id: null,
+            front_text: item.front_text || "Term",
+            front_subtext: item.front_subtext || "",
+            back_text: item.back_text || "Meaning",
+            back_explanation: item.back_explanation || item.english_hint || "",
+            audio_url: "",
+            image_url: "",
+            tags: item.tags || [topic],
+            is_favorite: false,
+          });
+          savedCount++;
+        } catch (e) {
+          console.error("Failed to save single card:", e);
+        }
       }
-      toast.success(`Đã lưu ${previewItems.length} thẻ mới vào hệ thống!`);
+
+      toast.success(`Đã lưu thành công ${savedCount} thẻ mới vào hệ thống!`);
       handleClose();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Không thể lưu thẻ.");
@@ -147,28 +156,35 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
     }
 
     setIsSaving(true);
+    let savedCount = 0;
+
     try {
       const shuffled = [...matchingWords].sort(() => Math.random() - 0.5);
       const picked = shuffled.slice(0, count);
 
       for (const word of picked) {
-        await onCreateCard({
-          language: word.language,
-          collection_id: null,
-          front_text: word.word,
-          front_subtext: word.ipa || "",
-          back_text: word.vietnamese,
-          back_explanation: word.english_meaning
-            ? `${word.english_meaning}${word.example ? `\n\nVí dụ: ${word.example}` : ""}`
-            : word.example || "",
-          audio_url: word.audio_url || "",
-          image_url: word.image_url || "",
-          tags: [word.collection, word.part_of_speech].filter(Boolean) as string[],
-          is_favorite: false,
-        });
+        try {
+          await onCreateCard({
+            language: word.language,
+            collection_id: null,
+            front_text: word.word,
+            front_subtext: word.ipa || "",
+            back_text: word.vietnamese,
+            back_explanation: word.english_meaning
+              ? `${word.english_meaning}${word.example ? `\n\nVí dụ: ${word.example}` : ""}`
+              : word.example || "",
+            audio_url: word.audio_url || "",
+            image_url: word.image_url || "",
+            tags: [word.collection, word.part_of_speech].filter(Boolean) as string[],
+            is_favorite: false,
+          });
+          savedCount++;
+        } catch (e) {
+          console.error("Failed to extract single word:", e);
+        }
       }
 
-      toast.success(`Đã trích xuất ${picked.length} flashcard từ Kho Từ Vựng.`);
+      toast.success(`Đã trích xuất ${savedCount} flashcard từ Kho Từ Vựng.`);
       handleClose();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Không thể tạo flashcard tự động.");
