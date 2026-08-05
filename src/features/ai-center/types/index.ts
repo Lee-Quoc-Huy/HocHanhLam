@@ -2,11 +2,8 @@ export type AgentType =
   | "vocabulary"
   | "grammar"
   | "teacher"
-  | "conversation"
-  | "planner"
-  | "search"
   | "translation"
-  | "recommendation";
+  | "flashcard";
 
 export type TargetLanguage = "en" | "ko" | "zh";
 

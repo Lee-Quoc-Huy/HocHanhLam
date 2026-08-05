@@ -1,6 +1,6 @@
 "use client";
 
-import { Layers, Plus, Sparkles, Flame, CheckCircle2, Clock, BookOpen, FolderPlus } from "lucide-react";
+import { Layers, Plus, Sparkles, CheckCircle2, Clock, BookOpen, FolderPlus, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FlashcardStats } from "../types";
 import { ActiveTab } from "../store/flashcard-store";
@@ -12,6 +12,7 @@ interface FlashcardHeaderProps {
   onOpenCreateCard: () => void;
   onOpenCreateDeck: () => void;
   onOpenCreateFolder: () => void;
+  onOpenAutoGenerate: () => void;
 }
 
 export function FlashcardHeader({
@@ -21,6 +22,7 @@ export function FlashcardHeader({
   onOpenCreateCard,
   onOpenCreateDeck,
   onOpenCreateFolder,
+  onOpenAutoGenerate,
 }: FlashcardHeaderProps) {
   return (
     <div className="space-y-6">
@@ -61,6 +63,15 @@ export function FlashcardHeader({
           </Button>
 
           <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenAutoGenerate}
+            className="gap-1.5 text-xs border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+          >
+            <Wand2 className="size-3.5" /> Tạo Tự Động
+          </Button>
+
+          <Button
             onClick={onOpenCreateCard}
             size="default"
             className="gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 font-medium shadow-md transition-all hover:opacity-95 text-white"
@@ -72,7 +83,7 @@ export function FlashcardHeader({
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3.5 backdrop-blur-xs transition-all hover:border-rose-500/40">
           <div className="flex items-center gap-2 text-xs font-medium text-rose-600 dark:text-rose-400">
             <Clock className="size-3.5" /> Cần Ôn Hôm Nay
@@ -118,14 +129,6 @@ export function FlashcardHeader({
           </div>
         </div>
 
-        <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-3.5 backdrop-blur-xs transition-all hover:border-orange-500/40">
-          <div className="flex items-center gap-2 text-xs font-medium text-orange-600 dark:text-orange-400">
-            <Flame className="size-3.5 fill-orange-500 text-orange-500 animate-pulse" /> Chuỗi Ngày
-          </div>
-          <div className="mt-1 font-display text-2xl font-bold text-orange-700 dark:text-orange-300">
-            {stats.streakDays} Ngày 🔥
-          </div>
-        </div>
       </div>
 
       {/* Main Tab Navigation */}

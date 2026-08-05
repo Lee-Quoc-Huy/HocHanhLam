@@ -4,20 +4,12 @@ import { createChatStream, type ChatMessage } from "@/lib/ai/openrouter-client";
 import { AGENT_TEMPLATES } from "@/features/ai-center/lib/prompt-templates";
 import { AgentType } from "@/features/ai-center/types";
 import { AI_MODEL_ROUTES } from "@/config/ai-models";
+import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
 
 const requestSchema = z.object({
-  agentType: z.enum([
-    "vocabulary",
-    "grammar",
-    "teacher",
-    "conversation",
-    "planner",
-    "search",
-    "translation",
-    "recommendation",
-  ]),
+  agentType: z.enum(["vocabulary", "grammar", "teacher", "translation", "flashcard"]),
   targetLanguage: z.enum(["en", "ko", "zh"]).default("en"),
   messages: z
     .array(z.object({ role: z.enum(["system", "user", "assistant"]), content: z.string() }))
@@ -47,6 +39,51 @@ Nếu người dùng yêu cầu bạn TẠO MỚI một hoặc nhiều mục t�
 4. TUYỆT ĐỐI KHÔNG dùng khối ACTION_JSON nếu người dùng chỉ đang hỏi/giải thích/trò chuyện thông thường mà không yêu cầu tạo mới nội dung để lưu.
 5. Không đề cập đến việc "đã lưu" — vì nội dung chỉ được lưu khi người dùng tự bấm xác nhận trên giao diện, không phải do bạn.`;
 
+async function buildLiveDataContext(agentType: AgentType, targetLanguage: string): Promise<string> {
+  if (agentType !== "vocabulary" && agentType !== "grammar" && agentType !== "flashcard") return "";
+
+  const supabase = await createClient();
+  const blocks: string[] = [];
+
+  try {
+    if (agentType === "vocabulary" || agentType === "flashcard") {
+      const { data } = await supabase
+        .from("vocabulary")
+        .select("word, vietnamese, part_of_speech, collection, language")
+        .eq("language", targetLanguage)
+        .order("created_at", { ascending: false })
+        .limit(60);
+
+      if (data && data.length > 0) {
+        const lines = data
+          .map((w: any) => `- ${w.word} (${w.part_of_speech}) — ${w.vietnamese} [Bộ sưu tập: ${w.collection}]`)
+          .join("\n");
+        blocks.push(`DỮ LIỆU TỪ VỰNG HIỆN CÓ (mẫu tối đa 60 từ mới nhất, ngôn ngữ ${targetLanguage}):\n${lines}`);
+      }
+    }
+
+    if (agentType === "grammar" || agentType === "flashcard") {
+      const { data } = await supabase
+        .from("grammar")
+        .select("title, meaning, category, language")
+        .eq("language", targetLanguage)
+        .order("created_at", { ascending: false })
+        .limit(40);
+
+      if (data && data.length > 0) {
+        const lines = data
+          .map((g: any) => `- ${g.title} — ${g.meaning} [Danh mục: ${g.category}]`)
+          .join("\n");
+        blocks.push(`DỮ LIỆU NGỮ PHÁP HIỆN CÓ (mẫu tối đa 40 cấu trúc mới nhất, ngôn ngữ ${targetLanguage}):\n${lines}`);
+      }
+    }
+  } catch {
+    // Offline / query failed — agent just answers without live grounding.
+  }
+
+  return blocks.length > 0 ? `\n\n${blocks.join("\n\n")}` : "";
+}
+
 export async function POST(request: Request) {
   const body = await request.json();
   const parsed = requestSchema.safeParse(body);
@@ -61,11 +98,13 @@ export async function POST(request: Request) {
   const langLabel =
     targetLanguage === "en" ? "English" : targetLanguage === "ko" ? "Korean" : "Chinese";
 
+  const liveDataContext = await buildLiveDataContext(agentType as AgentType, targetLanguage);
+
   const systemMessage: ChatMessage = {
     role: "system",
     content: useWebSearch
-      ? `${template.systemPrompt(langLabel)}\n\nBạn có quyền truy cập Internet cho câu trả lời này — hãy tra cứu thông tin mới nhất/chính xác nhất khi cần, và nêu rõ nếu có dùng nguồn từ web.\n\n${ACTION_PROTOCOL_INSTRUCTIONS}`
-      : `${template.systemPrompt(langLabel)}\n\n${ACTION_PROTOCOL_INSTRUCTIONS}`,
+      ? `${template.systemPrompt(langLabel)}${liveDataContext}\n\nBạn có quyền truy cập Internet cho câu trả lời này — hãy tra cứu thông tin mới nhất/chính xác nhất khi cần, và nêu rõ nếu có dùng nguồn từ web.\n\n${ACTION_PROTOCOL_INSTRUCTIONS}`
+      : `${template.systemPrompt(langLabel)}${liveDataContext}\n\n${ACTION_PROTOCOL_INSTRUCTIONS}`,
   };
 
   const fullMessages: ChatMessage[] = [systemMessage, ...(messages as ChatMessage[])];

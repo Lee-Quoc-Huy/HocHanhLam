@@ -4,10 +4,8 @@ import {
   BookOpenText,
   BookMarked,
   GraduationCap,
-  MessagesSquare,
-  CalendarDays,
-  Search,
   Languages,
+  Layers,
   Sparkles,
 } from "lucide-react";
 import { AGENT_TEMPLATES } from "../lib/prompt-templates";
@@ -17,10 +15,8 @@ const ICON_MAP = {
   BookOpenText,
   BookMarked,
   GraduationCap,
-  MessagesSquare,
-  CalendarDays,
-  Search,
   Languages,
+  Layers,
   Sparkles,
 };
 
@@ -39,8 +35,8 @@ export function AgentSelector({
 
   return (
     <div className="space-y-4">
-      {/* 8 Agent Cards Grid */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+      {/* 5 Agent Cards Grid */}
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
         {(Object.keys(AGENT_TEMPLATES) as AgentType[]).map((agentKey) => {
           const t = AGENT_TEMPLATES[agentKey];
           const Icon = ICON_MAP[t.iconName as keyof typeof ICON_MAP] || Sparkles;

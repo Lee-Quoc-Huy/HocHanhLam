@@ -48,7 +48,7 @@ export default function AiTutorPage() {
               <span>AI Center & Agent Hub</span>
             </h1>
             <p className="text-xs text-muted-foreground sm:text-sm">
-              8 Chuyên gia AI Subagents · English · Korean · Chinese
+              5 Chuyên gia AI Subagents · Tiếng Anh · Tiếng Hàn · Tiếng Trung
             </p>
           </div>
         </div>

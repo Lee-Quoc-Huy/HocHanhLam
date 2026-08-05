@@ -2,6 +2,7 @@
 
 import { useFlashcards } from "@/features/flashcards/hooks/use-flashcards";
 import { FlashcardHeader } from "@/features/flashcards/components/flashcard-header";
+import { AutoGenerateFlashcardsModal } from "@/features/flashcards/components/auto-generate-flashcards-modal";
 import { FlashcardReviewEngine } from "@/features/flashcards/components/flashcard-review-engine";
 import { FlashcardDeckList } from "@/features/flashcards/components/flashcard-deck-list";
 import { FlashcardFormModal } from "@/features/flashcards/components/flashcard-form-modal";
@@ -11,9 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Star, Edit, Trash2, Volume2, RotateCcw } from "lucide-react";
 import { useSpeech } from "@/features/vocabulary/hooks/use-speech";
+import { useState } from "react";
 
 export default function FlashcardsPage() {
   const { speak } = useSpeech();
+  const [isAutoGenerateOpen, setIsAutoGenerateOpen] = useState(false);
   const {
     cards,
     filteredCards,
@@ -80,6 +83,13 @@ export default function FlashcardsPage() {
         onOpenCreateCard={openCreateCardModal}
         onOpenCreateDeck={openDeckModal}
         onOpenCreateFolder={openFolderModal}
+        onOpenAutoGenerate={() => setIsAutoGenerateOpen(true)}
+      />
+
+      <AutoGenerateFlashcardsModal
+        open={isAutoGenerateOpen}
+        onClose={() => setIsAutoGenerateOpen(false)}
+        onCreateCard={createCard}
       />
 
       {/* Mode 1: Daily Review Engine */}
