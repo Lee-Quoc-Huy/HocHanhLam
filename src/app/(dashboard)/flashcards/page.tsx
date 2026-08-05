@@ -4,6 +4,7 @@ import { useFlashcards } from "@/features/flashcards/hooks/use-flashcards";
 import { FlashcardHeader } from "@/features/flashcards/components/flashcard-header";
 import { AutoGenerateFlashcardsModal } from "@/features/flashcards/components/auto-generate-flashcards-modal";
 import { FlashcardReviewEngine } from "@/features/flashcards/components/flashcard-review-engine";
+import { FlashcardQuizEngine } from "@/features/flashcards/components/flashcard-quiz-engine";
 import { FlashcardDeckList } from "@/features/flashcards/components/flashcard-deck-list";
 import { FlashcardFormModal } from "@/features/flashcards/components/flashcard-form-modal";
 import { FolderModal } from "@/features/flashcards/components/folder-modal";
@@ -39,6 +40,8 @@ export default function FlashcardsPage() {
     toggleFavorite,
     submitReview,
     flipCard,
+    nextReviewCard,
+    prevReviewCard,
     startReviewSession,
     createFolder,
     createCollection,
@@ -92,7 +95,7 @@ export default function FlashcardsPage() {
         onCreateCard={createCard}
       />
 
-      {/* Mode 1: Daily Review Engine */}
+      {/* Mode 1: Daily SRS Review Engine */}
       {activeTab === "review" && (
         <FlashcardReviewEngine
           queue={reviewQueue}
@@ -101,10 +104,20 @@ export default function FlashcardsPage() {
           onFlip={flipCard}
           onRate={submitReview}
           onToggleFavorite={toggleFavorite}
+          onPrevCard={prevReviewCard}
+          onNextCard={nextReviewCard}
         />
       )}
 
-      {/* Mode 2: Decks & Folders Tree */}
+      {/* Mode 2: VIP Quiz Engine */}
+      {activeTab === "quiz" && (
+        <FlashcardQuizEngine
+          queue={reviewQueue.length > 0 ? reviewQueue : cards}
+          allCards={cards}
+        />
+      )}
+
+      {/* Mode 3: Decks & Folders Tree */}
       {activeTab === "decks" && (
         <FlashcardDeckList
           folders={folders}
@@ -116,7 +129,7 @@ export default function FlashcardsPage() {
         />
       )}
 
-      {/* Mode 3: Browse & Search All Cards Table */}
+      {/* Mode 4: Browse & Search All Cards Table */}
       {activeTab === "browse" && (
         <div className="space-y-4">
           {/* Search & Filter Bar */}

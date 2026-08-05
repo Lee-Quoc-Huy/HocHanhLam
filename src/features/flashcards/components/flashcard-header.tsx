@@ -1,6 +1,6 @@
 "use client";
 
-import { Layers, Plus, Sparkles, CheckCircle2, Clock, BookOpen, FolderPlus, Wand2 } from "lucide-react";
+import { Layers, Plus, Sparkles, CheckCircle2, Clock, BookOpen, FolderPlus, Wand2, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FlashcardStats } from "../types";
 import { ActiveTab } from "../store/flashcard-store";
@@ -34,10 +34,10 @@ export function FlashcardHeader({
           </div>
           <div>
             <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              Hệ Thống Thẻ Ghi Nhớ SRS
+              Hệ Thống Thẻ Ghi Nhớ & Quiz VIP
             </h1>
             <p className="text-xs text-muted-foreground sm:text-sm">
-              Thuật toán lặp lại ngắt quãng SM-2 · Tiếng Anh · Tiếng Hàn · Tiếng Trung
+              Thuật toán lặp lại ngắt quãng SM-2 · Trắc Nghiệm Quiz Thông Minh · Tiếng Anh · Hàn · Trung
             </p>
           </div>
         </div>
@@ -128,15 +128,15 @@ export function FlashcardHeader({
             {stats.totalDecks}
           </div>
         </div>
-
       </div>
 
       {/* Main Tab Navigation */}
       <div className="flex items-center justify-between border-b border-border pb-1">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {(
             [
-              { id: "review", label: `Ôn Tập Hàng Ngày (${stats.dueToday})`, icon: Clock },
+              { id: "review", label: `Lật Thẻ SRS (${stats.dueToday})`, icon: Clock },
+              { id: "quiz", label: "Quiz Trắc Nghiệm VIP", icon: HelpCircle },
               { id: "browse", label: "Tất Cả Thẻ", icon: Layers },
               { id: "decks", label: "Bộ Thẻ & Thư Mục", icon: BookOpen },
             ] as const
@@ -147,7 +147,7 @@ export function FlashcardHeader({
               <button
                 key={tab.id}
                 onClick={() => onSetActiveTab(tab.id as ActiveTab)}
-                className={`flex items-center gap-2 border-b-2 px-4 py-2 text-xs sm:text-sm font-semibold transition-all ${
+                className={`flex items-center gap-2 border-b-2 px-3.5 py-2 text-xs sm:text-sm font-semibold transition-all ${
                   isActive
                     ? "border-emerald-600 text-emerald-600 dark:text-emerald-400"
                     : "border-transparent text-muted-foreground hover:text-foreground"

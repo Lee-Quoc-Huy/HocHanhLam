@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Volume2, Star, RotateCw, Sparkles, CheckCircle2, ArrowLeft, ArrowRight } from "lucide-react";
+import { Volume2, Star, RotateCw, Sparkles, CheckCircle2, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, useMotionValue, useTransform } from "framer-motion";
 import { Flashcard } from "../types";
@@ -16,6 +16,8 @@ interface FlashcardReviewEngineProps {
   onFlip: () => void;
   onRate: (rating: SRSRating) => Promise<void>;
   onToggleFavorite: (id: string) => void;
+  onPrevCard?: () => void;
+  onNextCard?: () => void;
 }
 
 export function FlashcardReviewEngine({
@@ -25,6 +27,8 @@ export function FlashcardReviewEngine({
   onFlip,
   onRate,
   onToggleFavorite,
+  onPrevCard,
+  onNextCard,
 }: FlashcardReviewEngineProps) {
   const { speak } = useSpeech();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,9 +41,9 @@ export function FlashcardReviewEngine({
 
   const currentCard = queue[currentIndex];
 
-  // Bind desktop keyboard shortcuts
+  // Bind desktop keyboard shortcuts safely
   useKeyboardShortcuts({
-    enabled: !!currentCard,
+    enabled: !!currentCard && !isSubmitting,
     isFlipped,
     onFlip,
     onRate: async (rating) => {
@@ -74,31 +78,66 @@ export function FlashcardReviewEngine({
   );
 
   const handleDragEnd = (_: any, info: any) => {
-    if (info.offset.x < -100) {
+    // Only process rating if swipe distance is significant
+    if (info.offset.x < -120) {
       handleRatingClick("again");
-    } else if (info.offset.x > 100) {
+    } else if (info.offset.x > 120) {
       handleRatingClick("good");
     }
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Prevent double flip if user is clicking action icons inside card
+    if ((e.target as HTMLElement).closest("button")) return;
+    onFlip();
   };
 
   const handleRatingClick = async (rating: SRSRating) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-    await onRate(rating);
-    setIsSubmitting(false);
+    try {
+      await onRate(rating);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const progressPercentage = Math.round(((currentIndex + 1) / queue.length) * 100);
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
-      {/* Progress & Deck Name */}
+      {/* Progress & Navigation Header */}
       <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <Sparkles className="size-3.5 text-amber-500" />
-          <span>Thẻ {currentIndex + 1} / {queue.length}</span>
-        </span>
-        <span className="rounded-full bg-muted px-2.5 py-0.5 uppercase tracking-wider">
+        <div className="flex items-center gap-2">
+          {onPrevCard && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={onPrevCard}
+              className="size-7 rounded-lg"
+              title="Thẻ trước đó"
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+          )}
+          <span className="flex items-center gap-1.5">
+            <Sparkles className="size-3.5 text-amber-500" />
+            <span>Thẻ {currentIndex + 1} / {queue.length}</span>
+          </span>
+          {onNextCard && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={onNextCard}
+              className="size-7 rounded-lg"
+              title="Thẻ tiếp theo"
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+          )}
+        </div>
+
+        <span className="rounded-full bg-muted px-2.5 py-0.5 uppercase tracking-wider text-[10px]">
           {currentCard.status === "mastered" ? "Đã Thuộc" : currentCard.status === "learning" ? "Đang Học" : "Mới"}
         </span>
       </div>
@@ -117,7 +156,7 @@ export function FlashcardReviewEngine({
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
         onDragEnd={handleDragEnd}
-        onClick={onFlip}
+        onClick={handleCardClick}
         className="group relative min-h-[380px] w-full cursor-pointer rounded-2xl border border-border/80 bg-surface/90 p-8 shadow-xl backdrop-blur-md transition-all duration-300 hover:border-emerald-500/50 hover:shadow-2xl flex flex-col justify-between overflow-hidden"
       >
         {/* Visual Swipe Indicators */}

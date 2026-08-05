@@ -13,7 +13,7 @@ import {
 import { flashcardService } from "../api/flashcard-service";
 import { SRSRating } from "../lib/srs-algorithm";
 
-export type ActiveTab = "review" | "browse" | "decks";
+export type ActiveTab = "review" | "quiz" | "browse" | "decks";
 
 interface FlashcardState {
   cards: Flashcard[];
@@ -29,6 +29,7 @@ interface FlashcardState {
   reviewQueue: Flashcard[];
   currentReviewIndex: number;
   isCardFlipped: boolean;
+  isProcessingReview: boolean; // Atomic lock against card jump bugs
   reviewedCountToday: number;
 
   // Modals
@@ -87,6 +88,7 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
   reviewQueue: [],
   currentReviewIndex: 0,
   isCardFlipped: false,
+  isProcessingReview: false,
   reviewedCountToday: 0,
 
   isCardFormOpen: false,
@@ -155,20 +157,29 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
   },
 
   submitReview: async (rating) => {
-    const { reviewQueue, currentReviewIndex } = get();
+    const { reviewQueue, currentReviewIndex, isProcessingReview } = get();
+    if (isProcessingReview) return; // Prevent double execution / card jump bug
+
     const currentCard = reviewQueue[currentReviewIndex];
     if (!currentCard) return;
 
-    // Reset card flipped state for next
-    set({ isCardFlipped: false });
+    set({ isProcessingReview: true, isCardFlipped: false });
 
-    const updatedCard = await flashcardService.processReview(currentCard.id, rating);
+    try {
+      const updatedCard = await flashcardService.processReview(currentCard.id, rating);
 
-    set((state) => ({
-      cards: state.cards.map((c) => (c.id === currentCard.id ? updatedCard : c)),
-      reviewedCountToday: state.reviewedCountToday + 1,
-      currentReviewIndex: (state.currentReviewIndex + 1) % Math.max(1, state.reviewQueue.length),
-    }));
+      set((state) => {
+        const nextQueue = state.reviewQueue.map((c) => (c.id === currentCard.id ? updatedCard : c));
+        return {
+          cards: state.cards.map((c) => (c.id === currentCard.id ? updatedCard : c)),
+          reviewQueue: nextQueue,
+          reviewedCountToday: state.reviewedCountToday + 1,
+          currentReviewIndex: (state.currentReviewIndex + 1) % Math.max(1, nextQueue.length),
+        };
+      });
+    } finally {
+      set({ isProcessingReview: false });
+    }
   },
 
   flipCard: () => set((state) => ({ isCardFlipped: !state.isCardFlipped })),
@@ -239,7 +250,7 @@ export function selectFlashcardStats(cards: Flashcard[], collections: FlashcardC
     learning: cards.filter((c) => c.status === "learning").length,
     newCards: cards.filter((c) => c.status === "new").length,
     totalDecks: collections.length,
-    streakDays: 5, // Active streak counter
+    streakDays: 5,
   };
 }
 
