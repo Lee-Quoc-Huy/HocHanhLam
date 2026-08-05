@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpenText, Layers, Sparkles, FolderKanban } from "lucide-react";
+import { LayoutDashboard, BookOpenText, Layers, Sparkles, FolderKanban } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 const TAB_ITEMS = [
+  { title: "Trang Chủ", href: "/dashboard", icon: LayoutDashboard },
   { title: "Từ Vựng", href: "/vocabulary", icon: BookOpenText },
   { title: "Flashcard", href: "/flashcards", icon: Layers },
   { title: "AI Tutor", href: "/ai-tutor", icon: Sparkles },
@@ -16,16 +17,16 @@ export function MobileTabBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] px-3 lg:hidden pointer-events-none">
-      <div className="pointer-events-auto mx-auto flex h-16 max-w-md items-center justify-around rounded-[1.75rem] border border-white/10 bg-surface/70 p-1.5 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all duration-300 ring-1 ring-black/5 dark:ring-white/5">
+    <nav className="fixed inset-x-0 bottom-0 z-40 pb-[calc(env(safe-area-inset-bottom)+0.6rem)] px-3 lg:hidden pointer-events-none">
+      <div className="pointer-events-auto mx-auto flex h-16 max-w-md items-center justify-around rounded-[1.75rem] border border-white/10 bg-surface/75 p-1 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all duration-300 ring-1 ring-black/5 dark:ring-white/10">
         {TAB_ITEMS.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href || pathname.startsWith(item.href);
+          const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
           return (
             <Link
               key={item.href}
               href={item.href}
-              className="relative flex flex-1 flex-col items-center justify-center py-1.5 rounded-2xl text-[11px] font-semibold transition-all duration-300 active:scale-90"
+              className="relative flex flex-1 flex-col items-center justify-center py-1 rounded-2xl text-[10px] sm:text-[11px] font-semibold transition-all duration-300 active:scale-90"
             >
               {isActive && (
                 <span
@@ -35,7 +36,7 @@ export function MobileTabBar() {
               )}
               <Icon
                 className={cn(
-                  "relative size-5 transition-all duration-300",
+                  "relative size-4.5 sm:size-5 transition-all duration-300",
                   isActive
                     ? "scale-110 text-emerald-500 drop-shadow-[0_0_6px_rgba(16,185,129,0.6)]"
                     : "text-muted-foreground"
@@ -43,7 +44,7 @@ export function MobileTabBar() {
               />
               <span
                 className={cn(
-                  "relative mt-0.5 tracking-tight transition-colors duration-300",
+                  "relative mt-0.5 tracking-tight transition-colors duration-300 truncate max-w-full px-0.5",
                   isActive ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-muted-foreground"
                 )}
               >
