@@ -2,19 +2,20 @@
 
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Sparkles, X, Wand2, Loader2, Play, Bot, Zap, Headphones, HelpCircle, PenTool } from "lucide-react";
+import { Sparkles, X, Wand2, Loader2, Play, Bot, Zap, Headphones, HelpCircle, PenTool, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils/cn";
+import type { GameModeType } from "@/features/flashcards/types";
 
 interface FlashcardAiGameAgentModalProps {
   open: boolean;
   onClose: () => void;
-  onLaunchGame: (gameType: string, gameData: any) => void;
+  onLaunchGame: (gameType: GameModeType, gameData: any) => void;
 }
 
 export function FlashcardAiGameAgentModal({ open, onClose, onLaunchGame }: FlashcardAiGameAgentModalProps) {
-  const [selectedGameType, setSelectedGameType] = useState<"quiz" | "listening" | "spelling" | "reflex" | "blank">("quiz");
+  const [selectedGameType, setSelectedGameType] = useState<GameModeType>("quiz");
   const [language, setLanguage] = useState<"en" | "ko" | "zh">("en");
   const [topic, setTopic] = useState("Daily Communication");
   const [level, setLevel] = useState("intermediate");
@@ -39,7 +40,7 @@ export function FlashcardAiGameAgentModal({ open, onClose, onLaunchGame }: Flash
 
       const data = await res.json();
       if (data.items && data.items.length > 0) {
-        toast.success(`🤖 AI đã khởi tạo thành công game "${data.gameTitle || "Ôn tập AI"}"!`);
+        toast.success(`🤖 AI Agent đã tạo thành công bộ thẻ cho game "${data.gameTitle || "Ôn tập AI"}"!`);
         onLaunchGame(selectedGameType, data);
         onClose();
       } else {
@@ -68,7 +69,7 @@ export function FlashcardAiGameAgentModal({ open, onClose, onLaunchGame }: Flash
                   <span>Trợ Lý AI Agent Tạo Trò Chơi</span>
                 </Dialog.Title>
                 <Dialog.Description className="text-xs text-muted-foreground">
-                  Yêu cầu AI Agent tạo riêng một trò chơi học tập mới theo đúng ý bạn.
+                  Yêu cầu AI Agent tạo riêng một bộ thẻ trò chơi học tập mới theo đúng ý bạn.
                 </Dialog.Description>
               </div>
             </div>
@@ -86,11 +87,12 @@ export function FlashcardAiGameAgentModal({ open, onClose, onLaunchGame }: Flash
               <label className="mb-1.5 block text-xs font-semibold text-foreground">Chọn loại trò chơi AI muốn tạo:</label>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {[
-                  { id: "quiz", label: "Quiz Trắc Nghiệm", icon: HelpCircle },
-                  { id: "listening", label: "Luyện Nghe & Điền Câu", icon: Headphones },
+                  { id: "review", label: "Lật Thẻ SRS", icon: Clock },
+                  { id: "quiz", label: "Quiz VIP", icon: HelpCircle },
+                  { id: "listening", label: "Luyện Nghe & Điền", icon: Headphones },
                   { id: "spelling", label: "Chính Tả / Viết", icon: PenTool },
                   { id: "reflex", label: "Tốc Độ Phản Xạ", icon: Zap },
-                  { id: "blank", label: "Điền Từ Vào Chỗ Trống", icon: Wand2 },
+                  { id: "blank", label: "Điền Chỗ Trống", icon: Wand2 },
                 ].map((item) => {
                   const Icon = item.icon;
                   const isSelected = selectedGameType === item.id;
@@ -100,9 +102,9 @@ export function FlashcardAiGameAgentModal({ open, onClose, onLaunchGame }: Flash
                       type="button"
                       onClick={() => setSelectedGameType(item.id as any)}
                       className={cn(
-                        "flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border text-center transition-all text-xs font-semibold",
+                        "flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border text-center transition-all text-xs font-semibold active:scale-95",
                         isSelected
-                          ? "border-purple-500 bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold shadow-xs"
+                          ? "border-purple-500 bg-purple-500/15 text-purple-600 dark:text-purple-400 font-bold shadow-xs"
                           : "border-border bg-background text-muted-foreground hover:bg-muted/50"
                       )}
                     >
@@ -168,7 +170,7 @@ export function FlashcardAiGameAgentModal({ open, onClose, onLaunchGame }: Flash
                 </>
               ) : (
                 <>
-                  <Play className="size-5" /> 🤖 AI Agent Khởi Tạo & Bắt Đầu Trò Chơi
+                  <Play className="size-5" /> 🤖 AI Agent Khởi Tạo & Lưu Vào Game
                 </>
               )}
             </Button>

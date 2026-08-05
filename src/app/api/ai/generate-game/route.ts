@@ -5,7 +5,7 @@ import { generateFromPrompt } from "@/lib/ai/google-ai-client";
 export const maxDuration = 60;
 
 const requestSchema = z.object({
-  gameType: z.enum(["listening", "quiz", "spelling", "reflex", "blank"]),
+  gameType: z.enum(["review", "quiz", "spelling", "reflex", "blank", "listening"]),
   language: z.enum(["en", "ko", "zh"]).default("en"),
   topic: z.string().optional(),
   level: z.string().optional(),
@@ -46,29 +46,29 @@ ${grammar.slice(0, 10).map((g) => `- ${g.title}: ${g.meaning}`).join("\n")}`
 Yêu cầu cụ thể cho trò chơi "${gameType}":
 ${
   gameType === "listening"
-    ? `1. Tạo 6-10 CÂU HOÀN CHỈNH chuẩn ngữ pháp (${langLabel}).
-2. Mỗi câu phải chứa 1 từ vựng/ngữ pháp quan trọng làm từ khuyết (missingWord).
+    ? `1. Tạo 8 CÂU HOÀN CHỈNH chuẩn ngữ pháp (${langLabel}).
+2. Mỗi câu chứa 1 từ vựng/ngữ pháp quan trọng làm từ khuyết (missingWord).
 3. Đặt dấu khuyết [ ___ ] đúng vị trí của missingWord trong câu fullSentence.
-4. Trả về fullSentence (câu đầy đủ âm thanh), sentenceWithBlank (câu có khuyết [ ___ ]), missingWord (từ cần điền), vietnameseTranslation (dịch câu), và 4 lựa chọn (options).`
-    : `1. Tạo 6-10 câu hỏi trò chơi ${gameType} chất lượng cao.
-2. Với mỗi item, trả về frontText (từ/câu hỏi), backText (nghĩa/đáp án), hint (gợi ý), options (4 đáp án nếu trắc nghiệm).`
+4. Trả về fullSentence, sentenceWithBlank, missingWord, vietnameseTranslation, và 4 lựa chọn (options).`
+    : `1. Tạo 8 CÂU HOÀN CHỈNH hoặc TỪ VỰNG chất lượng cao cho trò chơi ${gameType}.
+2. Với mỗi item, trả về frontText (mặt trước/từ/câu hỏi bằng tiếng ${langLabel}), backText (mặt sau/nghĩa tiếng Việt), hint (gợi ý/phiên âm/IPA), và options (mảng 4 lựa chọn đáp án tiếng Việt nếu trắc nghiệm).`
 }
 
 CHỈ TRẢ VỀ JSON DUY NHẤT theo cấu trúc:
 {
-  "gameTitle": "Tên trò chơi AI vừa tạo",
+  "gameTitle": "Bộ thẻ trò chơi ${gameType} AI vừa tạo",
   "language": "${language}",
   "items": [
     {
       "id": "1",
-      "frontText": "...",
-      "backText": "...",
-      "fullSentence": "Câu hoàn chỉnh tiếng ${langLabel} để đọc TTS",
-      "sentenceWithBlank": "Câu có chỗ trống [ ___ ]",
-      "missingWord": "Từ hoặc cụm từ bị thiếu",
-      "vietnameseTranslation": "Nghĩa tiếng Việt",
-      "hint": "Gợi ý",
-      "options": ["A", "B", "C", "D"]
+      "frontText": "Mặt trước từ/câu hỏi tiếng ${langLabel}",
+      "backText": "Mặt sau nghĩa tiếng Việt",
+      "fullSentence": "Câu đầy đủ (nếu có)",
+      "sentenceWithBlank": "Câu có [ ___ ] (nếu có)",
+      "missingWord": "Từ bị thiếu (nếu có)",
+      "vietnameseTranslation": "Dịch nghĩa tiếng Việt",
+      "hint": "Gợi ý hoặc phiên âm IPA",
+      "options": ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"]
     }
   ]
 }`;

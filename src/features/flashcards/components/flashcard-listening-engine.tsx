@@ -14,6 +14,7 @@ import {
   Loader2,
   Filter,
   Plus,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -38,6 +39,7 @@ interface FlashcardListeningEngineProps {
   aiCustomItems?: ListeningSentenceItem[];
   onOpenCreateCardForGame?: () => void;
   onOpenAutoGenForGame?: () => void;
+  onDeleteCard?: (id: string) => void;
 }
 
 export function FlashcardListeningEngine({
@@ -45,6 +47,7 @@ export function FlashcardListeningEngine({
   aiCustomItems,
   onOpenCreateCardForGame,
   onOpenAutoGenForGame,
+  onDeleteCard,
 }: FlashcardListeningEngineProps) {
   const { speak } = useSpeech();
   const [listenMode, setListenMode] = useState<"ai_dictation" | "pick">("ai_dictation");
@@ -466,9 +469,20 @@ export function FlashcardListeningEngine({
               <span className="flex items-center gap-1.5 text-purple-600 font-bold">
                 <Headphones className="size-4" /> Luyện Nghe Từ {currentIndex + 1} / {gameCards.length}
               </span>
-              <span className="uppercase text-[10px] font-bold bg-purple-500/10 text-purple-600 px-2 py-0.5 rounded-md">
-                {currentCard?.language}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="uppercase text-[10px] font-bold bg-purple-500/10 text-purple-600 px-2 py-0.5 rounded-md">
+                  {currentCard?.language}
+                </span>
+                {onDeleteCard && currentCard && (
+                  <button
+                    onClick={() => onDeleteCard(currentCard.id)}
+                    className="rounded-md bg-background border border-border p-1 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                    title="Xóa thẻ này khỏi Supabase"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="py-6 space-y-4">

@@ -15,6 +15,7 @@ import {
   Filter,
   Plus,
   Wand2,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -26,9 +27,16 @@ interface FlashcardSpellingEngineProps {
   aiItems?: any[];
   onOpenCreateCardForGame?: () => void;
   onOpenAutoGenForGame?: () => void;
+  onDeleteCard?: (id: string) => void;
 }
 
-export function FlashcardSpellingEngine({ queue, aiItems, onOpenCreateCardForGame, onOpenAutoGenForGame }: FlashcardSpellingEngineProps) {
+export function FlashcardSpellingEngine({
+  queue,
+  aiItems,
+  onOpenCreateCardForGame,
+  onOpenAutoGenForGame,
+  onDeleteCard,
+}: FlashcardSpellingEngineProps) {
   const { speak } = useSpeech();
 
   // Custom Game Filters
@@ -281,12 +289,23 @@ export function FlashcardSpellingEngine({ queue, aiItems, onOpenCreateCardForGam
             {currentCard.language === "en" ? "🇬🇧 Tiếng Anh" : currentCard.language === "ko" ? "🇰🇷 Tiếng Hàn" : "🇨🇳 Tiếng Trung"}
           </span>
 
-          <button
-            onClick={() => speak(currentCard.front_text, currentCard.language, currentCard.audio_url)}
-            className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground hover:text-emerald-600"
-          >
-            <Volume2 className="size-4 text-emerald-500" /> Nghe từ
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => speak(currentCard.front_text, currentCard.language, currentCard.audio_url)}
+              className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground hover:text-emerald-600"
+            >
+              <Volume2 className="size-4 text-emerald-500" /> Nghe từ
+            </button>
+            {onDeleteCard && (
+              <button
+                onClick={() => onDeleteCard(currentCard.id)}
+                className="rounded-full bg-background border border-border p-1.5 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                title="Xóa thẻ này khỏi Supabase"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Meaning Prompt */}

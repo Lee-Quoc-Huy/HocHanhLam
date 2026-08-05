@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Puzzle, CheckCircle2, XCircle, RotateCcw, Trophy, ArrowRight, Flame, Volume2, Plus, Wand2 } from "lucide-react";
+import { Puzzle, CheckCircle2, XCircle, RotateCcw, Trophy, ArrowRight, Flame, Volume2, Plus, Wand2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flashcard } from "../types";
@@ -13,6 +13,7 @@ interface FlashcardFillBlankEngineProps {
   aiItems?: any[];
   onOpenCreateCardForGame?: () => void;
   onOpenAutoGenForGame?: () => void;
+  onDeleteCard?: (id: string) => void;
 }
 
 interface BlankQuestion {
@@ -22,7 +23,13 @@ interface BlankQuestion {
   options: string[];
 }
 
-export function FlashcardFillBlankEngine({ queue, aiItems, onOpenCreateCardForGame, onOpenAutoGenForGame }: FlashcardFillBlankEngineProps) {
+export function FlashcardFillBlankEngine({
+  queue,
+  aiItems,
+  onOpenCreateCardForGame,
+  onOpenAutoGenForGame,
+  onDeleteCard,
+}: FlashcardFillBlankEngineProps) {
   const { speak } = useSpeech();
   const [questions, setQuestions] = useState<BlankQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -190,12 +197,23 @@ export function FlashcardFillBlankEngine({ queue, aiItems, onOpenCreateCardForGa
           <span className="rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-600 uppercase">
             🧩 Điền Từ Vào Chỗ Trống
           </span>
-          <button
-            onClick={() => speak(currentQ.card.front_text, currentQ.card.language)}
-            className="p-2 rounded-full border border-border bg-background text-muted-foreground hover:text-indigo-600"
-          >
-            <Volume2 className="size-4" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => speak(currentQ.card.front_text, currentQ.card.language)}
+              className="p-2 rounded-full border border-border bg-background text-muted-foreground hover:text-indigo-600"
+            >
+              <Volume2 className="size-4" />
+            </button>
+            {onDeleteCard && (
+              <button
+                onClick={() => onDeleteCard(currentQ.card.id)}
+                className="p-2 rounded-full border border-border bg-background text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                title="Xóa thẻ này khỏi Supabase"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="py-4 space-y-3">

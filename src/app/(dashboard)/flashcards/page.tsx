@@ -14,6 +14,7 @@ import { FlashcardFormModal } from "@/features/flashcards/components/flashcard-f
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
 import { useState, useCallback } from "react";
+import { toast } from "sonner";
 import type { GameModeType } from "@/features/flashcards/types";
 
 export default function FlashcardsPage() {
@@ -53,16 +54,10 @@ export default function FlashcardsPage() {
     nextReviewCard,
     prevReviewCard,
     startReviewSession,
-    createFolder,
-    createCollection,
     setActiveTab,
-    setFilter,
-    resetFilter,
     openCreateCardModal,
     openEditCardModal,
     openDeleteCardModal,
-    openFolderModal,
-    openDeckModal,
     closeModals,
   } = useFlashcards();
 
@@ -81,35 +76,42 @@ export default function FlashcardsPage() {
     }
   };
 
-  // AI Agent creates game → store data + switch tab
-  const handleLaunchAiGame = useCallback((gameType: string, gameData: any) => {
+  // AI Agent creates game → Automatically save cards into Supabase under this game_mode & switch tab
+  const handleLaunchAiGame = useCallback(async (gameType: GameModeType, gameData: any) => {
     const items = gameData?.items || [];
+    const lang = gameData?.language || "en";
 
-    switch (gameType) {
-      case "quiz":
-        setAiQuizItems(items);
-        setActiveTab("quiz");
-        break;
-      case "listening":
-        setAiListeningItems(items);
-        setActiveTab("listening");
-        break;
-      case "spelling":
-        setAiSpellingItems(items);
-        setActiveTab("spelling");
-        break;
-      case "reflex":
-        setAiReflexItems(items);
-        setActiveTab("reflex");
-        break;
-      case "blank":
-        setAiBlankItems(items);
-        setActiveTab("blank");
-        break;
-      default:
-        setActiveTab(gameType as any);
+    // Auto save generated items as cards for this specific game mode
+    let savedCount = 0;
+    for (const item of items) {
+      try {
+        await createCard({
+          language: lang,
+          game_mode: gameType,
+          front_text: item.frontText || item.fullSentence || item.missingWord || "Mặt trước AI",
+          front_subtext: item.hint || item.sentenceWithBlank || "",
+          back_text: item.backText || item.vietnameseTranslation || "Nghĩa tiếng Việt",
+          back_explanation: item.sentenceWithBlank ? `Câu khuyết: ${item.sentenceWithBlank}\nTừ thiếu: ${item.missingWord}` : (item.hint || ""),
+          audio_url: "",
+          image_url: "",
+          tags: [gameData?.gameTitle || "AI Agent", gameType],
+          is_favorite: false,
+        });
+        savedCount++;
+      } catch (err) {
+        console.error("Failed to save AI card:", err);
+      }
     }
-  }, [setActiveTab]);
+
+    if (gameType === "quiz") setAiQuizItems(items);
+    else if (gameType === "listening") setAiListeningItems(items);
+    else if (gameType === "spelling") setAiSpellingItems(items);
+    else if (gameType === "reflex") setAiReflexItems(items);
+    else if (gameType === "blank") setAiBlankItems(items);
+
+    setActiveTab(gameType);
+    toast.success(`🤖 AI đã lưu ${savedCount} thẻ mới vào riêng Supabase cho game "${gameType.toUpperCase()}"!`);
+  }, [createCard, setActiveTab]);
 
   // Per-game create card handlers
   const handleOpenCreateForGame = useCallback((gameMode: GameModeType) => {
@@ -122,12 +124,22 @@ export default function FlashcardsPage() {
     setIsAutoGenerateOpen(true);
   }, []);
 
-  // Cards filtered by game_mode for each engine
+  // Strict card isolation per game mode (No cross-game leaking!)
   const getGameCards = useCallback((mode: GameModeType) => {
-    return cards.filter((c) => c.game_mode === mode || (!c.game_mode && mode === "review"));
+    return cards.filter((c) => {
+      if (mode === "review") {
+        return !c.game_mode || c.game_mode === "review";
+      }
+      return c.game_mode === mode;
+    });
   }, [cards]);
 
-  const activeQueue = reviewQueue.length > 0 ? reviewQueue : cards;
+  const handleDeleteCardDirect = useCallback((id: string) => {
+    const cardToDelete = cards.find((c) => c.id === id);
+    if (cardToDelete) {
+      openDeleteCardModal(cardToDelete);
+    }
+  }, [cards, openDeleteCardModal]);
 
   return (
     <div className="space-y-6">
@@ -139,7 +151,7 @@ export default function FlashcardsPage() {
         onOpenAiGameAgent={() => setIsAiGameAgentOpen(true)}
       />
 
-      {/* Auto Generate Modal (with optional game target) */}
+      {/* Auto Generate Modal (bound to target game mode) */}
       <AutoGenerateFlashcardsModal
         open={isAutoGenerateOpen}
         onClose={() => {
@@ -157,26 +169,30 @@ export default function FlashcardsPage() {
         onLaunchGame={handleLaunchAiGame}
       />
 
-      {/* Game 1: Daily SRS Flip Engine */}
+      {/* Game 1: Daily SRS Flip Engine (Lật Thẻ SRS) */}
       {activeTab === "review" && (
         <FlashcardReviewEngine
-          queue={reviewQueue}
+          queue={getGameCards("review")}
           currentIndex={currentReviewIndex}
           isFlipped={isCardFlipped}
           onFlip={flipCard}
           onRate={submitReview}
           onToggleFavorite={toggleFavorite}
+          onDeleteCard={handleDeleteCardDirect}
           onPrevCard={prevReviewCard}
           onNextCard={nextReviewCard}
+          onOpenCreateCardForGame={() => handleOpenCreateForGame("review")}
+          onOpenAutoGenForGame={() => handleOpenAutoGenForGame("review")}
         />
       )}
 
       {/* Game 2: VIP Quiz Engine */}
       {activeTab === "quiz" && (
         <FlashcardQuizEngine
-          queue={getGameCards("quiz").length > 0 ? getGameCards("quiz") : activeQueue}
+          queue={getGameCards("quiz")}
           allCards={cards}
           aiItems={aiQuizItems}
+          onDeleteCard={handleDeleteCardDirect}
           onOpenCreateCardForGame={() => handleOpenCreateForGame("quiz")}
           onOpenAutoGenForGame={() => handleOpenAutoGenForGame("quiz")}
         />
@@ -185,8 +201,9 @@ export default function FlashcardsPage() {
       {/* Game 3: Spelling & Typing Engine */}
       {activeTab === "spelling" && (
         <FlashcardSpellingEngine
-          queue={getGameCards("spelling").length > 0 ? getGameCards("spelling") : activeQueue}
+          queue={getGameCards("spelling")}
           aiItems={aiSpellingItems}
+          onDeleteCard={handleDeleteCardDirect}
           onOpenCreateCardForGame={() => handleOpenCreateForGame("spelling")}
           onOpenAutoGenForGame={() => handleOpenAutoGenForGame("spelling")}
         />
@@ -195,8 +212,9 @@ export default function FlashcardsPage() {
       {/* Game 4: Speed Reflex Challenge Engine */}
       {activeTab === "reflex" && (
         <FlashcardReflexEngine
-          queue={getGameCards("reflex").length > 0 ? getGameCards("reflex") : activeQueue}
+          queue={getGameCards("reflex")}
           aiItems={aiReflexItems}
+          onDeleteCard={handleDeleteCardDirect}
           onOpenCreateCardForGame={() => handleOpenCreateForGame("reflex")}
           onOpenAutoGenForGame={() => handleOpenAutoGenForGame("reflex")}
         />
@@ -205,8 +223,9 @@ export default function FlashcardsPage() {
       {/* Game 5: Fill in the Blank Engine */}
       {activeTab === "blank" && (
         <FlashcardFillBlankEngine
-          queue={getGameCards("blank").length > 0 ? getGameCards("blank") : activeQueue}
+          queue={getGameCards("blank")}
           aiItems={aiBlankItems}
+          onDeleteCard={handleDeleteCardDirect}
           onOpenCreateCardForGame={() => handleOpenCreateForGame("blank")}
           onOpenAutoGenForGame={() => handleOpenAutoGenForGame("blank")}
         />
@@ -215,8 +234,9 @@ export default function FlashcardsPage() {
       {/* Game 6: Listening Practice Engine */}
       {activeTab === "listening" && (
         <FlashcardListeningEngine
-          queue={getGameCards("listening").length > 0 ? getGameCards("listening") : activeQueue}
+          queue={getGameCards("listening")}
           aiCustomItems={aiListeningItems}
+          onDeleteCard={handleDeleteCardDirect}
           onOpenCreateCardForGame={() => handleOpenCreateForGame("listening")}
           onOpenAutoGenForGame={() => handleOpenAutoGenForGame("listening")}
         />
@@ -237,15 +257,15 @@ export default function FlashcardsPage() {
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs animate-in fade-in" />
           <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-surface-raised p-6 shadow-xl animate-in zoom-in-95">
-            <Dialog.Title className="font-display text-lg font-bold text-foreground">
-              Xác Nhận Xóa Thẻ
+            <Dialog.Title className="font-display text-lg font-bold text-foreground flex items-center gap-2">
+              <span>Xác Nhận Xóa Thẻ Supabase</span>
             </Dialog.Title>
             <Dialog.Description className="mt-2 text-sm text-muted-foreground">
-              Bạn có chắc chắn muốn xóa thẻ &quot;{selectedCardForDelete?.front_text}&quot; không? Thao tác này không thể hoàn tác.
+              Bạn có chắc chắn muốn xóa vĩnh viễn thẻ &quot;{selectedCardForDelete?.front_text}&quot; khỏi hệ thống Supabase không? Thao tác này sẽ giải phóng dung lượng và không thể hoàn tác.
             </Dialog.Description>
             <div className="mt-6 flex justify-end gap-2">
               <Button variant="outline" onClick={closeModals}>Hủy Bỏ</Button>
-              <Button variant="destructive" onClick={handleDeleteConfirm}>Xóa Thẻ</Button>
+              <Button variant="destructive" onClick={handleDeleteConfirm}>Xóa Khỏi Supabase</Button>
             </div>
           </Dialog.Content>
         </Dialog.Portal>

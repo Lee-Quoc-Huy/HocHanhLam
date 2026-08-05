@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Zap, Check, X, RotateCcw, Trophy, Flame, Volume2, Plus, Wand2 } from "lucide-react";
+import { Zap, Check, X, RotateCcw, Trophy, Flame, Volume2, Plus, Wand2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Flashcard } from "../types";
@@ -12,6 +12,7 @@ interface FlashcardReflexEngineProps {
   aiItems?: any[];
   onOpenCreateCardForGame?: () => void;
   onOpenAutoGenForGame?: () => void;
+  onDeleteCard?: (id: string) => void;
 }
 
 interface ReflexItem {
@@ -20,7 +21,13 @@ interface ReflexItem {
   isMatch: boolean;
 }
 
-export function FlashcardReflexEngine({ queue, aiItems, onOpenCreateCardForGame, onOpenAutoGenForGame }: FlashcardReflexEngineProps) {
+export function FlashcardReflexEngine({
+  queue,
+  aiItems,
+  onOpenCreateCardForGame,
+  onOpenAutoGenForGame,
+  onDeleteCard,
+}: FlashcardReflexEngineProps) {
   const { speak } = useSpeech();
   const [items, setItems] = useState<ReflexItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -201,12 +208,23 @@ export function FlashcardReflexEngine({ queue, aiItems, onOpenCreateCardForGame,
           <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 uppercase">
             ⚡ Phản Xạ Tốc Độ
           </span>
-          <button
-            onClick={() => speak(currentItem.card.front_text, currentItem.card.language)}
-            className="p-2 rounded-full border border-border bg-background text-muted-foreground hover:text-emerald-500"
-          >
-            <Volume2 className="size-4" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => speak(currentItem.card.front_text, currentItem.card.language)}
+              className="p-2 rounded-full border border-border bg-background text-muted-foreground hover:text-emerald-500"
+            >
+              <Volume2 className="size-4" />
+            </button>
+            {onDeleteCard && (
+              <button
+                onClick={() => onDeleteCard(currentItem.card.id)}
+                className="p-2 rounded-full border border-border bg-background text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                title="Xóa thẻ này khỏi Supabase"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="py-4 space-y-3">

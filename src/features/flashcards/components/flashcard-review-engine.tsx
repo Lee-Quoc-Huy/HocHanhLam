@@ -1,7 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Volume2, Star, RotateCw, Sparkles, CheckCircle2, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Volume2,
+  Star,
+  RotateCw,
+  Sparkles,
+  CheckCircle2,
+  ArrowLeft,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Wand2,
+  Trash2,
+  Layers,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, useMotionValue, useTransform } from "framer-motion";
 import { Flashcard } from "../types";
@@ -16,8 +30,11 @@ interface FlashcardReviewEngineProps {
   onFlip: () => void;
   onRate: (rating: SRSRating) => Promise<void>;
   onToggleFavorite: (id: string) => void;
+  onDeleteCard?: (id: string) => void;
   onPrevCard?: () => void;
   onNextCard?: () => void;
+  onOpenCreateCardForGame?: () => void;
+  onOpenAutoGenForGame?: () => void;
 }
 
 export function FlashcardReviewEngine({
@@ -27,8 +44,11 @@ export function FlashcardReviewEngine({
   onFlip,
   onRate,
   onToggleFavorite,
+  onDeleteCard,
   onPrevCard,
   onNextCard,
+  onOpenCreateCardForGame,
+  onOpenAutoGenForGame,
 }: FlashcardReviewEngineProps) {
   const { speak } = useSpeech();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,16 +76,49 @@ export function FlashcardReviewEngine({
 
   if (queue.length === 0 || !currentCard) {
     return (
-      <div className="mx-auto max-w-md rounded-2xl border border-dashed border-border p-12 text-center bg-surface/40">
-        <div className="flex size-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mx-auto mb-3">
-          <CheckCircle2 className="size-8" />
+      <div className="mx-auto max-w-md space-y-4">
+        {(onOpenAutoGenForGame || onOpenCreateCardForGame) && (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {onOpenAutoGenForGame && (
+              <Button
+                size="sm"
+                onClick={onOpenAutoGenForGame}
+                className="h-8 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl"
+              >
+                <Wand2 className="size-3.5" /> Tạo Tự Động
+              </Button>
+            )}
+            {onOpenCreateCardForGame && (
+              <Button
+                size="sm"
+                onClick={onOpenCreateCardForGame}
+                className="h-8 text-xs gap-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl"
+              >
+                <Plus className="size-3.5" /> + Thẻ Lật SRS
+              </Button>
+            )}
+          </div>
+        )}
+
+        <div className="rounded-3xl border border-dashed border-border p-10 text-center bg-surface/40 space-y-3">
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mx-auto border border-emerald-500/20">
+            <Layers className="size-8" />
+          </div>
+          <h3 className="font-display text-xl font-bold text-foreground">
+            Chưa Có Thẻ Riêng Cho Trò Lật Thẻ SRS
+          </h3>
+          <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+            Bấm "+ Thẻ Lật SRS" hoặc "Tạo Tự Động" ở trên để tạo bộ thẻ lưu riêng cho trò chơi lật thẻ này!
+          </p>
+
+          <div className="flex justify-center gap-2 pt-2">
+            {onOpenCreateCardForGame && (
+              <Button onClick={onOpenCreateCardForGame} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-xs rounded-xl font-bold">
+                <Plus className="size-3.5" /> Tạo Thẻ SRS Mới
+              </Button>
+            )}
+          </div>
         </div>
-        <h3 className="font-display text-xl font-bold text-foreground">
-          Đã Hoàn Thành Ôn Tập Hôm Nay! 🎉
-        </h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Hiện tại không còn thẻ nào đến hạn ôn. Bạn đang duy trì phong độ rất xuất sắc!
-        </p>
       </div>
     );
   }
@@ -78,7 +131,6 @@ export function FlashcardReviewEngine({
   );
 
   const handleDragEnd = (_: any, info: any) => {
-    // Only process rating if swipe distance is significant
     if (info.offset.x < -120) {
       handleRatingClick("again");
     } else if (info.offset.x > 120) {
@@ -87,7 +139,6 @@ export function FlashcardReviewEngine({
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Prevent double flip if user is clicking action icons inside card
     if ((e.target as HTMLElement).closest("button")) return;
     onFlip();
   };
@@ -105,9 +156,9 @@ export function FlashcardReviewEngine({
   const progressPercentage = Math.round(((currentIndex + 1) / queue.length) * 100);
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
-      {/* Progress & Navigation Header */}
-      <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+    <div className="mx-auto max-w-xl space-y-4 sm:space-y-6">
+      {/* Top Action Bar: Per-game creation + Progress & Nav */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-surface/80 p-3 text-xs">
         <div className="flex items-center gap-2">
           {onPrevCard && (
             <Button
@@ -120,7 +171,7 @@ export function FlashcardReviewEngine({
               <ChevronLeft className="size-4" />
             </Button>
           )}
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-1.5 font-bold text-foreground">
             <Sparkles className="size-3.5 text-amber-500" />
             <span>Thẻ {currentIndex + 1} / {queue.length}</span>
           </span>
@@ -137,9 +188,26 @@ export function FlashcardReviewEngine({
           )}
         </div>
 
-        <span className="rounded-full bg-muted px-2.5 py-0.5 uppercase tracking-wider text-[10px]">
-          {currentCard.status === "mastered" ? "Đã Thuộc" : currentCard.status === "learning" ? "Đang Học" : "Mới"}
-        </span>
+        <div className="flex items-center gap-2">
+          {onOpenAutoGenForGame && (
+            <Button
+              size="sm"
+              onClick={onOpenAutoGenForGame}
+              className="h-8 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl"
+            >
+              <Wand2 className="size-3.5" /> Tạo Tự Động
+            </Button>
+          )}
+          {onOpenCreateCardForGame && (
+            <Button
+              size="sm"
+              onClick={onOpenCreateCardForGame}
+              className="h-8 text-xs gap-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl"
+            >
+              <Plus className="size-3.5" /> + Thẻ Lật SRS
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Progress Bar */}
@@ -157,7 +225,7 @@ export function FlashcardReviewEngine({
         dragConstraints={{ left: 0, right: 0 }}
         onDragEnd={handleDragEnd}
         onClick={handleCardClick}
-        className="group relative min-h-[380px] w-full cursor-pointer rounded-2xl border border-border/80 bg-surface/90 p-8 shadow-xl backdrop-blur-md transition-all duration-300 hover:border-emerald-500/50 hover:shadow-2xl flex flex-col justify-between overflow-hidden"
+        className="group relative min-h-[360px] sm:min-h-[380px] w-full cursor-pointer rounded-3xl border border-border/80 bg-surface/90 p-6 sm:p-8 shadow-xl backdrop-blur-md transition-all duration-300 hover:border-emerald-500/50 hover:shadow-2xl flex flex-col justify-between overflow-hidden"
       >
         {/* Visual Swipe Indicators */}
         <motion.div
@@ -184,17 +252,19 @@ export function FlashcardReviewEngine({
               : "🇨🇳 Tiếng Trung"}
           </span>
 
-          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => speak(currentCard.front_text, currentCard.language, currentCard.audio_url)}
-              className="rounded-full bg-background border border-border p-2 text-muted-foreground hover:text-emerald-600 transition-colors"
+              className="rounded-xl bg-background border border-border p-2 text-muted-foreground hover:text-emerald-600 transition-colors"
               title="Phát âm"
             >
               <Volume2 className="size-4" />
             </button>
+
             <button
               onClick={() => onToggleFavorite(currentCard.id)}
-              className="rounded-full bg-background border border-border p-2 text-muted-foreground hover:text-amber-500 transition-colors"
+              className="rounded-xl bg-background border border-border p-2 text-muted-foreground hover:text-amber-500 transition-colors"
+              title="Yêu thích"
             >
               <Star
                 className={`size-4 ${
@@ -202,6 +272,16 @@ export function FlashcardReviewEngine({
                 }`}
               />
             </button>
+
+            {onDeleteCard && (
+              <button
+                onClick={() => onDeleteCard(currentCard.id)}
+                className="rounded-xl bg-background border border-border p-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                title="Xóa thẻ này khỏi Supabase"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -210,15 +290,15 @@ export function FlashcardReviewEngine({
           {!isFlipped ? (
             /* FRONT */
             <div className="space-y-3 animate-in fade-in">
-              <h2 className="font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+              <h2 className="font-display text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground leading-tight">
                 {currentCard.front_text}
               </h2>
               {currentCard.front_subtext && (
-                <p className="font-mono text-lg text-emerald-600 dark:text-emerald-400 font-medium">
+                <p className="font-mono text-base sm:text-lg text-emerald-600 dark:text-emerald-400 font-medium">
                   [{currentCard.front_subtext}]
                 </p>
               )}
-              <p className="text-xs text-muted-foreground pt-4 flex items-center justify-center gap-1">
+              <p className="text-xs text-muted-foreground pt-3 flex items-center justify-center gap-1">
                 <RotateCw className="size-3" /> Nhấp vào đây hoặc bấm Space để lật đáp án
               </p>
             </div>
@@ -230,7 +310,7 @@ export function FlashcardReviewEngine({
                   {currentCard.back_text}
                 </h3>
                 {currentCard.back_explanation && (
-                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed font-mono">
+                  <p className="mt-2 text-xs sm:text-sm text-muted-foreground leading-relaxed font-mono">
                     {currentCard.back_explanation}
                   </p>
                 )}
@@ -243,12 +323,12 @@ export function FlashcardReviewEngine({
         <div className="flex items-center justify-between border-t border-border/40 pt-3 text-[11px] text-muted-foreground">
           <div className="flex flex-wrap gap-1">
             {currentCard.tags?.map((t) => (
-              <span key={t} className="rounded bg-muted px-1.5 py-0.5 font-medium">
+              <span key={t} className="rounded bg-muted px-1.5 py-0.5 font-medium text-[10px]">
                 #{t}
               </span>
             ))}
           </div>
-          <span>Hệ số EF: {currentCard.ease_factor}</span>
+          <span className="font-mono text-[10px]">EF: {currentCard.ease_factor}</span>
         </div>
       </motion.div>
 
@@ -304,15 +384,6 @@ export function FlashcardReviewEngine({
           Lật Mặt Đáp Án (Hoặc Nhấp Vào Thẻ)
         </Button>
       )}
-
-      {/* Desktop Keyboard Hints Guide */}
-      <div className="hidden sm:flex items-center justify-center gap-4 text-[11px] text-muted-foreground border-t border-border/40 pt-3">
-        <span><kbd className="rounded border bg-muted px-1.5 py-0.5 text-[10px]">Space</kbd> Lật Thẻ</span>
-        <span><kbd className="rounded border bg-muted px-1.5 py-0.5 text-[10px]">1</kbd> Ôn Lại</span>
-        <span><kbd className="rounded border bg-muted px-1.5 py-0.5 text-[10px]">2</kbd> Khó</span>
-        <span><kbd className="rounded border bg-muted px-1.5 py-0.5 text-[10px]">3</kbd> Tốt</span>
-        <span><kbd className="rounded border bg-muted px-1.5 py-0.5 text-[10px]">4</kbd> Dễ</span>
-      </div>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
   FilterX,
   Plus,
   Wand2,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -36,9 +37,17 @@ interface FlashcardQuizEngineProps {
   aiItems?: any[];
   onOpenCreateCardForGame?: () => void;
   onOpenAutoGenForGame?: () => void;
+  onDeleteCard?: (id: string) => void;
 }
 
-export function FlashcardQuizEngine({ queue, allCards, aiItems, onOpenCreateCardForGame, onOpenAutoGenForGame }: FlashcardQuizEngineProps) {
+export function FlashcardQuizEngine({
+  queue,
+  allCards,
+  aiItems,
+  onOpenCreateCardForGame,
+  onOpenAutoGenForGame,
+  onDeleteCard,
+}: FlashcardQuizEngineProps) {
   const { speak } = useSpeech();
 
   // Custom Game Filters
@@ -48,20 +57,19 @@ export function FlashcardQuizEngine({ queue, allCards, aiItems, onOpenCreateCard
 
   // Available topics for filter
   const availableTopics = useMemo(() => {
-    const tags = allCards.flatMap((c) => c.tags || []);
+    const tags = queue.flatMap((c) => c.tags || []);
     return Array.from(new Set(tags)).filter(Boolean);
-  }, [allCards]);
+  }, [queue]);
 
-  // Dedicated data pool for Quiz
+  // Dedicated data pool for Quiz - STRICTLY isolated to queue (Quiz game cards only!)
   const quizPool = useMemo(() => {
-    const base = queue.length > 0 ? queue : allCards;
-    return base.filter((c) => {
+    return queue.filter((c) => {
       if (selectedLang !== "all" && c.language !== selectedLang) return false;
       if (selectedTopic !== "all" && !c.tags?.includes(selectedTopic)) return false;
       if (onlyFavorites && !c.is_favorite) return false;
       return true;
     });
-  }, [queue, allCards, selectedLang, selectedTopic, onlyFavorites]);
+  }, [queue, selectedLang, selectedTopic, onlyFavorites]);
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -323,12 +331,23 @@ export function FlashcardQuizEngine({ queue, allCards, aiItems, onOpenCreateCard
             {currentCard.language === "en" ? "🇬🇧 Tiếng Anh" : currentCard.language === "ko" ? "🇰🇷 Tiếng Hàn" : "🇨🇳 Tiếng Trung"}
           </span>
 
-          <button
-            onClick={() => speak(currentCard.front_text, currentCard.language, currentCard.audio_url)}
-            className="flex items-center gap-1.5 rounded-full bg-background border border-border px-3 py-1 text-xs font-semibold text-muted-foreground hover:text-emerald-600"
-          >
-            <Volume2 className="size-4 text-emerald-500" /> Nghe Phát Âm
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => speak(currentCard.front_text, currentCard.language, currentCard.audio_url)}
+              className="flex items-center gap-1.5 rounded-full bg-background border border-border px-3 py-1 text-xs font-semibold text-muted-foreground hover:text-emerald-600"
+            >
+              <Volume2 className="size-4 text-emerald-500" /> Nghe Phát Âm
+            </button>
+            {onDeleteCard && (
+              <button
+                onClick={() => onDeleteCard(currentCard.id)}
+                className="rounded-full bg-background border border-border p-1.5 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                title="Xóa thẻ này khỏi Supabase"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="text-center py-3 space-y-2">
