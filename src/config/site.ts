@@ -24,8 +24,8 @@ export const navConfig = {
     { title: "Từ Vựng", href: "/vocabulary", icon: "BookOpenText" },
     { title: "Ngữ Pháp", href: "/grammar", icon: "BookMarked" },
     { title: "Ôn Tập", href: "/flashcards", icon: "Layers" },
-    { title: "Tài Liệu", href: "/documents", icon: "FolderKanban" },
     { title: "Trợ Lý AI Center", href: "/ai-tutor", icon: "Sparkles" },
+    { title: "Thư Viện", href: "/library", icon: "FolderKanban" },
   ],
   secondary: [
     { title: "Cài Đặt", href: "/settings", icon: "Settings" },

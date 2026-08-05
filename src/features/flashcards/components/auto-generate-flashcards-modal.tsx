@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Wand2, Loader2, BookOpen, BookMarked, Layers, CheckCircle2 } from "lucide-react";
+import { X, Wand2, Loader2, BookOpen, BookMarked, Layers, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { vocabularyService } from "@/features/vocabulary/api/vocabulary-service";
@@ -21,17 +21,20 @@ interface AutoGenerateFlashcardsModalProps {
 export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: AutoGenerateFlashcardsModalProps) {
   const [sourceType, setSourceType] = useState<"vocabulary" | "grammar">("vocabulary");
 
-  // Vocabulary State
+  // Vocabulary State & Extended Filters
   const [allWords, setAllWords] = useState<VocabularyItem[]>([]);
   const [vocabCount, setVocabCount] = useState(20);
   const [vocabLang, setVocabLang] = useState<"all" | "en" | "ko" | "zh">("all");
   const [vocabCollection, setVocabCollection] = useState<string>("all");
+  const [vocabPos, setVocabPos] = useState<string>("all");
+  const [vocabDifficulty, setVocabDifficulty] = useState<string>("all");
 
-  // Grammar State
+  // Grammar State & Extended Filters
   const [allGrammar, setAllGrammar] = useState<GrammarItem[]>([]);
   const [grammarCount, setGrammarCount] = useState(15);
   const [grammarLang, setGrammarLang] = useState<"all" | "en" | "ko" | "zh">("all");
   const [grammarCategory, setGrammarCategory] = useState<string>("all");
+  const [grammarDifficulty, setGrammarDifficulty] = useState<string>("all");
 
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -57,9 +60,11 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
     return allWords.filter((w) => {
       if (vocabLang !== "all" && w.language !== vocabLang) return false;
       if (vocabCollection !== "all" && w.collection !== vocabCollection) return false;
+      if (vocabPos !== "all" && w.part_of_speech !== vocabPos) return false;
+      if (vocabDifficulty !== "all" && w.difficulty !== vocabDifficulty) return false;
       return true;
     });
-  }, [allWords, vocabLang, vocabCollection]);
+  }, [allWords, vocabLang, vocabCollection, vocabPos, vocabDifficulty]);
 
   // Grammar Filters
   const availableCategories = useMemo(
@@ -70,9 +75,10 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
     return allGrammar.filter((g) => {
       if (grammarLang !== "all" && g.language !== grammarLang) return false;
       if (grammarCategory !== "all" && g.category !== grammarCategory) return false;
+      if (grammarDifficulty !== "all" && g.difficulty !== grammarDifficulty) return false;
       return true;
     });
-  }, [allGrammar, grammarLang, grammarCategory]);
+  }, [allGrammar, grammarLang, grammarCategory, grammarDifficulty]);
 
   function handleClose() {
     onClose();
@@ -105,7 +111,7 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
               : word.example || "",
             audio_url: word.audio_url || "",
             image_url: word.image_url || "",
-            tags: [word.collection, word.part_of_speech].filter(Boolean) as string[],
+            tags: [word.collection, word.part_of_speech, word.difficulty].filter(Boolean) as string[],
             is_favorite: false,
           });
           savedCount++;
@@ -152,7 +158,7 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
             back_explanation: `${g.explanation}\n\n${exText}`,
             audio_url: "",
             image_url: "",
-            tags: [g.category, "Grammar"].filter(Boolean) as string[],
+            tags: [g.category, "Grammar", g.difficulty].filter(Boolean) as string[],
             is_favorite: false,
           });
           savedCount++;
@@ -183,10 +189,10 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
               </div>
               <div>
                 <Dialog.Title className="font-display text-lg font-bold text-foreground flex items-center gap-2">
-                  <span>Tạo Thẻ Tự Động Từ Hệ Thống</span>
+                  <span>Tạo Thẻ Tự Động Nâng Cao</span>
                 </Dialog.Title>
                 <Dialog.Description className="text-xs text-muted-foreground">
-                  Trích xuất dữ liệu sẵn có từ Kho Từ Vựng hoặc Kho Ngữ Pháp để tạo thẻ ôn tập.
+                  Lọc theo Loại từ, Chủ đề & Cấp độ để trích xuất thẻ ôn tập chính xác.
                 </Dialog.Description>
               </div>
             </div>
@@ -248,7 +254,8 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              {/* Filters Grid */}
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-foreground">Ngôn ngữ</label>
                   <select
@@ -264,13 +271,13 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-foreground">Bộ sưu tập / Chủ đề</label>
+                  <label className="mb-1 block text-xs font-semibold text-foreground">Chủ đề / Bộ sưu tập</label>
                   <select
                     value={vocabCollection}
                     onChange={(e) => setVocabCollection(e.target.value)}
                     className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-medium outline-none"
                   >
-                    <option value="all">Tất cả bộ sưu tập</option>
+                    <option value="all">Tất cả chủ đề</option>
                     {availableCollections.map((c) => (
                       <option key={c} value={c}>
                         {c}
@@ -278,10 +285,43 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
                     ))}
                   </select>
                 </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-foreground">Loại từ (Part of speech)</label>
+                  <select
+                    value={vocabPos}
+                    onChange={(e) => setVocabPos(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-medium outline-none"
+                  >
+                    <option value="all">Tất cả loại từ</option>
+                    <option value="noun">Danh từ (Noun)</option>
+                    <option value="verb">Động từ (Verb)</option>
+                    <option value="adjective">Tính từ (Adjective)</option>
+                    <option value="adverb">Phó từ (Adverb)</option>
+                    <option value="phrase">Cụm từ (Phrase)</option>
+                    <option value="idiom">Thành ngữ (Idiom)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-foreground">Cấp độ (Level)</label>
+                  <select
+                    value={vocabDifficulty}
+                    onChange={(e) => setVocabDifficulty(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-medium outline-none"
+                  >
+                    <option value="all">Tất cả cấp độ</option>
+                    <option value="beginner">Sơ cấp (Beginner)</option>
+                    <option value="intermediate">Trung cấp (Intermediate)</option>
+                    <option value="advanced">Nâng cao (Advanced)</option>
+                    <option value="master">Bậc thầy (Master)</option>
+                  </select>
+                </div>
               </div>
 
-              <p className="text-xs text-muted-foreground">
-                Đang tìm thấy <span className="font-bold text-foreground">{matchingWords.length}</span> từ vựng phù hợp.
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Filter className="size-3.5 text-emerald-500" />
+                Khớp <span className="font-bold text-foreground">{matchingWords.length}</span> từ vựng phù hợp với bộ lọc.
               </p>
 
               <Button
@@ -318,7 +358,7 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-foreground">Ngôn ngữ</label>
                   <select
@@ -334,7 +374,7 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-foreground">Danh mục ngữ pháp</label>
+                  <label className="mb-1 block text-xs font-semibold text-foreground">Chủ đề / Danh mục</label>
                   <select
                     value={grammarCategory}
                     onChange={(e) => setGrammarCategory(e.target.value)}
@@ -348,10 +388,26 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard }: Aut
                     ))}
                   </select>
                 </div>
+
+                <div className="col-span-2">
+                  <label className="mb-1 block text-xs font-semibold text-foreground">Cấp độ (Level)</label>
+                  <select
+                    value={grammarDifficulty}
+                    onChange={(e) => setGrammarDifficulty(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-medium outline-none"
+                  >
+                    <option value="all">Tất cả cấp độ</option>
+                    <option value="beginner">Sơ cấp (Beginner)</option>
+                    <option value="intermediate">Trung cấp (Intermediate)</option>
+                    <option value="advanced">Nâng cao (Advanced)</option>
+                    <option value="master">Bậc thầy (Master)</option>
+                  </select>
+                </div>
               </div>
 
-              <p className="text-xs text-muted-foreground">
-                Đang tìm thấy <span className="font-bold text-foreground">{matchingGrammar.length}</span> cấu trúc ngữ pháp phù hợp.
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Filter className="size-3.5 text-indigo-500" />
+                Khớp <span className="font-bold text-foreground">{matchingGrammar.length}</span> cấu trúc ngữ pháp phù hợp.
               </p>
 
               <Button

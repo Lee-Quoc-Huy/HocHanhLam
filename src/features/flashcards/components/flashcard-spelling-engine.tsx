@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import {
   Volume2,
   CheckCircle2,
@@ -12,9 +12,10 @@ import {
   Flame,
   KeyRound,
   HelpCircle,
+  Filter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Flashcard } from "../types";
 import { useSpeech } from "@/features/vocabulary/hooks/use-speech";
 
@@ -24,6 +25,26 @@ interface FlashcardSpellingEngineProps {
 
 export function FlashcardSpellingEngine({ queue }: FlashcardSpellingEngineProps) {
   const { speak } = useSpeech();
+
+  // Custom Game Filters
+  const [selectedLang, setSelectedLang] = useState<string>("all");
+  const [selectedTopic, setSelectedTopic] = useState<string>("all");
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
+
+  const availableTopics = useMemo(() => {
+    const tags = queue.flatMap((c) => c.tags || []);
+    return Array.from(new Set(tags)).filter(Boolean);
+  }, [queue]);
+
+  const spellingPool = useMemo(() => {
+    return queue.filter((c) => {
+      if (selectedLang !== "all" && c.language !== selectedLang) return false;
+      if (selectedTopic !== "all" && !c.tags?.includes(selectedTopic)) return false;
+      if (onlyFavorites && !c.is_favorite) return false;
+      return true;
+    });
+  }, [queue, selectedLang, selectedTopic, onlyFavorites]);
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userInput, setUserInput] = useState("");
   const [isAnswered, setIsAnswered] = useState(false);
@@ -34,7 +55,7 @@ export function FlashcardSpellingEngine({ queue }: FlashcardSpellingEngineProps)
   const [completed, setCompleted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const currentCard = queue[currentIndex];
+  const currentCard = spellingPool[currentIndex];
 
   useEffect(() => {
     setUserInput("");
@@ -44,18 +65,55 @@ export function FlashcardSpellingEngine({ queue }: FlashcardSpellingEngineProps)
     if (inputRef.current) {
       inputRef.current.focus();
     }
-  }, [currentIndex]);
+  }, [currentIndex, spellingPool]);
 
-  if (queue.length === 0 || !currentCard) {
+  if (spellingPool.length === 0 || !currentCard) {
     return (
-      <div className="mx-auto max-w-md rounded-2xl border border-dashed border-border p-12 text-center bg-surface/40">
-        <div className="flex size-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mx-auto mb-3">
-          <KeyRound className="size-8" />
+      <div className="space-y-4">
+        {/* Game Filter Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-surface/80 p-3 text-xs">
+          <div className="flex items-center gap-2 font-bold text-foreground">
+            <Filter className="size-4 text-emerald-500" /> Nguồn dữ liệu Luyện Viết riêng:
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={selectedLang}
+              onChange={(e) => setSelectedLang(e.target.value)}
+              className="h-8 rounded-lg border border-border bg-background px-2 font-medium"
+            >
+              <option value="all">Tất cả tiếng</option>
+              <option value="en">🇬🇧 Anh</option>
+              <option value="ko">🇰🇷 Hàn</option>
+              <option value="zh">🇨🇳 Trung</option>
+            </select>
+
+            <select
+              value={selectedTopic}
+              onChange={(e) => setSelectedTopic(e.target.value)}
+              className="h-8 rounded-lg border border-border bg-background px-2 font-medium max-w-[130px] truncate"
+            >
+              <option value="all">Tất cả chủ đề</option>
+              {availableTopics.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+
+            <Button
+              variant={onlyFavorites ? "default" : "outline"}
+              size="sm"
+              onClick={() => setOnlyFavorites(!onlyFavorites)}
+              className="h-8 text-xs gap-1"
+            >
+              ⭐ Yêu Thích
+            </Button>
+          </div>
         </div>
-        <h3 className="font-display text-xl font-bold text-foreground">Chưa Có Thẻ Để Ôn Viết</h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Hãy thêm thẻ vựng hoặc trích xuất kho để bắt đầu luyện viết chính tả!
-        </p>
+
+        <div className="mx-auto max-w-md rounded-2xl border border-dashed border-border p-10 text-center bg-surface/40">
+          <KeyRound className="size-8 text-emerald-500 mx-auto mb-2" />
+          <h3 className="font-display text-base font-bold text-foreground">Chưa Có Thẻ Để Ôn Viết Với Bộ Lọc Này</h3>
+          <p className="mt-1 text-xs text-muted-foreground">Thử chọn tất cả chủ đề để bắt đầu luyện chính tả.</p>
+        </div>
       </div>
     );
   }
@@ -70,7 +128,6 @@ export function FlashcardSpellingEngine({ queue }: FlashcardSpellingEngineProps)
     }
 
     if (!userInput.trim()) return;
-
     const userAns = userInput.trim().toLowerCase();
     const correct = userAns === cleanAnswer;
 
@@ -86,7 +143,7 @@ export function FlashcardSpellingEngine({ queue }: FlashcardSpellingEngineProps)
   };
 
   const handleNext = () => {
-    if (currentIndex < queue.length - 1) {
+    if (currentIndex < spellingPool.length - 1) {
       setCurrentIndex((i) => i + 1);
     } else {
       setCompleted(true);
@@ -103,7 +160,7 @@ export function FlashcardSpellingEngine({ queue }: FlashcardSpellingEngineProps)
   };
 
   if (completed) {
-    const accuracy = Math.round((score / queue.length) * 100);
+    const accuracy = Math.round((score / spellingPool.length) * 100);
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -117,7 +174,7 @@ export function FlashcardSpellingEngine({ queue }: FlashcardSpellingEngineProps)
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl border border-border bg-background p-4">
             <span className="text-xs text-muted-foreground font-semibold uppercase">Đúng</span>
-            <p className="font-display text-2xl font-bold text-emerald-600">{score} / {queue.length}</p>
+            <p className="font-display text-2xl font-bold text-emerald-600">{score} / {spellingPool.length}</p>
           </div>
           <div className="rounded-2xl border border-border bg-background p-4">
             <span className="text-xs text-muted-foreground font-semibold uppercase">Chính Xác</span>
@@ -132,12 +189,51 @@ export function FlashcardSpellingEngine({ queue }: FlashcardSpellingEngineProps)
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="mx-auto max-w-xl space-y-4">
+      {/* Game Filter Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-surface/80 p-3 text-xs">
+        <div className="flex items-center gap-2 font-bold text-foreground">
+          <Filter className="size-4 text-emerald-500" /> Nguồn Luyện Viết ({spellingPool.length} thẻ):
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={selectedLang}
+            onChange={(e) => setSelectedLang(e.target.value)}
+            className="h-8 rounded-lg border border-border bg-background px-2 font-medium"
+          >
+            <option value="all">Tất cả tiếng</option>
+            <option value="en">🇬🇧 Anh</option>
+            <option value="ko">🇰🇷 Hàn</option>
+            <option value="zh">🇨🇳 Trung</option>
+          </select>
+
+          <select
+            value={selectedTopic}
+            onChange={(e) => setSelectedTopic(e.target.value)}
+            className="h-8 rounded-lg border border-border bg-background px-2 font-medium max-w-[130px] truncate"
+          >
+            <option value="all">Tất cả chủ đề</option>
+            {availableTopics.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+
+          <Button
+            variant={onlyFavorites ? "default" : "outline"}
+            size="sm"
+            onClick={() => setOnlyFavorites(!onlyFavorites)}
+            className="h-8 text-xs gap-1"
+          >
+            ⭐ Yêu Thích
+          </Button>
+        </div>
+      </div>
+
       {/* Progress */}
       <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <Sparkles className="size-3.5 text-amber-500" />
-          <span>Thẻ {currentIndex + 1} / {queue.length}</span>
+          <span>Thẻ {currentIndex + 1} / {spellingPool.length}</span>
         </span>
         {streak > 1 && (
           <span className="flex items-center gap-1 text-amber-500 font-bold">
@@ -149,7 +245,7 @@ export function FlashcardSpellingEngine({ queue }: FlashcardSpellingEngineProps)
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div
           className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-300"
-          style={{ width: `${Math.round(((currentIndex + 1) / queue.length) * 100)}%` }}
+          style={{ width: `${Math.round(((currentIndex + 1) / spellingPool.length) * 100)}%` }}
         />
       </div>
 

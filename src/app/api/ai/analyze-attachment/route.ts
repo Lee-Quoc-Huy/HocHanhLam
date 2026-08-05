@@ -2,19 +2,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { generateFromImage, parseImageDataUrl } from "@/lib/ai/google-ai-client";
 
-/**
- * Reads an image (photo of a vocabulary list, a grammar chart, a textbook
- * page, etc.) or a plain-text document the person attaches, and asks
- * Google AI Studio directly (model: gemini-3.5-flash-late, kept separate
- * from the OpenRouter-routed chat models) to propose vocabulary words,
- * grammar structures, and flashcards found in it.
- *
- * This never writes to Supabase directly — it only returns candidates. The
- * person reviews and picks what to keep in the UI (`ExtractionConfirmCard`),
- * which then calls the normal vocabulary/grammar/flashcard services to
- * actually save anything.
- */
-
 export const maxDuration = 60;
 
 const requestSchema = z.object({
@@ -25,50 +12,47 @@ const requestSchema = z.object({
   message: "Cần có imageDataUrl hoặc text.",
 });
 
-const EXTRACTION_SYSTEM_PROMPT = (langLabel: string) => `Bạn là trợ lý học ngoại ngữ đang phân tích một ảnh chụp hoặc tài liệu (ví dụ: trang sách giáo khoa, ảnh chụp bảng từ vựng, ảnh chụp cấu trúc ngữ pháp, ghi chú tay...) liên quan đến ${langLabel}.
+const EXTRACTION_SYSTEM_PROMPT = (langLabel: string) => `Bạn là một trợ lý AI thông minh chuyên phân tích ảnh chụp/tài liệu học ngoại ngữ (${langLabel}).
 
 Nhiệm vụ của bạn:
-1. Đọc kỹ toàn bộ nội dung nhìn thấy được.
-2. Xác định TẤT CẢ từ vựng đáng học có trong đó (nếu có).
-3. Xác định TẤT CẢ cấu trúc ngữ pháp đáng học có trong đó (nếu có).
+1. Đọc và TỰ ĐỘNG SỬA LỖI CHÍNH TẢ / LỖI OCR (nếu chữ trong ảnh bị nhòe, sai nét hay lỗi đọc ký tự), chuyển về từ gốc đúng chuẩn từ điển.
+2. TỰ ĐỘNG PHÂN LOẠI CHỦ ĐỀ (collection) chính xác cho từng từ vựng (ví dụ: "Du lịch & Sân bay", "Giao tiếp công sở", "Ẩm thực & Gọi món", "TOPIK II", "HSK 4", "IELTS Academic"...).
+3. Đề xuất danh sách từ vựng và cấu trúc ngữ pháp có trong ảnh.
 
-CHỈ trả lời bằng một khối JSON DUY NHẤT, không thêm giải thích, không thêm markdown code fence, đúng theo cấu trúc sau (bỏ trống mảng nếu không có gì phù hợp):
-
+Trả về 1 khối JSON DUY NHẤT đúng cấu trúc (không thêm markdown code block):
 {
-  "summary": "Mô tả ngắn gọn (1-2 câu tiếng Việt) về nội dung ảnh/tài liệu này",
+  "summary": "Tóm tắt ngắn gọn (1-2 câu tiếng Việt) về nội dung tài liệu này",
   "vocabulary": [
     {
       "language": "en",
-      "word": "...",
-      "ipa": "...",
-      "vietnamese": "...",
-      "english_meaning": "...",
-      "part_of_speech": "noun",
-      "example": "...",
-      "example_translation": "...",
-      "difficulty": "intermediate"
+      "word": "Từ vựng (đã sửa chuẩn chính tả)",
+      "ipa": "Phiên âm IPA hoặc Pinyin chuẩn",
+      "vietnamese": "Nghĩa tiếng Việt chuẩn xác",
+      "english_meaning": "Giải nghĩa tiếng Anh ngắn",
+      "part_of_speech": "noun|verb|adjective|adverb|phrase|idiom",
+      "example": "Câu ví dụ minh họa",
+      "example_translation": "Dịch nghĩa câu ví dụ",
+      "difficulty": "beginner|intermediate|advanced|master",
+      "collection": "Tên chủ đề phân loại tự động"
     }
   ],
   "grammar": [
     {
       "language": "en",
-      "title": "...",
+      "title": "Cấu trúc ngữ pháp",
       "meaning": "Tóm tắt ý nghĩa bằng tiếng Việt",
-      "explanation": "Giải thích chi tiết công thức & cách dùng",
+      "explanation": "Công thức & cách dùng chi tiết",
       "examples": [{ "example": "...", "translation": "..." }],
-      "category": "General",
+      "category": "Danh mục ngữ pháp tự động",
       "difficulty": "intermediate"
     }
   ]
 }
 
-language phải là một trong: "en", "ko", "zh" (tuỳ theo ngôn ngữ thực tế nhìn thấy trong ảnh — có thể khác ${langLabel} nếu ảnh chứa ngôn ngữ khác).
-difficulty phải là một trong: "beginner", "intermediate", "advanced", "master".
-Nếu ảnh không chứa nội dung học ngoại ngữ nào rõ ràng, trả về summary mô tả điều đó và để 2 mảng đều rỗng.
-Không đề xuất flashcard — chỉ đề xuất từ vựng và ngữ pháp, flashcard sẽ được tạo riêng sau này khi người dùng chọn.`;
+language phải là "en", "ko", hoặc "zh".
+difficulty phải là "beginner", "intermediate", "advanced", hoặc "master".`;
 
 export async function POST(request: Request) {
-  // Personal single-user app — no login wall on any feature.
   const body = await request.json();
   const parsed = requestSchema.safeParse(body);
   if (!parsed.success) {
@@ -82,7 +66,7 @@ export async function POST(request: Request) {
   try {
     const responseText = await generateFromImage({
       systemInstruction: EXTRACTION_SYSTEM_PROMPT(langLabel),
-      userText: text?.trim() ? text : "Hãy phân tích ảnh này.",
+      userText: text?.trim() ? text : "Hãy phân tích ảnh này, sửa lỗi chính tả nếu có và tự lọc chủ đề.",
       image: imageDataUrl ? parseImageDataUrl(imageDataUrl) : undefined,
       temperature: 0.3,
     });
