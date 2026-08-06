@@ -7,12 +7,10 @@ export const maxDuration = 60;
 /**
  * POST /api/generate-practice
  *
- * Body: { exam: "TOPIK" | "TOEIC" | "HSK", level: string, fileUrls: string[] }
+ * Body: { exam: "TOPIK" | "TOEIC" | "IELTS" | "HSK", level: string, format?: string, fileUrls?: string[] }
  *
  * Uses OpenRouter with a multi-AI fallback chain:
  *   Gemini 2.5 Flash → DeepSeek R1 → Qwen 72B → Nemotron → Llama 3.3
- * When one model hits rate limits or fails, the next is tried automatically.
- * Falls back to hard-coded sample questions only when ALL models fail.
  */
 
 interface Choice {
@@ -22,8 +20,9 @@ interface Choice {
 
 interface Question {
   id: string;
-  type: "multiple-choice" | "fill-blank" | "listening";
+  type: "multiple-choice" | "fill-blank" | "listening" | "reading-comprehension" | "sentence-order" | "speaking-prompt";
   prompt: string;
+  passage?: string;
   choices?: Choice[];
   answer: string;
   audioUrl?: string;
@@ -49,7 +48,7 @@ const SAMPLES: Record<string, Question[]> = {
     {
       id: "t2",
       type: "fill-blank",
-      prompt: "나는 매일 아침 ____을/를 먹습니다. (bữa sáng)",
+      prompt: "나는 매일 아침 ____을/를 먹습니다. (cơm/bữa ăn)",
       answer: "밥",
       explanation: "밥 (bap) là cơm / bữa ăn trong tiếng Hàn.",
     },
@@ -68,10 +67,10 @@ const SAMPLES: Record<string, Question[]> = {
     },
     {
       id: "t4",
-      type: "fill-blank",
-      prompt: "저는 한국____입니다. (người)",
-      answer: "사람",
-      explanation: "사람 (saram) nghĩa là 'người'.",
+      type: "sentence-order",
+      prompt: "Hãy sắp xếp từ sau thành câu hoàn chỉnh: [가요 / 학교에 / 저는]",
+      answer: "저는 학교에 가요",
+      explanation: "Chủ ngữ (저는) + Địa điểm (학교에) + Động từ (가요).",
     },
     {
       id: "t5",
@@ -95,16 +94,17 @@ const SAMPLES: Record<string, Question[]> = {
     },
     {
       id: "t7",
-      type: "multiple-choice",
-      prompt: "'어디에 가요?' có nghĩa là gì?",
+      type: "reading-comprehension",
+      passage: "저는 민수입니다. 저는 한국어 선생님입니다. 매일 학교에서 학생들에게 한국어를 가르칩니다.",
+      prompt: "민수의 직업은 무엇입니까?",
       choices: [
-        { id: "a", text: "Bạn ăn gì?" },
-        { id: "b", text: "Bạn đi đâu?" },
-        { id: "c", text: "Bạn làm gì?" },
-        { id: "d", text: "Bạn mua gì?" },
+        { id: "a", text: "의사" },
+        { id: "b", text: "선생님" },
+        { id: "c", text: "요리사" },
+        { id: "d", text: "경찰" },
       ],
       answer: "b",
-      explanation: "어디에 가요 = Bạn đi đâu vậy?",
+      explanation: "Trong đoạn văn ghi: '저는 한국어 선생님입니다' (Tôi là giáo viên tiếng Hàn).",
     },
     {
       id: "t8",
@@ -124,21 +124,21 @@ const SAMPLES: Record<string, Question[]> = {
         { id: "d", text: "먹어라" },
       ],
       answer: "b",
-      explanation: "먹습니다 là thể kính ngữ (formal polite) của 먹다.",
+      explanation: "먹습니다 là thể kính ngữ trang trọng của 먹다.",
     },
     {
       id: "t10",
-      type: "fill-blank",
-      prompt: "저는 회사____다닙니다. (trợ từ vị trí/địa điểm)",
-      answer: "에",
-      explanation: "에 là trợ từ chỉ địa điểm/hướng đến.",
+      type: "speaking-prompt",
+      prompt: "한국어로 자기소개를 해 보세요. (Hãy tự giới thiệu bản thân bằng tiếng Hàn: Tên, quốc tịch, nghề nghiệp)",
+      answer: "안녕하세요",
+      explanation: "Mẫu câu cơ bản: 안녕하세요. 저는 [Tên]입니다. 베트남 사람입니다.",
     },
   ],
   TOEIC: [
     {
       id: "tc1",
       type: "multiple-choice",
-      prompt: "The meeting has been ____ until next Monday.",
+      prompt: "The meeting has been ____ until next Monday due to severe weather conditions.",
       choices: [
         { id: "a", text: "postponed" },
         { id: "b", text: "cancelled out" },
@@ -146,19 +146,19 @@ const SAMPLES: Record<string, Question[]> = {
         { id: "d", text: "submitted" },
       ],
       answer: "a",
-      explanation: "postponed = hoãn lại. 'postponed until' là cụm cố định.",
+      explanation: "postponed = trì hoãn. Cụm 'postponed until' nghĩa là hoãn đến khi...",
     },
     {
       id: "tc2",
       type: "fill-blank",
-      prompt: "Please ____ the attached document before the deadline.",
+      prompt: "Please ____ the attached budget proposal before tomorrow's executive meeting.",
       answer: "review",
-      explanation: "review = xem xét, đọc lại tài liệu.",
+      explanation: "review = xem xét, rà soát lại tài liệu.",
     },
     {
       id: "tc3",
       type: "multiple-choice",
-      prompt: "The report ____ by the manager before noon.",
+      prompt: "The quarterly report ____ by the regional manager before noon.",
       choices: [
         { id: "a", text: "will approve" },
         { id: "b", text: "will be approved" },
@@ -166,39 +166,40 @@ const SAMPLES: Record<string, Question[]> = {
         { id: "d", text: "was approving" },
       ],
       answer: "b",
-      explanation: "Câu bị động tương lai: will be + V3.",
+      explanation: "Câu bị động ở thì tương lai đơn: will be + V3/V-ed.",
     },
     {
       id: "tc4",
-      type: "fill-blank",
-      prompt: "We need to ____ a new strategy for the next quarter.",
-      answer: "develop",
-      explanation: "develop a strategy = xây dựng chiến lược.",
+      type: "sentence-order",
+      prompt: "Reorder into a correct sentence: [to / deadline / submitted / the / must be / report / before]",
+      answer: "the report must be submitted before the deadline",
+      explanation: "Cấu trúc bị động với động từ khuyết thiếu: must be + V3.",
     },
     {
       id: "tc5",
-      type: "multiple-choice",
-      prompt: "Which word means 'to postpone'?",
+      type: "reading-comprehension",
+      passage: "ABC Logistics announced yesterday that it will expand its express shipping service to three new international routes starting next month to meet rising consumer demand.",
+      prompt: "What will ABC Logistics do next month?",
       choices: [
-        { id: "a", text: "accelerate" },
-        { id: "b", text: "delay" },
-        { id: "c", text: "confirm" },
-        { id: "d", text: "process" },
+        { id: "a", text: "Close new offices" },
+        { id: "b", text: "Expand shipping routes" },
+        { id: "c", text: "Hire new executives" },
+        { id: "d", text: "Reduce service prices" },
       ],
       answer: "b",
-      explanation: "delay = trì hoãn, hoãn lại.",
+      explanation: "Bài đọc nêu rõ: 'expand its express shipping service to three new international routes'.",
     },
     {
       id: "tc6",
       type: "fill-blank",
-      prompt: "The client was ____ with our proposal.",
-      answer: "satisfied",
-      explanation: "satisfied with = hài lòng với.",
+      prompt: "All employees are required to ____ their security badges at all times inside the facility.",
+      answer: "wear",
+      explanation: "wear a badge = đeo thẻ nhân viên/an ninh.",
     },
     {
       id: "tc7",
       type: "multiple-choice",
-      prompt: "The deadline for ____ the application is Friday.",
+      prompt: "The deadline for ____ the online application form is midnight Friday.",
       choices: [
         { id: "a", text: "submit" },
         { id: "b", text: "submitted" },
@@ -206,19 +207,19 @@ const SAMPLES: Record<string, Question[]> = {
         { id: "d", text: "to submit" },
       ],
       answer: "c",
-      explanation: "Sau giới từ 'for', dùng V-ing: for submitting.",
+      explanation: "Sau giới từ 'for', ta dùng danh động từ (V-ing): for submitting.",
     },
     {
       id: "tc8",
       type: "fill-blank",
-      prompt: "Please ____ the invoice to accounting.",
+      prompt: "Please ____ the invoice to the accounting department for immediate processing.",
       answer: "forward",
-      explanation: "forward = chuyển tiếp, gửi đi.",
+      explanation: "forward = chuyển tiếp tài liệu/hóa đơn.",
     },
     {
       id: "tc9",
       type: "multiple-choice",
-      prompt: "Employees are ____ to attend the safety training.",
+      prompt: "New staff members are ____ to attend the orientation session tomorrow morning.",
       choices: [
         { id: "a", text: "required" },
         { id: "b", text: "requested" },
@@ -226,14 +227,117 @@ const SAMPLES: Record<string, Question[]> = {
         { id: "d", text: "allowed" },
       ],
       answer: "a",
-      explanation: "required to = bắt buộc phải.",
+      explanation: "be required to do sth = được yêu cầu / bắt buộc làm gì.",
     },
     {
       id: "tc10",
+      type: "speaking-prompt",
+      prompt: "Describe your daily working routine or study habits in 30 seconds.",
+      answer: "work",
+      explanation: "Mẫu câu: Every morning I start work at 8 AM and focus on priority tasks first.",
+    },
+  ],
+  IELTS: [
+    {
+      id: "ie1",
+      type: "multiple-choice",
+      prompt: "Which of the following is a synonym for 'substantive' in academic context?",
+      choices: [
+        { id: "a", text: "Significant" },
+        { id: "b", text: "Superficial" },
+        { id: "c", text: "Temporary" },
+        { id: "d", text: "Trivial" },
+      ],
+      answer: "a",
+      explanation: "substantive = quan trọng, có ý nghĩa lớn (= significant).",
+    },
+    {
+      id: "ie2",
+      type: "reading-comprehension",
+      passage: "Urbanisation has led to severe habitat fragmentation, forcing wildlife species to adapt rapidly to human-dominated environments or face local extinction.",
+      prompt: "What primary consequence of urbanisation is mentioned in the text?",
+      choices: [
+        { id: "a", text: "Decrease in human population" },
+        { id: "b", text: "Habitat fragmentation" },
+        { id: "c", text: "Expansion of natural forests" },
+        { id: "d", text: "Immediate extinction of all species" },
+      ],
+      answer: "b",
+      explanation: "Tác hại được nêu ngay đầu đoạn: 'Urbanisation has led to severe habitat fragmentation'.",
+    },
+    {
+      id: "ie3",
       type: "fill-blank",
-      prompt: "The company will ____ a bonus to all employees.",
-      answer: "award",
-      explanation: "award a bonus = trao thưởng/bonus.",
+      prompt: "The graph illustrates a significant ____ in renewable energy adoption over the last decade. (sự gia tăng)",
+      answer: "increase",
+      explanation: "a significant increase = sự gia tăng đáng kể trong bài Writing Task 1.",
+    },
+    {
+      id: "ie4",
+      type: "multiple-choice",
+      prompt: "Choose the correct phrase to express cause and effect in Task 2 writing:",
+      choices: [
+        { id: "a", text: "As a consequence of" },
+        { id: "b", text: "In spite of" },
+        { id: "c", text: "On the other hand" },
+        { id: "d", text: "Nevertheless" },
+      ],
+      answer: "a",
+      explanation: "'As a consequence of' = Do kết quả/hậu quả của...",
+    },
+    {
+      id: "ie5",
+      type: "speaking-prompt",
+      prompt: "IELTS Speaking Part 2: Describe a memorable journey you took recently. (Where, Who with, Why memorable)",
+      answer: "trip",
+      explanation: "Bố cục trả lời Part 2: Introduction → Context → Key events → Feeling.",
+    },
+    {
+      id: "ie6",
+      type: "fill-blank",
+      prompt: "Technological advancements have ____ altered the way people communicate globally. (hoàn toàn / sâu sắc)",
+      answer: "profoundly",
+      explanation: "profoundly altered = làm thay đổi sâu sắc.",
+    },
+    {
+      id: "ie7",
+      type: "multiple-choice",
+      prompt: "Select the word closest in meaning to 'ubiquitous':",
+      choices: [
+        { id: "a", text: "Omnipresent / Everywhere" },
+        { id: "b", text: "Scarce / Rare" },
+        { id: "c", text: "Obsolete" },
+        { id: "d", text: "Fragile" },
+      ],
+      answer: "a",
+      explanation: "ubiquitous = phổ biến ở khắp mọi nơi (= omnipresent).",
+    },
+    {
+      id: "ie8",
+      type: "sentence-order",
+      prompt: "Reorder into an academic sentence: [far-reaching / climate change / consequences / has / global / for / ecosystems]",
+      answer: "climate change has far-reaching consequences for global ecosystems",
+      explanation: "Cụm 'far-reaching consequences' = hậu quả sâu rộng.",
+    },
+    {
+      id: "ie9",
+      type: "fill-blank",
+      prompt: "It is widely argued that education plays a ____ role in reducing poverty rates.",
+      answer: "pivotal",
+      explanation: "pivotal role = vai trò then chốt / cốt lõi.",
+    },
+    {
+      id: "ie10",
+      type: "multiple-choice",
+      prompt: "Which cohesive device shows contrast between two paragraphs?",
+      choices: [
+        { id: "a", text: "Conversely" },
+        { id: "b", text: "Furthermore" },
+        { id: "c", text: "In addition" },
+        { id: "d", text: "Consequently" },
+      ],
+      answer: "a",
+      explanation: "Conversely = Ngược lại, dùng thể hiện sự tương phản.",
     },
   ],
   HSK: [
@@ -260,7 +364,7 @@ const SAMPLES: Record<string, Question[]> = {
     {
       id: "h3",
       type: "multiple-choice",
-      prompt: "'谢谢' đọc là gì?",
+      prompt: "'谢谢' đọc phiên âm Pinyin là gì?",
       choices: [
         { id: "a", text: "xièxie" },
         { id: "b", text: "nǐhǎo" },
@@ -272,10 +376,10 @@ const SAMPLES: Record<string, Question[]> = {
     },
     {
       id: "h4",
-      type: "fill-blank",
-      prompt: "我____北京人。(là)",
-      answer: "是",
-      explanation: "是 (shì) = là, động từ to be trong tiếng Trung.",
+      type: "sentence-order",
+      prompt: "Sắp xếp thành câu đúng: [是 / 我 / 中国人]",
+      answer: "我是中国人",
+      explanation: "Chủ ngữ (我) + Động từ (是) + Tân ngữ (中国人).",
     },
     {
       id: "h5",
@@ -299,23 +403,24 @@ const SAMPLES: Record<string, Question[]> = {
     },
     {
       id: "h7",
-      type: "multiple-choice",
-      prompt: "'我不喝茶' có nghĩa là?",
+      type: "reading-comprehension",
+      passage: "我是小明。我每天早上七点起床，八点去学校学习汉语。我非常喜欢汉语。",
+      prompt: "小明每天几点去学校？",
       choices: [
-        { id: "a", text: "Tôi uống trà" },
-        { id: "b", text: "Tôi không uống trà" },
-        { id: "c", text: "Tôi thích trà" },
-        { id: "d", text: "Tôi mua trà" },
+        { id: "a", text: "6点" },
+        { id: "b", text: "7点" },
+        { id: "c", text: "8点" },
+        { id: "d", text: "9点" },
       ],
-      answer: "b",
-      explanation: "不 (bù) = không, phủ định. 喝茶 = uống trà.",
+      answer: "c",
+      explanation: "Bài đọc ghi: '八点去学校' (8 giờ đi đến trường).",
     },
     {
       id: "h8",
       type: "fill-blank",
       prompt: "她____老师。(là)",
       answer: "是",
-      explanation: "是 = là, dùng để nối chủ ngữ và danh từ.",
+      explanation: "是 (shì) = là.",
     },
     {
       id: "h9",
@@ -332,55 +437,70 @@ const SAMPLES: Record<string, Question[]> = {
     },
     {
       id: "h10",
-      type: "fill-blank",
-      prompt: "你____什么名字？(tên bạn là gì — động từ)",
-      answer: "叫",
-      explanation: "你叫什么名字？(nǐ jiào shénme míngzì) = Bạn tên là gì?",
+      type: "speaking-prompt",
+      prompt: "用中文介绍一下你最喜欢吃的东西。(Hãy dùng tiếng Trung giới thiệu món ăn bạn thích nhất)",
+      answer: "喜欢",
+      explanation: "Mẫu câu: 我最喜欢吃[Tên món ăn]. 因为它非常好吃。",
     },
   ],
 };
 
-// ─── Build prompt ──────────────────────────────────────────────────────────────
-function buildPrompt(exam: string, level: string, fileUrls: string[]): string {
+// ─── Build prompt for AI ──────────────────────────────────────────────────────
+function buildPrompt(
+  exam: string,
+  level: string,
+  format: string,
+  fileUrls: string[]
+): string {
   const context =
     fileUrls.length > 0
-      ? `Tham khảo thêm nội dung từ các tệp sau nếu có thể: ${fileUrls.slice(0, 3).join(", ")}.`
-      : "Tạo câu hỏi dựa trên kiến thức chuẩn của kỳ thi.";
+      ? `Tham khảo thêm thông tin kiến thức từ các tệp thư viện sau nếu có thể: ${fileUrls.slice(0, 3).join(", ")}.`
+      : "Tạo câu hỏi sát với cấu trúc đề thi thực tế.";
 
-  return `Bạn là một giáo viên chuyên luyện thi ${exam} cấp độ ${level}.
+  return `Bạn là một chuyên gia luyện thi ${exam} trình độ cao.
+Dưới đây là thông tin bài thi cần tạo:
+- Kỳ thi: ${exam}
+- Cấp độ / Band mục tiêu: ${level}
+- Hình thức dạng bài: ${format}
 ${context}
 
-Hãy tạo đúng 10 câu hỏi luyện tập cho kỳ thi ${exam} cấp ${level}.
-Trả về JSON có dạng:
+Hãy tạo đúng 10 câu hỏi luyện tập chuẩn cấu trúc kỳ thi ${exam} (${level}).
+Trả về kết quả ở dạng JSON thuần túy có dạng:
 {
   "questions": [
     {
       "id": "q1",
-      "type": "multiple-choice",
+      "type": "multiple-choice" | "fill-blank" | "reading-comprehension" | "sentence-order" | "speaking-prompt",
       "prompt": "Nội dung câu hỏi...",
+      "passage": "Đoạn văn đọc hiểu (nếu là dạng bài reading-comprehension)",
       "choices": [{"id": "a", "text": "..."}, {"id": "b", "text": "..."}, {"id": "c", "text": "..."}, {"id": "d", "text": "..."}],
       "answer": "a",
-      "explanation": "Giải thích ngắn gọn bằng tiếng Việt..."
+      "explanation": "Giải thích chi tiết bằng tiếng Việt..."
     }
   ]
 }
 
 Quy tắc bắt buộc:
-- Dùng hỗn hợp "multiple-choice" và "fill-blank"
-- Đảm bảo độ khó phù hợp cấp ${level}
-- Câu hỏi bằng ngôn ngữ của kỳ thi (Hàn/Anh/Trung), giải thích bằng tiếng Việt
-- fill-blank: "choices" là mảng rỗng [], "answer" là chuỗi văn bản đúng
-- CHỈ trả về JSON thuần túy, không có markdown, không có text thừa`;
+1. Nội dung câu hỏi phải hoàn toàn bằng ngôn ngữ thi (${exam === "TOPIK" ? "Tiếng Hàn" : exam === "HSK" ? "Tiếng Trung" : "Tiếng Anh"}), phần giải thích bằng tiếng Việt.
+2. Đảm bảo độ khó phù hợp chuẩn xác với cấp độ ${level}.
+3. Nếu type là "fill-blank" hoặc "sentence-order", mảng "choices" có thể để rỗng [], "answer" là chuỗi văn bản đáp án đúng.
+4. CHỈ trả về JSON thuần túy, không chứa ký tự markdown hay văn bản thừa ngoài JSON.`;
 }
 
 // ─── Route Handler ─────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { exam, level, fileUrls = [] } = body as {
+    const {
+      exam,
+      level,
+      format = "all",
+      fileUrls = [],
+    } = body as {
       exam: string;
       level: string;
-      fileUrls: string[];
+      format?: string;
+      fileUrls?: string[];
     };
 
     if (!exam || !level) {
@@ -393,23 +513,21 @@ export async function POST(req: NextRequest) {
     let questions: Question[];
 
     try {
-      // ── Multi-AI fallback chain via OpenRouter ─────────────────────────────
-      // Thứ tự: Gemini 2.5 Flash → DeepSeek R1 → Qwen 72B → Nemotron → Llama 3.3
-      // openrouter-client tự động thử từng model khi model trước thất bại.
-      const prompt = buildPrompt(exam, level, fileUrls);
+      // ── Multi-AI Fallback Chain via OpenRouter ─────────────────────────────
+      // Gemini 2.5 Flash → DeepSeek R1 → Qwen 72B → Nemotron → Llama 3.3
+      const prompt = buildPrompt(exam, level, format, fileUrls);
       const result = await createChatCompletion({
         task: "exam_generation",
         messages: [
           {
             role: "system",
-            content: `Bạn là chuyên gia luyện thi ${exam}. CHỈ trả về JSON thuần túy, không markdown.`,
+            content: `Bạn là giám khảo và chuyên gia soạn đề thi ${exam} quốc tế. CHỈ trả về JSON array/object thuần túy.`,
           },
           { role: "user", content: prompt },
         ],
         temperature: 0.7,
       });
 
-      // Loại bỏ markdown fences nếu model nào đó wrap JSON trong code block
       const jsonStr = result.content
         .replace(/```json\s*/gi, "")
         .replace(/```\s*/g, "")
@@ -423,16 +541,15 @@ export async function POST(req: NextRequest) {
       }
 
       console.info(
-        `[exam-prep] Tạo ${questions.length} câu hỏi thành công với model: ${result.model}`
+        `[exam-prep] Generated ${questions.length} questions for ${exam} (${level}) via model: ${result.model}`
       );
     } catch (aiErr) {
-      // ── Câu hỏi mẫu dự phòng khi TẤT CẢ model thất bại ──────────────────
-      console.warn("[exam-prep] Tất cả AI model thất bại, dùng câu hỏi mẫu:", aiErr);
+      console.warn("[exam-prep] All AI models failed, using fallback samples:", aiErr);
       const key = exam.toUpperCase() as keyof typeof SAMPLES;
       questions = SAMPLES[key] ?? SAMPLES["TOPIK"];
     }
 
-    // ── Lưu session vào Supabase ─────────────────────────────────────────────
+    // ── Save session to Supabase ─────────────────────────────────────────────
     let sessionId = `local-${Date.now()}`;
     try {
       const supabase = await createClient();
@@ -455,8 +572,7 @@ export async function POST(req: NextRequest) {
         if (session?.id) sessionId = session.id;
       }
     } catch (dbErr) {
-      // Non-fatal — session vẫn hoạt động, chỉ không lưu được
-      console.warn("Không lưu được session vào Supabase:", dbErr);
+      console.warn("Không thể lưu session vào Supabase:", dbErr);
     }
 
     return NextResponse.json({ sessionId, questions });
