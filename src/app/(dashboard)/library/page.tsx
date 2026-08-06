@@ -5,6 +5,7 @@ import { LibraryHeader } from "@/features/library/components/library-header";
 import { LibraryFolderTree } from "@/features/library/components/library-folder-tree";
 import { LibraryItemGrid } from "@/features/library/components/library-item-grid";
 import { LibraryDetailModal } from "@/features/library/components/library-detail-modal";
+import { UploadExamModal } from "@/features/library/components/upload-exam-modal";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,12 +37,14 @@ export default function LibraryPage() {
     setCreateNoteOpen,
     setCreateFolderOpen,
     handleUploadFiles,
+    handleUploadExamPaper,
     handleCreateNote,
     handleDownload,
     handleGenerateShare,
   } = useLibrary();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadExamOpen, setIsUploadExamOpen] = useState(false);
 
   // New Note Modal state
   const [noteTitle, setNoteTitle] = useState("");
@@ -88,6 +91,7 @@ export default function LibraryPage() {
         trashedOnly={filter.trashedOnly}
         favoritesOnly={filter.favoritesOnly}
         onUploadClick={() => fileInputRef.current?.click()}
+        onUploadExamClick={() => setIsUploadExamOpen(true)}
         onCreateNoteClick={() => setCreateNoteOpen(true)}
         onCreateFolderClick={() => setCreateFolderOpen(true)}
         onToggleTrashView={() => setFilter({ trashedOnly: !filter.trashedOnly, favoritesOnly: false })}
@@ -276,6 +280,13 @@ export default function LibraryPage() {
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+
+      {/* Upload Exam Modal */}
+      <UploadExamModal
+        isOpen={isUploadExamOpen}
+        onClose={() => setIsUploadExamOpen(false)}
+        onUploadExam={handleUploadExamPaper}
+      />
     </div>
   );
 }

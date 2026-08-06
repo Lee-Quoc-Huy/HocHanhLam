@@ -92,6 +92,61 @@ export function useLibrary() {
     }
   };
 
+  // Upload Đề thi & File kèm chuyên biệt vào Cloudflare R2 + lưu metadata
+  const handleUploadExamPaper = async (input: {
+    file: File;
+    examCategory: "TOPIK" | "TOEIC" | "IELTS" | "HSK";
+    examLevel: string;
+    paperType: "full_exam" | "audio_attachment" | "reading_passage" | "answer_key";
+    title?: string;
+  }) => {
+    const { file, examCategory, examLevel, paperType, title } = input;
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    const formattedSize =
+      file.size > 1024 * 1024
+        ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+        : `${Math.round(file.size / 1024)} KB`;
+
+    let fileUrl: string | null = null;
+    let contentText = `Tệp đề thi ${file.name} thuộc kỳ thi ${examCategory} (${examLevel}).`;
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/library/upload", { method: "POST", body: formData });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Tải tệp đề thi lên Cloudflare R2 thất bại.");
+      fileUrl = result.url;
+    } catch (err) {
+      console.error("Lỗi tải đề thi lên R2:", err);
+      contentText = `⚠️ Không thể tải "${file.name}" lên bộ nhớ đám mây. ${
+        err instanceof Error ? err.message : ""
+      }`;
+    }
+
+    const tags = [
+      "DE_THI",
+      examCategory.toUpperCase(),
+      examLevel.replace(/\s+/g, "_").toUpperCase(),
+      paperType.toUpperCase(),
+      ext.toUpperCase(),
+    ];
+
+    await store.createItem({
+      title: title || file.name,
+      item_type: "exam_paper",
+      file_url: fileUrl,
+      file_size: formattedSize,
+      content_text: contentText,
+      tags,
+      is_favorite: false,
+      folder_id: store.filter.folderId || null,
+      exam_category: examCategory,
+      exam_level: examLevel,
+      exam_paper_type: paperType,
+    });
+  };
+
   const handleCreateNote = async (title: string, content: string, tagsStr: string) => {
     const tags = tagsStr ? tagsStr.split(",").map((t) => t.trim()) : ["GhiChú"];
     await store.createItem({
@@ -125,6 +180,7 @@ export function useLibrary() {
     ...store,
     filteredItems,
     handleUploadFiles,
+    handleUploadExamPaper,
     handleCreateNote,
     handleDownload,
     handleGenerateShare,

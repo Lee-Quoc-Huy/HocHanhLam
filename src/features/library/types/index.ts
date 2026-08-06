@@ -1,4 +1,4 @@
-export type LibraryItemType = "document" | "audio" | "video" | "image" | "note";
+export type LibraryItemType = "document" | "audio" | "video" | "image" | "note" | "exam_paper";
 
 export interface LibraryFolder {
   id: string;
@@ -35,6 +35,10 @@ export interface LibraryItem {
   is_favorite: boolean;
   is_trashed: boolean;
   share_token?: string | null;
+  // Metadata chuyên biệt cho Đề thi
+  exam_category?: "TOPIK" | "TOEIC" | "IELTS" | "HSK" | null;
+  exam_level?: string | null;
+  exam_paper_type?: "full_exam" | "audio_attachment" | "reading_passage" | "answer_key" | null;
   created_at: string;
   updated_at: string;
 }

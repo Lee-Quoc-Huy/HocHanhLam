@@ -450,21 +450,25 @@ function buildPrompt(
   exam: string,
   level: string,
   format: string,
+  mode: "practice" | "real_exam",
+  count: number,
   fileUrls: string[]
 ): string {
   const context =
     fileUrls.length > 0
-      ? `Tham khảo thêm thông tin kiến thức từ các tệp thư viện sau nếu có thể: ${fileUrls.slice(0, 3).join(", ")}.`
-      : "Tạo câu hỏi sát với cấu trúc đề thi thực tế.";
+      ? `THAM KHẢO & TRỘN ĐỀ từ các tệp đề thi / tài liệu thư viện sau của người dùng: ${fileUrls.slice(0, 5).join(", ")}.`
+      : "Hãy tự động tạo bộ đề thi chuẩn quốc tế sát với đề thi thật.";
 
-  return `Bạn là một chuyên gia luyện thi ${exam} trình độ cao.
-Dưới đây là thông tin bài thi cần tạo:
-- Kỳ thi: ${exam}
-- Cấp độ / Band mục tiêu: ${level}
-- Hình thức dạng bài: ${format}
+  const modeInstruction =
+    mode === "real_exam"
+      ? `Đây là BÀI THI THẬT (Real Exam Simulation) của kỳ thi ${exam} (${level}). Số lượng câu yêu cầu là ${count} câu. Đảm bảo cấu trúc tỷ lệ các phần thi (Nghe / Đọc / Từ vựng / Ngữ pháp / Viết) đúng theo chuẩn bài thi thật quốc tế.`
+      : `Đây là BÀI ÔN TẬP (Practice Session) cho kỳ thi ${exam} (${level}) với dạng bài ${format}. Số lượng câu hỏi yêu cầu là ${count} câu.`;
+
+  return `Bạn là một giám khảo và chuyên gia soạn đề thi ${exam} quốc tế trình độ cao.
+${modeInstruction}
 ${context}
 
-Hãy tạo đúng 10 câu hỏi luyện tập chuẩn cấu trúc kỳ thi ${exam} (${level}).
+Hãy tạo đúng ${count} câu hỏi luyện tập.
 Trả về kết quả ở dạng JSON thuần túy có dạng:
 {
   "questions": [
@@ -472,7 +476,7 @@ Trả về kết quả ở dạng JSON thuần túy có dạng:
       "id": "q1",
       "type": "multiple-choice" | "fill-blank" | "reading-comprehension" | "sentence-order" | "speaking-prompt",
       "prompt": "Nội dung câu hỏi...",
-      "passage": "Đoạn văn đọc hiểu (nếu là dạng bài reading-comprehension)",
+      "passage": "Đoạn văn đọc hiểu (nếu có)",
       "choices": [{"id": "a", "text": "..."}, {"id": "b", "text": "..."}, {"id": "c", "text": "..."}, {"id": "d", "text": "..."}],
       "answer": "a",
       "explanation": "Giải thích chi tiết bằng tiếng Việt..."
@@ -495,11 +499,15 @@ export async function POST(req: NextRequest) {
       exam,
       level,
       format = "all",
+      mode = "practice",
+      questionCount = 10,
       fileUrls = [],
     } = body as {
       exam: string;
       level: string;
       format?: string;
+      mode?: "practice" | "real_exam";
+      questionCount?: number;
       fileUrls?: string[];
     };
 
@@ -510,12 +518,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Giới hạn số câu hợp lý cho request AI (Tối đa 40 câu / batch AI để tránh timeout)
+    const targetCount = Math.min(Math.max(questionCount, 5), 40);
+
     let questions: Question[];
 
     try {
       // ── Multi-AI Fallback Chain via OpenRouter ─────────────────────────────
       // Gemini 2.5 Flash → DeepSeek R1 → Qwen 72B → Nemotron → Llama 3.3
-      const prompt = buildPrompt(exam, level, format, fileUrls);
+      const prompt = buildPrompt(exam, level, format, mode, targetCount, fileUrls);
       const result = await createChatCompletion({
         task: "exam_generation",
         messages: [
@@ -541,12 +552,12 @@ export async function POST(req: NextRequest) {
       }
 
       console.info(
-        `[exam-prep] Generated ${questions.length} questions for ${exam} (${level}) via model: ${result.model}`
+        `[exam-prep] Generated ${questions.length} questions for ${exam} (${level}) mode=${mode} via model: ${result.model}`
       );
     } catch (aiErr) {
       console.warn("[exam-prep] All AI models failed, using fallback samples:", aiErr);
       const key = exam.toUpperCase() as keyof typeof SAMPLES;
-      questions = SAMPLES[key] ?? SAMPLES["TOPIK"];
+      questions = (SAMPLES[key] ?? SAMPLES["TOPIK"]).slice(0, targetCount);
     }
 
     // ── Save session to Supabase ─────────────────────────────────────────────
