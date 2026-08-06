@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createChatCompletion } from "@/lib/ai/openrouter-client";
+import { callGoogleAIDirect } from "@/config/ai-models";
 
 export const maxDuration = 60;
 
 /**
  * POST /api/generate-practice
  *
- * Body: { exam: "TOPIK" | "TOEIC" | "IELTS" | "HSK", level: string, format?: string, fileUrls?: string[] }
+ * Body: { exam, level, format?, mode?, source?, questionCount?, fileUrls? }
  *
- * Uses OpenRouter with a multi-AI fallback chain:
- *   Gemini 2.5 Flash → DeepSeek R1 → Qwen 72B → Nemotron → Llama 3.3
+ * 8-AI Dual Gateway Strategy:
+ *   KÊNH 1 (Google AI Studio Direct):
+ *     [1] Gemini 2.5 Flash (primary)  →  [2] Gemini 2.0 Flash (secondary)
+ *   KÊNH 2 (OpenRouter Multi-Model Routing):
+ *     [3] Gemini 2.5 Flash  →  [4] DeepSeek R1  →  [5] Qwen 72B
+ *     →  [6] Nemotron  →  [7] Llama 3.3 70B  →  [8] Gemma 26B
  */
 
 interface Choice {
@@ -532,52 +537,35 @@ export async function POST(req: NextRequest) {
     let questions: Question[] = [];
     const prompt = buildPrompt(exam, level, format, mode, targetCount, source, fileUrls);
 
-    // ── KÊNH 1: Google AI Studio Direct API (Gemini Direct) ───────────────────
-    const googleKey = process.env.GOOGLE_AI_STUDIO_API_KEY || process.env.GEMINI_API_KEY;
+    // ── KÊNH 1: Google AI Studio Direct (Gemini 2.5 Flash → Gemini 2.0 Flash) ─
     let successWithDirectGemini = false;
+    const directResult = await callGoogleAIDirect(prompt, {
+      maxOutputTokens: 4096,
+      temperature: 0.7,
+    });
 
-    if (googleKey) {
+    if (directResult) {
       try {
-        const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: {
-                temperature: 0.7,
-                maxOutputTokens: 4096,
-              },
-            }),
-          }
-        );
-
-        if (geminiRes.ok) {
-          const geminiData = await geminiRes.json();
-          const rawText: string =
-            geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-
-          const jsonStr = rawText
-            .replace(/```json\s*/gi, "")
-            .replace(/```\s*/g, "")
-            .trim();
-
-          const parsed = JSON.parse(jsonStr);
-          if (Array.isArray(parsed.questions) && parsed.questions.length > 0) {
-            questions = parsed.questions;
-            successWithDirectGemini = true;
-            console.info(
-              `[exam-prep] Generated ${questions.length} questions via Google AI Studio Direct (Gemini 2.5 Flash)`
-            );
-          }
+        const jsonStr = directResult.text
+          .replace(/```json\s*/gi, "")
+          .replace(/```\s*/g, "")
+          .trim();
+        const parsed = JSON.parse(jsonStr);
+        if (Array.isArray(parsed.questions) && parsed.questions.length > 0) {
+          questions = parsed.questions;
+          successWithDirectGemini = true;
+          console.info(
+            `[exam-prep] ✓ Generated ${questions.length} questions via ${directResult.model}`
+          );
         }
-      } catch (directErr) {
-        console.warn("[exam-prep] Google AI Studio Direct API failed, falling back to OpenRouter:", directErr);
+      } catch {
+        console.warn("[exam-prep] Google AI Studio Direct: JSON parse failed, trying OpenRouter.");
       }
     }
 
-    // ── KÊNH 2: OpenRouter Multi-Model Routing (DeepSeek R1 → Qwen → Nemotron → Llama → Gemma)
+    // ── KÊNH 2: OpenRouter 6-Model Routing Chain ──────────────────────────────
+    // [3] Gemini 2.5 Flash → [4] DeepSeek R1 → [5] Qwen 72B
+    // → [6] Nemotron → [7] Llama 3.3 70B → [8] Gemma 26B
     if (!successWithDirectGemini) {
       try {
         const result = await createChatCompletion({
