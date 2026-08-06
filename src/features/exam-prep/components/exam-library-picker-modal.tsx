@@ -102,7 +102,7 @@ export function ExamLibraryPickerModal({
                       <div>
                         <div className="text-xs font-bold line-clamp-1">{item.title}</div>
                         <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                          <span>{item.type.toUpperCase()}</span>
+                          <span>{(item.type || "DOC").toUpperCase()}</span>
                           {item.tags && item.tags.length > 0 && (
                             <span className="truncate max-w-[150px]">· {item.tags.join(", ")}</span>
                           )}

@@ -107,7 +107,7 @@ export function ExamPrepHeader({
       <div className="rounded-2xl border border-border/80 bg-surface/80 p-4 space-y-3 shadow-xs backdrop-blur-md">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-            <Award className="size-4 text-indigo-500" /> Chọn Cấp Độ Thi ({selectedCertificate.toUpperCase()}):
+            <Award className="size-4 text-indigo-500" /> Chọn Cấp Độ Thi ({(selectedCertificate || "topik").toUpperCase()}):
           </span>
 
           {/* Library File Link Trigger */}

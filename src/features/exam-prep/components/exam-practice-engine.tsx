@@ -240,7 +240,7 @@ export function ExamPracticeEngine({ paper, isMockMode = false, onRestart }: Exa
         <div className="flex items-center justify-between">
           <span className="rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-bold text-indigo-600 uppercase border border-indigo-500/20 flex items-center gap-1.5">
             {currentQ.section === "listening" ? <Headphones className="size-3.5" /> : <FileText className="size-3.5" />}
-            {currentQ.section.toUpperCase()} · Câu {currentQ.number} / {paper.questions.length}
+            {(currentQ.section || "CÂU HỎI").toUpperCase()} · Câu {currentQ.number} / {paper.questions.length}
           </span>
 
           {/* Audio Button for Listening Questions */}

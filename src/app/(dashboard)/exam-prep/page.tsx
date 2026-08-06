@@ -141,7 +141,7 @@ export default function ExamPrepPage() {
           {/* Preset Syllabus Level Showcase */}
           <div className="space-y-3">
             <h3 className="font-display text-base font-bold text-foreground flex items-center gap-2">
-              <Award className="size-4 text-indigo-500" /> Các Cấp Độ Thi {selectedCertificate.toUpperCase()}:
+              <Award className="size-4 text-indigo-500" /> Các Cấp Độ Thi {(selectedCertificate || "topik").toUpperCase()}:
             </h3>
             <div className="grid gap-3 sm:grid-cols-2">
               {(EXAM_LEVELS[selectedCertificate] || []).map((lvl) => (
