@@ -529,43 +529,89 @@ export async function POST(req: NextRequest) {
 
     const targetCount = Math.min(Math.max(questionCount, 5), 40);
 
-    let questions: Question[];
+    let questions: Question[] = [];
+    const prompt = buildPrompt(exam, level, format, mode, targetCount, source, fileUrls);
 
-    try {
-      // ── Multi-AI Fallback Chain via OpenRouter ─────────────────────────────
-      // Gemini 2.5 Flash → DeepSeek R1 → Qwen 72B → Nemotron → Llama 3.3
-      const prompt = buildPrompt(exam, level, format, mode, targetCount, source, fileUrls);
-      const result = await createChatCompletion({
-        task: "exam_generation",
-        messages: [
+    // ── KÊNH 1: Google AI Studio Direct API (Gemini Direct) ───────────────────
+    const googleKey = process.env.GOOGLE_AI_STUDIO_API_KEY || process.env.GEMINI_API_KEY;
+    let successWithDirectGemini = false;
+
+    if (googleKey) {
+      try {
+        const geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleKey}`,
           {
-            role: "system",
-            content: `Bạn là giám khảo và chuyên gia soạn đề thi ${exam} quốc tế. CHỈ trả về JSON array/object thuần túy.`,
-          },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.7,
-      });
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 4096,
+              },
+            }),
+          }
+        );
 
-      const jsonStr = result.content
-        .replace(/```json\s*/gi, "")
-        .replace(/```\s*/g, "")
-        .trim();
+        if (geminiRes.ok) {
+          const geminiData = await geminiRes.json();
+          const rawText: string =
+            geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
-      const parsed = JSON.parse(jsonStr);
-      questions = parsed.questions ?? [];
+          const jsonStr = rawText
+            .replace(/```json\s*/gi, "")
+            .replace(/```\s*/g, "")
+            .trim();
 
-      if (!Array.isArray(questions) || questions.length === 0) {
-        throw new Error("AI không trả về câu hỏi hợp lệ.");
+          const parsed = JSON.parse(jsonStr);
+          if (Array.isArray(parsed.questions) && parsed.questions.length > 0) {
+            questions = parsed.questions;
+            successWithDirectGemini = true;
+            console.info(
+              `[exam-prep] Generated ${questions.length} questions via Google AI Studio Direct (Gemini 2.5 Flash)`
+            );
+          }
+        }
+      } catch (directErr) {
+        console.warn("[exam-prep] Google AI Studio Direct API failed, falling back to OpenRouter:", directErr);
       }
+    }
 
-      console.info(
-        `[exam-prep] Generated ${questions.length} questions for ${exam} (${level}) mode=${mode} source=${source} via model: ${result.model}`
-      );
-    } catch (aiErr) {
-      console.warn("[exam-prep] All AI models failed, using fallback samples:", aiErr);
-      const key = exam.toUpperCase() as keyof typeof SAMPLES;
-      questions = (SAMPLES[key] ?? SAMPLES["TOPIK"]).slice(0, targetCount);
+    // ── KÊNH 2: OpenRouter Multi-Model Routing (DeepSeek R1 → Qwen → Nemotron → Llama → Gemma)
+    if (!successWithDirectGemini) {
+      try {
+        const result = await createChatCompletion({
+          task: "exam_generation",
+          messages: [
+            {
+              role: "system",
+              content: `Bạn là giám khảo và chuyên gia soạn đề thi ${exam} quốc tế. CHỈ trả về JSON array/object thuần túy.`,
+            },
+            { role: "user", content: prompt },
+          ],
+          temperature: 0.7,
+        });
+
+        const jsonStr = result.content
+          .replace(/```json\s*/gi, "")
+          .replace(/```\s*/g, "")
+          .trim();
+
+        const parsed = JSON.parse(jsonStr);
+        questions = parsed.questions ?? [];
+
+        if (!Array.isArray(questions) || questions.length === 0) {
+          throw new Error("AI không trả về câu hỏi hợp lệ.");
+        }
+
+        console.info(
+          `[exam-prep] Generated ${questions.length} questions for ${exam} (${level}) mode=${mode} source=${source} via OpenRouter model: ${result.model}`
+        );
+      } catch (aiErr) {
+        console.warn("[exam-prep] All AI models failed, using fallback samples:", aiErr);
+        const key = exam.toUpperCase() as keyof typeof SAMPLES;
+        questions = (SAMPLES[key] ?? SAMPLES["TOPIK"]).slice(0, targetCount);
+      }
     }
 
     // ── Save session to Supabase ─────────────────────────────────────────────

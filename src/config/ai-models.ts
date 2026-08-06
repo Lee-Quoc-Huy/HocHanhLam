@@ -58,18 +58,19 @@ export const AI_MODEL_ROUTES: Record<AiTaskType, AiModelRoute> = {
     maxOutputTokens: 0,
   },
 
-  // ── Exam question generation: tries 4 free models in order ──────────────
+  // ── Exam question generation: tries 5 free models in order ──────────────
   exam_generation: {
     task: "exam_generation",
     provider: "google",
-    // Primary: Gemini Flash via OpenRouter (fastest, best JSON)
+    // Primary: Gemini 2.5 Flash via OpenRouter (fastest, best JSON)
     model: "google/gemini-2.5-flash",
-    // Fallback chain: DeepSeek → Qwen → Nemotron
+    // Fallback chain: DeepSeek R1 → Qwen 72B → Nemotron 550B → Llama 3.3 70B → Gemma 26B
     fallbackModels: [
       "deepseek/deepseek-r1-distill-qwen-32b:free",
       "qwen/qwen-2.5-72b-instruct:free",
       "nvidia/nemotron-3-ultra-550b-a55b:free",
       "meta-llama/llama-3.3-70b-instruct:free",
+      "google/gemma-4-26b-a4b-it:free",
     ],
     maxOutputTokens: 4096,
   },
