@@ -16,11 +16,11 @@
  * ╚══════════════════════════════════════════════════════════════════════════╝
  */
 
-// ── 2 Google AI Studio Direct Models ─────────────────────────────────────────
+// ── 2 Google AI Studio Direct Models (Tên chuẩn REST API Google) ────────────
 export const GOOGLE_AI_STUDIO_MODELS = {
-  /** Primary – Gemini 2.5 Flash: Tạo đề thi, AI Tutor, phân tích dài */
-  primary: "gemini-2.5-flash",
-  /** Secondary – Gemini 2.0 Flash: Flashcard, OCR, completion nhanh */
+  /** Primary – Gemini 1.5 Flash (Nhanh, chuẩn REST API Google AI Studio) */
+  primary: "gemini-1.5-flash",
+  /** Secondary – Gemini 2.0 Flash (Thế hệ mới, phản hồi tốt) */
   secondary: "gemini-2.0-flash",
 } as const;
 
