@@ -16,12 +16,12 @@
  * ╚══════════════════════════════════════════════════════════════════════════╝
  */
 
-// ── 2 Google AI Studio Direct Models (Tên chuẩn REST API Google) ────────────
+// ── 2 Google AI Studio Direct Models (Chọn từ bảng Quota tài khoản thực tế) ──
 export const GOOGLE_AI_STUDIO_MODELS = {
-  /** Primary – Gemini 1.5 Flash (Nhanh, chuẩn REST API Google AI Studio) */
-  primary: "gemini-1.5-flash",
-  /** Secondary – Gemini 2.0 Flash (Thế hệ mới, phản hồi tốt) */
-  secondary: "gemini-2.0-flash",
+  /** Primary – Gemini 2.5 Flash (Tốc độ & Thông minh nhất cho Thi thật/Tutor) */
+  primary: "gemini-2.5-flash",
+  /** Secondary – Gemini 2.5 Flash Lite (Hạn ngạch 500 RPD/ngày siêu rộng) */
+  secondary: "gemini-2.5-flash-lite",
 } as const;
 
 // ── 6 OpenRouter Models (Phân công theo nhiệm vụ) ────────────────────────────

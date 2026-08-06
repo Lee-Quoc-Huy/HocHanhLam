@@ -17,7 +17,7 @@ const GOOGLE_AI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
 const MODELS_TO_TRY = [
   GOOGLE_AI_STUDIO_MODELS.primary,   // gemini-2.5-flash
-  GOOGLE_AI_STUDIO_MODELS.secondary, // gemini-2.0-flash
+  GOOGLE_AI_STUDIO_MODELS.secondary, // gemini-2.5-flash-lite
 ] as const;
 
 export interface GoogleAiImagePart {
