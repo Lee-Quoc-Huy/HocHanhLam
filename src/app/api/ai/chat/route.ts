@@ -12,7 +12,14 @@ export const maxDuration = 60;
  */
 
 const requestSchema = z.object({
-  task: z.enum(["chat_tutor", "reasoning", "fast_completion"]),
+  task: z.enum([
+    "chat_tutor",
+    "reasoning",
+    "fast_completion",
+    "exam_generation",
+    "game_engine",
+    "flashcard_gen",
+  ]),
   messages: z
     .array(z.object({ role: z.enum(["system", "user", "assistant"]), content: z.string() }))
     .min(1),

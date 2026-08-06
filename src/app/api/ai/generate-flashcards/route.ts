@@ -49,7 +49,7 @@ Trả về 1 mảng JSON thuần túy gồm ${count} phần tử. Mỗi phần t
 TUYỆT ĐỐI CHỈ TRẢ VỀ JSON ARRAY THUẦN TÚY, KHÔNG CÓ MARKDOWN HOẶC VĂN BẢN KHÁC.`;
 
     const rawResponse = await createChatCompletion({
-      task: "fast_completion",
+      task: "flashcard_gen",
       messages: [
         { role: "system", content: "Chuyên gia tạo Flashcard & Quiz học ngoại ngữ. Chỉ trả về JSON array." },
         { role: "user", content: prompt },
@@ -57,9 +57,10 @@ TUYỆT ĐỐI CHỈ TRẢ VỀ JSON ARRAY THUẦN TÚY, KHÔNG CÓ MARKDOWN HO�
       temperature: 0.7,
     });
 
-    // Parse JSON array from raw response
-    const jsonMatch = rawResponse.match(/\[\s*\{[\s\S]*\}\s*\]/);
-    const jsonStr = jsonMatch ? jsonMatch[0] : rawResponse.trim();
+    // Parse JSON array from raw response content string
+    const rawText = rawResponse.content;
+    const jsonMatch = rawText.match(/\[\s*\{[\s\S]*\}\s*\]/);
+    const jsonStr = jsonMatch ? jsonMatch[0] : rawText.trim();
     const items = JSON.parse(jsonStr);
 
     return NextResponse.json({ items });
