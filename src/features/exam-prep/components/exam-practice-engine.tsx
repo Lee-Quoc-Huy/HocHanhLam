@@ -15,6 +15,9 @@ import {
   Check,
   FileText,
   Headphones,
+  Eye,
+  EyeOff,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -35,6 +38,16 @@ export function ExamPracticeEngine({ paper, isMockMode = false, onRestart }: Exa
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [result, setResult] = useState<ExamResult | null>(null);
+
+  // Toggle state for Passage & Audio Script (hidden upfront by default to simulate real exam)
+  const [showPassage, setShowPassage] = useState(false);
+  const [showAudioScript, setShowAudioScript] = useState(false);
+
+  // Reset toggles when moving to next/prev question
+  useEffect(() => {
+    setShowPassage(false);
+    setShowAudioScript(false);
+  }, [currentIdx]);
 
   // Timer state for Mock Test mode
   const [timeLeftSeconds, setTimeLeftSeconds] = useState(paper.durationMinutes * 60);
@@ -191,6 +204,7 @@ export function ExamPracticeEngine({ paper, isMockMode = false, onRestart }: Exa
                     </span>
                   </div>
                   {q.passageText && <p className="text-muted-foreground italic font-mono bg-background p-2 rounded-lg">{q.passageText}</p>}
+                  {q.audioScript && <p className="text-purple-600 dark:text-purple-300 italic font-mono bg-purple-500/10 p-2 rounded-lg">🎧 Script: &ldquo;{q.audioScript}&rdquo;</p>}
                   <div className="grid grid-cols-2 gap-1 text-[11px]">
                     {q.options.map((opt, i) => (
                       <div key={i} className={`p-1.5 rounded-lg ${i === q.correctAnswerIndex ? "bg-emerald-500/20 font-bold text-emerald-700 dark:text-emerald-300" : i === userAns ? "bg-rose-500/20 text-rose-600" : "text-muted-foreground"}`}>
@@ -236,7 +250,7 @@ export function ExamPracticeEngine({ paper, isMockMode = false, onRestart }: Exa
 
       {/* Main Question Sheet */}
       <div className="rounded-3xl border border-border/80 bg-surface/90 p-6 sm:p-8 shadow-2xl backdrop-blur-md space-y-6">
-        {/* Header Badges */}
+        {/* Header Badges & Audio Trigger */}
         <div className="flex items-center justify-between">
           <span className="rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-bold text-indigo-600 uppercase border border-indigo-500/20 flex items-center gap-1.5">
             {currentQ.section === "listening" ? <Headphones className="size-3.5" /> : <FileText className="size-3.5" />}
@@ -250,27 +264,72 @@ export function ExamPracticeEngine({ paper, isMockMode = false, onRestart }: Exa
               size="sm"
               className={cn(
                 "h-8 text-xs gap-1.5 rounded-full font-bold shadow-sm transition-all",
-                isPlayingAudio ? "bg-amber-500 text-white animate-pulse" : "bg-indigo-600 text-white hover:bg-indigo-700"
+                isPlayingAudio ? "bg-amber-500 text-white animate-pulse" : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95"
               )}
             >
               <Volume2 className="size-4" />
-              <span>{isPlayingAudio ? "Đang phát..." : "Nghe Đoạn Audio"}</span>
+              <span>{isPlayingAudio ? "Đang phát..." : "Nghe Âm Thanh Audio"}</span>
             </Button>
           )}
         </div>
 
-        {/* Reading Passage if applicable */}
+        {/* Toggle Reading Passage (Hidden upfront to simulate real exam) */}
         {currentQ.passageText && (
-          <div className="rounded-2xl border border-border bg-background/90 p-4 text-xs sm:text-sm font-medium text-foreground leading-relaxed space-y-1">
-            <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Đoạn văn bài đọc:</span>
-            <p className="italic font-mono">{currentQ.passageText}</p>
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowPassage((prev) => !prev)}
+              className="gap-1.5 text-xs font-bold rounded-xl border-dashed border-indigo-500/40 text-indigo-600 dark:text-indigo-400 bg-indigo-500/5 hover:bg-indigo-500/10 active:scale-95"
+            >
+              {showPassage ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+              <span>{showPassage ? "Ẩn Đoạn Văn Bài Đọc ✕" : "📖 Xem Gợi Ý Đoạn Văn Bài Đọc"}</span>
+            </Button>
+
+            {showPassage && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="rounded-2xl border border-indigo-500/30 bg-background/90 p-4 text-xs sm:text-sm font-medium text-foreground leading-relaxed space-y-1 shadow-inner"
+              >
+                <span className="text-[10px] font-bold uppercase text-indigo-600 dark:text-indigo-400 tracking-wider">
+                  📖 Nội dung bài đọc:
+                </span>
+                <p className="italic font-mono leading-relaxed pt-1 text-foreground">{currentQ.passageText}</p>
+              </motion.div>
+            )}
           </div>
         )}
 
-        {/* Audio Script text if revealed */}
+        {/* Toggle Audio Script (Hidden upfront to simulate real exam listening) */}
         {currentQ.audioScript && (
-          <div className="rounded-xl border border-purple-500/20 bg-purple-500/10 p-3 text-xs text-purple-700 dark:text-purple-300 font-mono">
-            🎧 Audio Script: &ldquo;{currentQ.audioScript}&rdquo;
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAudioScript((prev) => !prev)}
+              className="gap-1.5 text-xs font-bold rounded-xl border-dashed border-purple-500/40 text-purple-600 dark:text-purple-400 bg-purple-500/5 hover:bg-purple-500/10 active:scale-95"
+            >
+              <HelpCircle className="size-3.5" />
+              <span>{showAudioScript ? "Ẩn Lời Thoại Audio ✕" : "💡 Gợi Ý Lời Thoại (Audio Script)"}</span>
+            </Button>
+
+            {showAudioScript && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-3 text-xs text-purple-700 dark:text-purple-300 font-mono leading-relaxed shadow-inner"
+              >
+                <span className="font-bold block text-[10px] uppercase text-purple-600 dark:text-purple-400 mb-1">
+                  🎧 Lời thoại nghe (Audio Script):
+                </span>
+                &ldquo;{currentQ.audioScript}&rdquo;
+              </motion.div>
+            )}
           </div>
         )}
 
