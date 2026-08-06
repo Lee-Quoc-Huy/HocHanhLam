@@ -5,16 +5,20 @@
  */
 
 export type AiTaskType =
-  | "chat_tutor" // conversational practice, general Q&A
-  | "reasoning" // grammar explanation, exam-answer reasoning
-  | "fast_completion" // flashcard hints, quick lookups
-  | "vision_ocr" // Gemini Vision document/text extraction
-  | "embedding"; // pgvector semantic search / SRS similarity
+  | "chat_tutor"       // conversational practice, general Q&A
+  | "reasoning"        // grammar explanation, exam-answer reasoning
+  | "fast_completion"  // flashcard hints, quick lookups
+  | "vision_ocr"       // Gemini Vision document/text extraction
+  | "embedding"        // pgvector semantic search / SRS similarity
+  | "exam_generation"; // generate TOPIK/TOEIC/HSK practice questions
 
 export interface AiModelRoute {
   task: AiTaskType;
-  provider: "google" | "deepseek" | "qwen" | "openai";
+  provider: "google" | "deepseek" | "qwen" | "openai" | "nvidia" | "mistral";
   model: string;
+  /** Ordered list of fallback model IDs tried in sequence on failure */
+  fallbackModels?: string[];
+  /** @deprecated use fallbackModels instead */
   fallbackModel?: string;
   maxOutputTokens: number;
 }
@@ -52,6 +56,22 @@ export const AI_MODEL_ROUTES: Record<AiTaskType, AiModelRoute> = {
     provider: "openai",
     model: process.env.AI_MODEL_EMBEDDING ?? "text-embedding-3-large",
     maxOutputTokens: 0,
+  },
+
+  // ── Exam question generation: tries 4 free models in order ──────────────
+  exam_generation: {
+    task: "exam_generation",
+    provider: "google",
+    // Primary: Gemini Flash via OpenRouter (fastest, best JSON)
+    model: "google/gemini-2.5-flash",
+    // Fallback chain: DeepSeek → Qwen → Nemotron
+    fallbackModels: [
+      "deepseek/deepseek-r1-distill-qwen-32b:free",
+      "qwen/qwen-2.5-72b-instruct:free",
+      "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "meta-llama/llama-3.3-70b-instruct:free",
+    ],
+    maxOutputTokens: 4096,
   },
 };
 

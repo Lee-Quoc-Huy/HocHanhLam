@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createChatCompletion } from "@/lib/ai/openrouter-client";
 
 export const maxDuration = 60;
 
@@ -8,11 +9,10 @@ export const maxDuration = 60;
  *
  * Body: { exam: "TOPIK" | "TOEIC" | "HSK", level: string, fileUrls: string[] }
  *
- * Uses the Google Gemini API (via GEMINI_API_KEY env var) to generate a
- * 10-question practice set, then auto-saves the session to Supabase.
- *
- * Falls back to hard-coded sample questions when GEMINI_API_KEY is not set,
- * so the UI is fully functional even without a key during local development.
+ * Uses OpenRouter with a multi-AI fallback chain:
+ *   Gemini 2.5 Flash → DeepSeek R1 → Qwen 72B → Nemotron → Llama 3.3
+ * When one model hits rate limits or fails, the next is tried automatically.
+ * Falls back to hard-coded sample questions only when ALL models fail.
  */
 
 interface Choice {
@@ -129,9 +129,9 @@ const SAMPLES: Record<string, Question[]> = {
     {
       id: "t10",
       type: "fill-blank",
-      prompt: "저는 회사____다닙니다. (입자 trợ từ vị trí/địa điểm)",
+      prompt: "저는 회사____다닙니다. (trợ từ vị trí/địa điểm)",
       answer: "에",
-      explanation: "에 là trợ từ chỉ địa điểm/hướng đến (에 = ở/đến).",
+      explanation: "에 là trợ từ chỉ địa điểm/hướng đến.",
     },
   ],
   TOEIC: [
@@ -151,7 +151,7 @@ const SAMPLES: Record<string, Question[]> = {
     {
       id: "tc2",
       type: "fill-blank",
-      prompt: "Please ____ the attached document before the deadline. (review)",
+      prompt: "Please ____ the attached document before the deadline.",
       answer: "review",
       explanation: "review = xem xét, đọc lại tài liệu.",
     },
@@ -171,7 +171,7 @@ const SAMPLES: Record<string, Question[]> = {
     {
       id: "tc4",
       type: "fill-blank",
-      prompt: "We need to ____ a new strategy for the next quarter. (develop)",
+      prompt: "We need to ____ a new strategy for the next quarter.",
       answer: "develop",
       explanation: "develop a strategy = xây dựng chiến lược.",
     },
@@ -191,7 +191,7 @@ const SAMPLES: Record<string, Question[]> = {
     {
       id: "tc6",
       type: "fill-blank",
-      prompt: "The client was ____ with our proposal. (hài lòng)",
+      prompt: "The client was ____ with our proposal.",
       answer: "satisfied",
       explanation: "satisfied with = hài lòng với.",
     },
@@ -211,7 +211,7 @@ const SAMPLES: Record<string, Question[]> = {
     {
       id: "tc8",
       type: "fill-blank",
-      prompt: "Please ____ the invoice to accounting. (forward/send)",
+      prompt: "Please ____ the invoice to accounting.",
       answer: "forward",
       explanation: "forward = chuyển tiếp, gửi đi.",
     },
@@ -231,7 +231,7 @@ const SAMPLES: Record<string, Question[]> = {
     {
       id: "tc10",
       type: "fill-blank",
-      prompt: "The company will ____ a bonus to all employees. (award)",
+      prompt: "The company will ____ a bonus to all employees.",
       answer: "award",
       explanation: "award a bonus = trao thưởng/bonus.",
     },
@@ -333,18 +333,18 @@ const SAMPLES: Record<string, Question[]> = {
     {
       id: "h10",
       type: "fill-blank",
-      prompt: "你____什么名字？(tên bạn là gì — động từ hỏi tên)",
+      prompt: "你____什么名字？(tên bạn là gì — động từ)",
       answer: "叫",
       explanation: "你叫什么名字？(nǐ jiào shénme míngzì) = Bạn tên là gì?",
     },
   ],
 };
 
-// ─── Build Gemini prompt ────────────────────────────────────────────────────────
+// ─── Build prompt ──────────────────────────────────────────────────────────────
 function buildPrompt(exam: string, level: string, fileUrls: string[]): string {
   const context =
     fileUrls.length > 0
-      ? `Tham khảo thêm nội dung từ các tệp sau (nếu có thể): ${fileUrls.slice(0, 3).join(", ")}.`
+      ? `Tham khảo thêm nội dung từ các tệp sau nếu có thể: ${fileUrls.slice(0, 3).join(", ")}.`
       : "Tạo câu hỏi dựa trên kiến thức chuẩn của kỳ thi.";
 
   return `Bạn là một giáo viên chuyên luyện thi ${exam} cấp độ ${level}.
@@ -356,20 +356,21 @@ Trả về JSON có dạng:
   "questions": [
     {
       "id": "q1",
-      "type": "multiple-choice" | "fill-blank",
+      "type": "multiple-choice",
       "prompt": "Nội dung câu hỏi...",
-      "choices": [{"id": "a", "text": "..."}, ...],  // chỉ cho multiple-choice
-      "answer": "a",  // id của đáp án đúng cho MC, hoặc chuỗi văn bản cho fill-blank
-      "explanation": "Giải thích ngắn gọn..."
+      "choices": [{"id": "a", "text": "..."}, {"id": "b", "text": "..."}, {"id": "c", "text": "..."}, {"id": "d", "text": "..."}],
+      "answer": "a",
+      "explanation": "Giải thích ngắn gọn bằng tiếng Việt..."
     }
   ]
 }
 
-Quy tắc:
-- Dùng hỗn hợp multiple-choice và fill-blank
+Quy tắc bắt buộc:
+- Dùng hỗn hợp "multiple-choice" và "fill-blank"
 - Đảm bảo độ khó phù hợp cấp ${level}
 - Câu hỏi bằng ngôn ngữ của kỳ thi (Hàn/Anh/Trung), giải thích bằng tiếng Việt
-- CHỈ trả về JSON thuần túy, không có markdown hay text thừa`;
+- fill-blank: "choices" là mảng rỗng [], "answer" là chuỗi văn bản đúng
+- CHỈ trả về JSON thuần túy, không có markdown, không có text thừa`;
 }
 
 // ─── Route Handler ─────────────────────────────────────────────────────────────
@@ -390,38 +391,26 @@ export async function POST(req: NextRequest) {
     }
 
     let questions: Question[];
-    const apiKey = process.env.GEMINI_API_KEY;
 
-    if (apiKey) {
-      // ── Call Gemini ────────────────────────────────────────────────────────
+    try {
+      // ── Multi-AI fallback chain via OpenRouter ─────────────────────────────
+      // Thứ tự: Gemini 2.5 Flash → DeepSeek R1 → Qwen 72B → Nemotron → Llama 3.3
+      // openrouter-client tự động thử từng model khi model trước thất bại.
       const prompt = buildPrompt(exam, level, fileUrls);
-      const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 4096,
-            },
-          }),
-        }
-      );
+      const result = await createChatCompletion({
+        task: "exam_generation",
+        messages: [
+          {
+            role: "system",
+            content: `Bạn là chuyên gia luyện thi ${exam}. CHỈ trả về JSON thuần túy, không markdown.`,
+          },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.7,
+      });
 
-      if (!geminiRes.ok) {
-        const errText = await geminiRes.text();
-        console.error("Gemini API error:", errText);
-        throw new Error("Gemini API trả về lỗi. Dùng câu hỏi mẫu thay thế.");
-      }
-
-      const geminiData = await geminiRes.json();
-      const rawText: string =
-        geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-
-      // Strip markdown fences if present
-      const jsonStr = rawText
+      // Loại bỏ markdown fences nếu model nào đó wrap JSON trong code block
+      const jsonStr = result.content
         .replace(/```json\s*/gi, "")
         .replace(/```\s*/g, "")
         .trim();
@@ -430,16 +419,20 @@ export async function POST(req: NextRequest) {
       questions = parsed.questions ?? [];
 
       if (!Array.isArray(questions) || questions.length === 0) {
-        throw new Error("Gemini không trả về câu hỏi hợp lệ.");
+        throw new Error("AI không trả về câu hỏi hợp lệ.");
       }
-    } else {
-      // ── Fallback to sample questions ───────────────────────────────────────
-      console.warn("GEMINI_API_KEY không được cài. Dùng câu hỏi mẫu.");
+
+      console.info(
+        `[exam-prep] Tạo ${questions.length} câu hỏi thành công với model: ${result.model}`
+      );
+    } catch (aiErr) {
+      // ── Câu hỏi mẫu dự phòng khi TẤT CẢ model thất bại ──────────────────
+      console.warn("[exam-prep] Tất cả AI model thất bại, dùng câu hỏi mẫu:", aiErr);
       const key = exam.toUpperCase() as keyof typeof SAMPLES;
       questions = SAMPLES[key] ?? SAMPLES["TOPIK"];
     }
 
-    // ── Save session to Supabase ─────────────────────────────────────────────
+    // ── Lưu session vào Supabase ─────────────────────────────────────────────
     let sessionId = `local-${Date.now()}`;
     try {
       const supabase = await createClient();
@@ -462,7 +455,7 @@ export async function POST(req: NextRequest) {
         if (session?.id) sessionId = session.id;
       }
     } catch (dbErr) {
-      // Non-fatal — session still works, just won't be persisted
+      // Non-fatal — session vẫn hoạt động, chỉ không lưu được
       console.warn("Không lưu được session vào Supabase:", dbErr);
     }
 

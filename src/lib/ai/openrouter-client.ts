@@ -27,56 +27,73 @@ export interface CompletionResult {
   usage?: { promptTokens: number; completionTokens: number; totalTokens: number };
 }
 
+async function tryModel(
+  model: string,
+  params: CompletionParams,
+  apiKey: string,
+  maxTokens: number,
+): Promise<CompletionResult | null> {
+  try {
+    const response = await fetch(`${OPENROUTER_CONFIG.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        ...OPENROUTER_CONFIG.siteHeaders,
+      },
+      body: JSON.stringify({
+        model,
+        messages: params.messages,
+        temperature: params.temperature ?? 0.7,
+        max_tokens: maxTokens,
+        stream: false,
+      }),
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    // OpenRouter may return an error object with status 200
+    if (data.error) return null;
+
+    const content: string = data.choices?.[0]?.message?.content ?? "";
+    if (!content.trim()) return null;
+
+    return mapResponse(data, model);
+  } catch {
+    return null;
+  }
+}
+
 export async function createChatCompletion(params: CompletionParams): Promise<CompletionResult> {
   const route = AI_MODEL_ROUTES[params.task];
-  const model = params.modelOverride ?? route.model;
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not configured.");
 
-  const response = await fetch(`${OPENROUTER_CONFIG.baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      ...OPENROUTER_CONFIG.siteHeaders,
-    },
-    body: JSON.stringify({
-      model,
-      messages: params.messages,
-      temperature: params.temperature ?? 0.7,
-      max_tokens: route.maxOutputTokens,
-      stream: false,
-    }),
-  });
+  // Build the full ordered list of models to try: primary → fallbackModels → fallbackModel
+  const modelsToTry: string[] = [
+    params.modelOverride ?? route.model,
+    ...(route.fallbackModels ?? []),
+    ...(route.fallbackModel ? [route.fallbackModel] : []),
+  ];
 
-  if (!response.ok) {
-    if (route.fallbackModel) {
-      const fallbackResponse = await fetch(`${OPENROUTER_CONFIG.baseUrl}/chat/completions`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          ...OPENROUTER_CONFIG.siteHeaders,
-        },
-        body: JSON.stringify({
-          model: route.fallbackModel,
-          messages: params.messages,
-          temperature: params.temperature ?? 0.7,
-          max_tokens: route.maxOutputTokens,
-        }),
-      });
-      if (fallbackResponse.ok) {
-        const data = await fallbackResponse.json();
-        return mapResponse(data, route.fallbackModel);
+  let lastError = "";
+  for (const model of modelsToTry) {
+    const result = await tryModel(model, params, apiKey, route.maxOutputTokens);
+    if (result) {
+      if (model !== modelsToTry[0]) {
+        console.info(`[AI] Primary model unavailable. Using fallback: ${model}`);
       }
+      return result;
     }
-    const errorBody = await response.text();
-    throw new Error(`OpenRouter request failed (${response.status}): ${errorBody}`);
+    lastError = model;
   }
 
-  const data = await response.json();
-  return mapResponse(data, model);
+  throw new Error(
+    `All AI models failed for task "${params.task}". Last tried: ${lastError}. Check OPENROUTER_API_KEY and model availability.`,
+  );
 }
+
 
 /**
  * Creates a Server-Sent Events stream for real-time AI token generation.
