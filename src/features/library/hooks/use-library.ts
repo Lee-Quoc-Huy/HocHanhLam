@@ -6,14 +6,14 @@ import { libraryService } from "../api/library-service";
 import { LibraryItemType } from "../types";
 
 export function useLibrary() {
-  // Helper: retrieve files matching all provided tags (exam & level)
+  const store = useLibraryStore();
+
+  // Helper: retrieve library items matching ALL provided tags (e.g. exam type + level).
   const getFilesByTag = (tags: string[]) => {
-    // Items may have a `tags` array (strings). Return items where every tag is present.
     return store.items.filter((item: any) =>
       tags.every((t) => item.tags?.includes(t))
     );
   };
-  const store = useLibraryStore();
 
   useEffect(() => {
     store.fetchLibraryData();
