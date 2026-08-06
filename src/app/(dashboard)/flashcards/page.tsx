@@ -11,8 +11,6 @@ import { FlashcardReflexEngine } from "@/features/flashcards/components/flashcar
 import { FlashcardFillBlankEngine } from "@/features/flashcards/components/flashcard-fill-blank-engine";
 import { FlashcardListeningEngine } from "@/features/flashcards/components/flashcard-listening-engine";
 import { FlashcardFormModal } from "@/features/flashcards/components/flashcard-form-modal";
-import * as Dialog from "@radix-ui/react-dialog";
-import { Button } from "@/components/ui/button";
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import type { GameModeType } from "@/features/flashcards/types";
@@ -34,10 +32,8 @@ export default function FlashcardsPage() {
   const {
     cards,
     collections,
-    folders,
     stats,
     activeTab,
-    filter,
     reviewQueue,
     currentReviewIndex,
     isCardFlipped,
@@ -68,13 +64,6 @@ export default function FlashcardsPage() {
     }
   };
 
-  const handleDeleteConfirm = async () => {
-    if (selectedCardForDelete) {
-      await deleteCard(selectedCardForDelete.id);
-      closeModals();
-    }
-  };
-
   // AI Agent creates game → Automatically save cards into Supabase under this game_mode & switch tab
   const handleLaunchAiGame = useCallback(async (gameType: GameModeType, gameData: any) => {
     const items = gameData?.items || [];
@@ -89,7 +78,9 @@ export default function FlashcardsPage() {
           front_text: item.frontText || item.fullSentence || item.missingWord || "Mặt trước AI",
           front_subtext: item.hint || item.sentenceWithBlank || "",
           back_text: item.backText || item.vietnameseTranslation || "Nghĩa tiếng Việt",
-          back_explanation: item.sentenceWithBlank ? `Câu khuyết: ${item.sentenceWithBlank}\nTừ thiếu: ${item.missingWord}` : (item.hint || ""),
+          back_explanation: item.sentenceWithBlank
+            ? `Câu khuyết: ${item.sentenceWithBlank}\nTừ thiếu: ${item.missingWord}`
+            : (item.hint || ""),
           audio_url: "",
           image_url: "",
           tags: [gameData?.gameTitle || "AI Agent", gameType],
@@ -170,7 +161,7 @@ export default function FlashcardsPage() {
         />
       )}
 
-      {/* Game 2: VIP Quiz Engine */}
+      {/* Game 2: Quiz Engine (bidirectional, all-vocab distractors) */}
       {activeTab === "quiz" && (
         <FlashcardQuizEngine
           queue={getGameCards("quiz")}
@@ -184,6 +175,7 @@ export default function FlashcardsPage() {
       {activeTab === "spelling" && (
         <FlashcardSpellingEngine
           queue={getGameCards("spelling")}
+          allCards={cards}
           aiItems={aiSpellingItems}
           onOpenAutoGenForGame={() => handleOpenAutoGenForGame("spelling")}
         />
@@ -193,24 +185,27 @@ export default function FlashcardsPage() {
       {activeTab === "reflex" && (
         <FlashcardReflexEngine
           queue={getGameCards("reflex")}
+          allCards={cards}
           aiItems={aiReflexItems}
           onOpenAutoGenForGame={() => handleOpenAutoGenForGame("reflex")}
         />
       )}
 
-      {/* Game 5: Fill in the Blank Engine */}
+      {/* Game 5: Fill in the Blank Engine (bidirectional, all-vocab distractors) */}
       {activeTab === "blank" && (
         <FlashcardFillBlankEngine
           queue={getGameCards("blank")}
+          allCards={cards}
           aiItems={aiBlankItems}
           onOpenAutoGenForGame={() => handleOpenAutoGenForGame("blank")}
         />
       )}
 
-      {/* Game 6: Listening Practice Engine */}
+      {/* Game 6: Listening Practice Engine (fix audio sticking, all-vocab distractors) */}
       {activeTab === "listening" && (
         <FlashcardListeningEngine
           queue={getGameCards("listening")}
+          allCards={cards}
           aiCustomItems={aiListeningItems}
           onOpenAutoGenForGame={() => handleOpenAutoGenForGame("listening")}
         />

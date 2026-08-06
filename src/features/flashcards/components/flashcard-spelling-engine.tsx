@@ -22,41 +22,34 @@ import { useSpeech } from "@/features/vocabulary/hooks/use-speech";
 
 interface FlashcardSpellingEngineProps {
   queue: Flashcard[];
+  allCards?: Flashcard[]; // All vocab in system for harder hints
   aiItems?: any[];
   onOpenAutoGenForGame?: () => void;
 }
 
 export function FlashcardSpellingEngine({
   queue,
+  allCards,
   aiItems,
   onOpenAutoGenForGame,
 }: FlashcardSpellingEngineProps) {
-  const { speak } = useSpeech();
+  const { speak, stop } = useSpeech();
 
-  // Custom Game Filters
   const [selectedLang, setSelectedLang] = useState<string>("all");
-  const [selectedTopic, setSelectedTopic] = useState<string>("all");
-  const [onlyFavorites, setOnlyFavorites] = useState(false);
-
-  const availableTopics = useMemo(() => {
-    const tags = queue.flatMap((c) => c.tags || []);
-    return Array.from(new Set(tags)).filter(Boolean);
-  }, [queue]);
 
   const spellingPool = useMemo(() => {
     return queue.filter((c) => {
       if (selectedLang !== "all" && c.language !== selectedLang) return false;
-      if (selectedTopic !== "all" && !c.tags?.includes(selectedTopic)) return false;
-      if (onlyFavorites && !c.is_favorite) return false;
       return true;
     });
-  }, [queue, selectedLang, selectedTopic, onlyFavorites]);
+  }, [queue, selectedLang]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userInput, setUserInput] = useState("");
   const [isAnswered, setIsAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [hintLevel, setHintLevel] = useState(0); // 0=none, 1=length+type, 2=first char only
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [completed, setCompleted] = useState(false);
@@ -64,38 +57,38 @@ export function FlashcardSpellingEngine({
 
   const currentCard = spellingPool[currentIndex];
 
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => stop();
+  }, [stop]);
+
   useEffect(() => {
     setUserInput("");
     setIsAnswered(false);
     setIsCorrect(false);
     setShowHint(false);
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
+    setHintLevel(0);
+    if (inputRef.current) inputRef.current.focus();
   }, [currentIndex, spellingPool]);
 
   if (spellingPool.length === 0 || !currentCard) {
     return (
       <div className="space-y-4">
-        {/* Game Filter Bar */}
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-surface/80 p-3 text-xs shadow-sm backdrop-blur-md">
           <div className="flex items-center gap-2 font-bold text-foreground">
             <Filter className="size-4 text-emerald-500" /> Nguồn Luyện Viết:
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={selectedLang}
-              onChange={(e) => setSelectedLang(e.target.value)}
-              className="h-8 rounded-lg border border-border bg-background px-2 font-medium"
-            >
+            <select value={selectedLang} onChange={(e) => setSelectedLang(e.target.value)}
+              className="h-8 rounded-lg border border-border bg-background px-2 font-medium">
               <option value="all">Tất cả tiếng</option>
               <option value="en">🇬🇧 Anh</option>
               <option value="ko">🇰🇷 Hàn</option>
               <option value="zh">🇨🇳 Trung</option>
             </select>
-
             {onOpenAutoGenForGame && (
-              <Button size="sm" onClick={onOpenAutoGenForGame} className="h-8 text-xs gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl shadow-md active:scale-95">
+              <Button size="sm" onClick={onOpenAutoGenForGame}
+                className="h-8 text-xs gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl shadow-md active:scale-95">
                 <Wand2 className="size-3.5" /> 🤖 AI Tạo Tự Động
               </Button>
             )}
@@ -108,14 +101,11 @@ export function FlashcardSpellingEngine({
           </div>
           <h3 className="font-display text-xl font-bold text-foreground">Chưa Có Thẻ Để Ôn Viết</h3>
           <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
-            Bấm "🤖 AI Tạo Tự Động" để AI tự động trích xuất thẻ luyện viết chính tả riêng biệt cho bạn!
+            Bấm "🤖 AI Tạo Tự Động" để AI trích xuất thẻ luyện viết chính tả riêng biệt cho bạn!
           </p>
-
           {onOpenAutoGenForGame && (
-            <Button
-              onClick={onOpenAutoGenForGame}
-              className="py-5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 text-white font-bold text-xs gap-2 shadow-lg hover:opacity-95 active:scale-95"
-            >
+            <Button onClick={onOpenAutoGenForGame}
+              className="py-5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 text-white font-bold text-xs gap-2 shadow-lg hover:opacity-95 active:scale-95">
               <Wand2 className="size-4" /> 🤖 AI Tạo Tự Động Luyện Viết
             </Button>
           )}
@@ -126,20 +116,49 @@ export function FlashcardSpellingEngine({
 
   const cleanAnswer = currentCard.front_text.trim().toLowerCase();
 
+  // Smart hint – reveals progressively harder, never the full word
+  const getHintText = () => {
+    const word = currentCard.front_text;
+    const len = word.length;
+    const lang = currentCard.language;
+    const langLabel = lang === "en" ? "Tiếng Anh" : lang === "ko" ? "Tiếng Hàn" : "Tiếng Trung";
+
+    if (hintLevel === 0) {
+      return `Từ ${langLabel} · ${len} ký tự`;
+    }
+    if (hintLevel === 1) {
+      // Show first letter + underscores (e.g. "h _ _ _ _")
+      const firstChar = word[0];
+      const blanks = Array(len - 1).fill("_").join(" ");
+      return `${firstChar} ${blanks}`;
+    }
+    if (hintLevel >= 2) {
+      // Show first + last letter (e.g. "h _ _ _ d")
+      if (len <= 2) return word[0] + "…";
+      const firstChar = word[0];
+      const lastChar = word[word.length - 1];
+      const middle = Array(len - 2).fill("_").join(" ");
+      return `${firstChar} ${middle} ${lastChar}`;
+    }
+    return "";
+  };
+
+  const handleShowHint = () => {
+    setShowHint(true);
+    setHintLevel((l) => Math.min(l + 1, 2));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isAnswered) {
       handleNext();
       return;
     }
-
     if (!userInput.trim()) return;
     const userAns = userInput.trim().toLowerCase();
     const correct = userAns === cleanAnswer;
-
     setIsCorrect(correct);
     setIsAnswered(true);
-
     if (correct) {
       setScore((s) => s + 1);
       setStreak((s) => s + 1);
@@ -168,11 +187,8 @@ export function FlashcardSpellingEngine({
   if (completed) {
     const accuracy = Math.round((score / spellingPool.length) * 100);
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="mx-auto max-w-lg rounded-3xl border border-emerald-500/30 bg-surface/90 p-8 text-center shadow-2xl backdrop-blur-xl space-y-6"
-      >
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        className="mx-auto max-w-lg rounded-3xl border border-emerald-500/30 bg-surface/90 p-8 text-center shadow-2xl backdrop-blur-xl space-y-6">
         <div className="flex size-20 items-center justify-center rounded-3xl bg-emerald-500/10 text-emerald-500 mx-auto border border-emerald-500/30">
           <Trophy className="size-10" />
         </div>
@@ -196,25 +212,22 @@ export function FlashcardSpellingEngine({
 
   return (
     <div className="mx-auto max-w-xl space-y-4">
-      {/* Game Filter Bar */}
+      {/* Single top bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-surface/80 p-3 text-xs shadow-sm backdrop-blur-md">
         <div className="flex items-center gap-2 font-bold text-foreground">
-          <Filter className="size-4 text-emerald-500" /> Nguồn Viết ({spellingPool.length} thẻ):
+          <Filter className="size-4 text-emerald-500" /> Chính Tả ({spellingPool.length} thẻ):
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={selectedLang}
-            onChange={(e) => setSelectedLang(e.target.value)}
-            className="h-8 rounded-lg border border-border bg-background px-2 font-medium"
-          >
+          <select value={selectedLang} onChange={(e) => setSelectedLang(e.target.value)}
+            className="h-8 rounded-lg border border-border bg-background px-2 font-medium">
             <option value="all">Tất cả tiếng</option>
             <option value="en">🇬🇧 Anh</option>
             <option value="ko">🇰🇷 Hàn</option>
             <option value="zh">🇨🇳 Trung</option>
           </select>
-
           {onOpenAutoGenForGame && (
-            <Button size="sm" onClick={onOpenAutoGenForGame} className="h-8 text-xs gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl shadow-md active:scale-95">
+            <Button size="sm" onClick={onOpenAutoGenForGame}
+              className="h-8 text-xs gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl shadow-md active:scale-95">
               <Wand2 className="size-3.5" /> 🤖 AI Tạo Tự Động
             </Button>
           )}
@@ -233,92 +246,69 @@ export function FlashcardSpellingEngine({
           </span>
         )}
       </div>
-
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-300"
-          style={{ width: `${Math.round(((currentIndex + 1) / spellingPool.length) * 100)}%` }}
-        />
+        <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-300"
+          style={{ width: `${Math.round(((currentIndex + 1) / spellingPool.length) * 100)}%` }} />
       </div>
 
-      {/* Main Spelling Card */}
+      {/* Spelling Card */}
       <div className="rounded-3xl border border-border/80 bg-surface/90 p-6 sm:p-8 shadow-2xl backdrop-blur-md space-y-6 text-center">
         <div className="flex items-center justify-between">
           <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 uppercase border border-emerald-500/20">
             {currentCard.language === "en" ? "🇬🇧 Tiếng Anh" : currentCard.language === "ko" ? "🇰🇷 Tiếng Hàn" : "🇨🇳 Tiếng Trung"}
           </span>
-
-          <button
-            onClick={() => speak(currentCard.front_text, currentCard.language, currentCard.audio_url)}
-            className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground hover:text-emerald-600 active:scale-90"
-          >
+          <button onClick={() => speak(currentCard.front_text, currentCard.language, currentCard.audio_url)}
+            className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground hover:text-emerald-600 active:scale-90">
             <Volume2 className="size-4 text-emerald-500" /> Nghe từ
           </button>
         </div>
 
-        {/* Meaning Prompt */}
+        {/* Question: show meaning, user must type the foreign word */}
         <div className="py-4 space-y-2">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Viết lại từ theo nghĩa bên dưới:</span>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Gõ lại từ ngoại ngữ theo nghĩa tiếng Việt:</span>
           <h2 className="font-display text-3xl font-extrabold text-foreground">{currentCard.back_text}</h2>
-          {currentCard.back_explanation && (
-            <p className="text-xs text-muted-foreground">{currentCard.back_explanation}</p>
-          )}
+          {/* Hide back_explanation - would give it away */}
         </div>
 
-        {/* Hint Box */}
+        {/* Progressive Hint (not revealing the word upfront) */}
         {showHint && (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-600 font-mono">
-            Gợi ý: Bắt đầu bằng <strong>"{currentCard.front_text.slice(0, 2)}"</strong> ({currentCard.front_text.length} ký tự)
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-400 font-mono flex items-center justify-center gap-2">
+            <HelpCircle className="size-3.5 shrink-0" />
+            <span>{getHintText()}</span>
           </div>
         )}
 
         {/* Input Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="relative">
-            <input
-              ref={inputRef}
-              type="text"
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              disabled={isAnswered}
-              placeholder="Gõ chính tả từ vựng..."
-              className={`w-full rounded-2xl border bg-background px-4 py-3.5 text-center text-lg font-bold outline-none transition-all ${
-                isAnswered
-                  ? isCorrect
-                    ? "border-emerald-500 bg-emerald-500/10 text-emerald-600"
-                    : "border-rose-500 bg-rose-500/10 text-rose-600"
-                  : "border-border focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-              }`}
-            />
-          </div>
+          <input ref={inputRef} type="text" value={userInput}
+            onChange={(e) => setUserInput(e.target.value)} disabled={isAnswered}
+            placeholder="Gõ chính tả từ vựng..."
+            className={`w-full rounded-2xl border bg-background px-4 py-3.5 text-center text-lg font-bold outline-none transition-all ${
+              isAnswered
+                ? isCorrect
+                  ? "border-emerald-500 bg-emerald-500/10 text-emerald-600"
+                  : "border-rose-500 bg-rose-500/10 text-rose-600"
+                : "border-border focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+            }`}
+          />
 
           <div className="flex gap-2">
             {!isAnswered && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowHint(true)}
-                className="gap-1 text-xs active:scale-95"
-              >
-                <HelpCircle className="size-3.5" /> Gợi Ý
+              <Button type="button" variant="outline" onClick={handleShowHint}
+                className="gap-1 text-xs active:scale-95">
+                <HelpCircle className="size-3.5" />
+                {hintLevel === 0 ? "Gợi Ý" : hintLevel === 1 ? "Thêm Gợi Ý" : "Hết Gợi Ý"}
               </Button>
             )}
-
-            <Button
-              type="submit"
-              disabled={!isAnswered && !userInput.trim()}
-              className="flex-1 py-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold shadow-lg active:scale-98"
-            >
+            <Button type="submit" disabled={!isAnswered && !userInput.trim()}
+              className="flex-1 py-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold shadow-lg active:scale-98">
               {isAnswered ? (
                 <span className="flex items-center gap-2">Tiếp Theo <ArrowRight className="size-4" /></span>
-              ) : (
-                "Kiểm Tra Đáp Án"
-              )}
+              ) : "Kiểm Tra Đáp Án"}
             </Button>
           </div>
         </form>
 
-        {/* Feedback Msg */}
         {isAnswered && (
           <div className="pt-2 text-xs font-bold">
             {isCorrect ? (
@@ -327,7 +317,7 @@ export function FlashcardSpellingEngine({
               </span>
             ) : (
               <span className="text-rose-500 flex items-center justify-center gap-1">
-                <XCircle className="size-4" /> Chưa chính xác. Đáp án đúng: <strong className="font-mono text-sm underline">{currentCard.front_text}</strong>
+                <XCircle className="size-4" /> Chưa chính xác. Đáp án đúng: <strong className="font-mono text-sm underline ml-1">{currentCard.front_text}</strong>
               </span>
             )}
           </div>

@@ -1,40 +1,71 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { VocabularyLanguage } from "../types";
 
 export function useSpeech() {
   const [isPlaying, setIsPlaying] = useState(false);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const speak = useCallback((text: string, language: VocabularyLanguage, customAudioUrl?: string) => {
-    const cleanText = text?.trim();
-    if (!cleanText && !customAudioUrl) return;
-
-    // 1. Custom audio URL if provided
-    if (customAudioUrl) {
-      try {
-        const audio = new Audio(customAudioUrl);
-        setIsPlaying(true);
-        audio.onended = () => setIsPlaying(false);
-        audio.onerror = () => playTtsApi(cleanText, language, setIsPlaying);
-        audio.play().catch(() => playTtsApi(cleanText, language, setIsPlaying));
-        return;
-      } catch {
-        // Fallback
-      }
+  const stop = useCallback(() => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      currentAudioRef.current = null;
     }
-
-    // 2. Play via Server-side Audio Streaming API (/api/tts)
-    playTtsApi(cleanText, language, setIsPlaying);
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    setIsPlaying(false);
   }, []);
 
-  return { speak, isPlaying };
+  const speak = useCallback(
+    (text: string, language: VocabularyLanguage, customAudioUrl?: string) => {
+      const cleanText = text?.trim();
+      if (!cleanText && !customAudioUrl) return;
+
+      // Stop any audio currently playing
+      stop();
+
+      // 1. Custom audio URL if provided
+      if (customAudioUrl) {
+        try {
+          const audio = new Audio(customAudioUrl);
+          currentAudioRef.current = audio;
+          setIsPlaying(true);
+          audio.onended = () => {
+            setIsPlaying(false);
+            currentAudioRef.current = null;
+          };
+          audio.onerror = () => playTtsApi(cleanText, language, setIsPlaying, currentAudioRef);
+          audio.play().catch(() => playTtsApi(cleanText, language, setIsPlaying, currentAudioRef));
+          return;
+        } catch {
+          // Fallback
+        }
+      }
+
+      // 2. Play via Server-side Audio Streaming API (/api/tts)
+      playTtsApi(cleanText, language, setIsPlaying, currentAudioRef);
+    },
+    [stop]
+  );
+
+  // Clean up audio on unmount or tab switch
+  useEffect(() => {
+    return () => {
+      stop();
+    };
+  }, [stop]);
+
+  return { speak, stop, isPlaying };
 }
 
 function playTtsApi(
   text: string,
   language: VocabularyLanguage,
-  setIsPlaying: (playing: boolean) => void
+  setIsPlaying: (playing: boolean) => void,
+  audioRef: React.MutableRefObject<HTMLAudioElement | null>
 ) {
   if (!text) return;
 
@@ -42,9 +73,13 @@ function playTtsApi(
 
   try {
     const audio = new Audio(apiUrl);
+    audioRef.current = audio;
     setIsPlaying(true);
 
-    audio.onended = () => setIsPlaying(false);
+    audio.onended = () => {
+      setIsPlaying(false);
+      audioRef.current = null;
+    };
     audio.onerror = () => {
       playWebSpeechFallback(text, language, setIsPlaying);
     };

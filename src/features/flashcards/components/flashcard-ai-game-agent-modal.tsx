@@ -88,7 +88,7 @@ export function FlashcardAiGameAgentModal({ open, onClose, onLaunchGame }: Flash
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {[
                   { id: "review", label: "Lật Thẻ SRS", icon: Clock },
-                  { id: "quiz", label: "Quiz VIP", icon: HelpCircle },
+                  { id: "quiz", label: "Quiz", icon: HelpCircle },
                   { id: "listening", label: "Luyện Nghe & Điền", icon: Headphones },
                   { id: "spelling", label: "Chính Tả / Viết", icon: PenTool },
                   { id: "reflex", label: "Tốc Độ Phản Xạ", icon: Zap },

@@ -9,6 +9,7 @@ import { useSpeech } from "@/features/vocabulary/hooks/use-speech";
 
 interface FlashcardReflexEngineProps {
   queue: Flashcard[];
+  allCards?: Flashcard[]; // ALL system cards for harder wrong distractors
   aiItems?: any[];
   onOpenAutoGenForGame?: () => void;
 }
@@ -21,6 +22,7 @@ interface ReflexItem {
 
 export function FlashcardReflexEngine({
   queue,
+  allCards,
   aiItems,
   onOpenAutoGenForGame,
 }: FlashcardReflexEngineProps) {
@@ -36,12 +38,19 @@ export function FlashcardReflexEngine({
   // Generate true/false reflex pairs
   useEffect(() => {
     if (queue.length === 0) return;
+
+    // Use ALL system cards as distractor pool (much harder fake meanings)
+    const distractorPool = (allCards && allCards.length >= 6) ? allCards : queue;
+
     const generated: ReflexItem[] = queue.map((card) => {
       const isMatch = Math.random() > 0.4; // 60% chance True, 40% False
       let shownMeaning = card.back_text;
 
       if (!isMatch) {
-        const distractors = queue.filter((c) => c.id !== card.id && c.back_text !== card.back_text);
+        // Pick a distractor from ALL system cards (not just this deck)
+        const distractors = distractorPool.filter(
+          (c) => c.id !== card.id && c.back_text !== card.back_text
+        );
         if (distractors.length > 0) {
           shownMeaning = distractors[Math.floor(Math.random() * distractors.length)].back_text;
         } else {

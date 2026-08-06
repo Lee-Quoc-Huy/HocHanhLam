@@ -8,9 +8,7 @@ import {
   Zap,
   Puzzle,
   Headphones,
-  Bot,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { FlashcardStats } from "../types";
 import { ActiveTab } from "../store/flashcard-store";
 
@@ -30,7 +28,7 @@ export function FlashcardHeader({
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Title Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-transparent text-emerald-600 dark:text-emerald-400 shadow-sm border border-emerald-500/20">
             <Layers className="size-5" />
@@ -40,20 +38,9 @@ export function FlashcardHeader({
               Trung Tâm Ôn Tập & Trò Chơi
             </h1>
             <p className="text-[11px] sm:text-xs text-muted-foreground">
-              Trò chơi ôn tập riêng biệt · AI Agent Tạo Game Thông Minh
+              Bộ thẻ ôn tập riêng biệt cho từng trò chơi · Tích hợp AI Thông Minh
             </p>
           </div>
-        </div>
-
-        {/* Action Button: AI AGENT GAME CREATOR */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button
-            onClick={onOpenAiGameAgent}
-            className="w-full sm:w-auto gap-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-600 font-bold shadow-lg transition-all hover:opacity-95 text-white py-5 rounded-2xl text-xs sm:text-sm active:scale-98"
-          >
-            <Bot className="size-4.5 animate-pulse" />
-            <span>🤖 AI Agent Tạo Game</span>
-          </Button>
         </div>
       </div>
 
@@ -63,7 +50,7 @@ export function FlashcardHeader({
           {(
             [
               { id: "review", label: `Lật Thẻ SRS`, icon: Clock },
-              { id: "quiz", label: "Quiz VIP", icon: HelpCircle },
+              { id: "quiz", label: "Quiz", icon: HelpCircle },
               { id: "spelling", label: "Chính Tả", icon: PenTool },
               { id: "reflex", label: "Phản Xạ Tốc Độ", icon: Zap },
               { id: "blank", label: "Điền Từ", icon: Puzzle },
