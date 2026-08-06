@@ -25,6 +25,7 @@ import {
   Zap,
   Clock,
   AlertTriangle,
+  FolderKanban,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -68,7 +69,7 @@ interface GenerateResponse {
   questions: Question[];
 }
 
-// ─── Đầy đủ cấp độ & Quy chuẩn thi thật (Số câu chuẩn & Thời gian thi) ───────
+// ─── Đầy đủ cấp độ & Quy chuẩn thi thật ─────────────────────────────────────
 const EXAM_CONFIG: Record<
   ExamType,
   {
@@ -492,14 +493,14 @@ function ExamSelector({
                   setExam(e);
                   setLevel(cfg.levels[0].id);
                 }}
-                className={`group relative flex flex-col items-start justify-between rounded-2xl border p-4 text-left transition-all ${
+                className={`group relative flex flex-col items-start justify-between rounded-2xl border p-3.5 sm:p-4 text-left transition-all ${
                   isSelected
                     ? `${cfg.badge} border-2 scale-[1.02] shadow-md ring-2 ring-primary/20`
                     : "border-border bg-background hover:border-border/80 hover:bg-muted/50"
                 }`}
               >
                 <div className="flex w-full items-center justify-between">
-                  <span className="font-display text-lg font-extrabold">{e}</span>
+                  <span className="font-display text-base sm:text-lg font-extrabold">{e}</span>
                   {isSelected && (
                     <Sparkles className="size-4 animate-pulse text-primary" />
                   )}
@@ -518,7 +519,7 @@ function ExamSelector({
         <label className="mb-2.5 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
           2. Chọn Cấp Độ Thi ({currentConfig.name}):
         </label>
-        <div className="flex flex-wrap gap-2.5">
+        <div className="flex flex-wrap gap-2 sm:gap-2.5">
           {currentConfig.levels.map((lvl) => {
             const isSelected = level === lvl.id;
             return (
@@ -526,7 +527,7 @@ function ExamSelector({
                 key={lvl.id}
                 type="button"
                 onClick={() => setLevel(lvl.id)}
-                className={`flex flex-col items-start rounded-xl border px-4 py-2.5 text-left transition-all ${
+                className={`flex flex-col items-start rounded-xl border px-3.5 py-2 sm:px-4 sm:py-2.5 text-left transition-all ${
                   isSelected
                     ? "border-primary bg-primary/10 text-primary font-bold shadow-xs"
                     : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -553,7 +554,7 @@ function ExamSelector({
                   key={c}
                   type="button"
                   onClick={() => setPracticeQuestionCount(c)}
-                  className={`rounded-xl border px-4 py-2 text-xs font-bold transition-all ${
+                  className={`rounded-xl border px-3.5 py-2 text-xs font-bold transition-all ${
                     practiceQuestionCount === c
                       ? "border-primary bg-primary text-white shadow-xs"
                       : "border-border bg-background text-foreground hover:bg-muted"
@@ -599,27 +600,27 @@ function ExamSelector({
         <motion.div
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="rounded-2xl border border-purple-500/30 bg-purple-500/10 p-5 space-y-3"
+          className="rounded-2xl border border-purple-500/30 bg-purple-500/10 p-4 sm:p-5 space-y-3"
         >
-          <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300 font-bold text-sm">
-            <Clock className="size-5" />
+          <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300 font-bold text-xs sm:text-sm">
+            <Clock className="size-5 shrink-0" />
             <span>Quy Chuẩn Bài Thi Thật: {exam} - {currentLevelObj.name}</span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
             <div className="rounded-xl border border-purple-500/20 bg-background/80 p-3">
               <span className="block text-[11px] text-muted-foreground">Tổng số câu hỏi:</span>
-              <span className="font-extrabold text-foreground text-sm">{currentLevelObj.realQuestions} câu chuẩn</span>
+              <span className="font-extrabold text-foreground text-xs sm:text-sm">{currentLevelObj.realQuestions} câu chuẩn</span>
             </div>
             <div className="rounded-xl border border-purple-500/20 bg-background/80 p-3">
               <span className="block text-[11px] text-muted-foreground">Thời gian đếm ngược:</span>
-              <span className="font-extrabold text-foreground text-sm">{currentLevelObj.realMinutes} phút</span>
+              <span className="font-extrabold text-foreground text-xs sm:text-sm">{currentLevelObj.realMinutes} phút</span>
             </div>
             <div className="col-span-2 sm:col-span-1 rounded-xl border border-purple-500/20 bg-background/80 p-3">
               <span className="block text-[11px] text-muted-foreground">Thang điểm tính:</span>
-              <span className="font-extrabold text-foreground text-sm">{currentLevelObj.scoreType}</span>
+              <span className="font-extrabold text-foreground text-xs sm:text-sm">{currentLevelObj.scoreType}</span>
             </div>
           </div>
-          <p className="text-[11px] text-purple-600 dark:text-purple-300 opacity-90">
+          <p className="text-[11px] text-purple-600 dark:text-purple-300 opacity-90 leading-normal">
             ⚡ <b>Tính năng Thi Thật:</b> Đề thi được AI tự động trích lọc & trộn đề thông minh từ các file Đề Thi trong Thư Viện + Ngân hàng đề thi AI. Đồng hồ đếm ngược sinh động, tự nộp bài khi hết giờ!
           </p>
         </motion.div>
@@ -646,7 +647,6 @@ function ActiveExamSession({
   const [timeLeft, setTimeLeft] = useState(realMinutes * 60);
   const [isTimeUp, setIsTimeUp] = useState(false);
 
-  // Countdown timer effect for Real Exam
   useEffect(() => {
     if (mode !== "real_exam" || submitted) return;
 
@@ -700,11 +700,10 @@ function ActiveExamSession({
   const isLast = current === questions.length - 1;
   const currentAnswer = answers[current] || "";
 
-  // Format timer
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
   const formattedTime = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  const isLowTime = timeLeft < 300 && mode === "real_exam"; // under 5 min
+  const isLowTime = timeLeft < 300 && mode === "real_exam";
 
   return (
     <AnimatePresence mode="wait">
@@ -714,15 +713,15 @@ function ActiveExamSession({
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.25 }}
-        className="mt-6 rounded-3xl border border-border bg-surface p-6 sm:p-8 shadow-md"
+        className="mt-4 sm:mt-6 rounded-3xl border border-border bg-surface p-4 sm:p-8 shadow-md"
       >
         {/* Real Exam Header with Timer */}
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
-          <div className="flex items-center gap-3">
-            <span className="font-bold text-sm text-foreground">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="font-bold text-xs sm:text-sm text-foreground">
               Câu {current + 1} / {questions.length}
             </span>
-            <span className="rounded-full border border-border px-3 py-1 font-semibold uppercase tracking-wider bg-muted/60 text-foreground text-[11px]">
+            <span className="rounded-full border border-border px-2.5 py-0.5 font-semibold uppercase tracking-wider bg-muted/60 text-foreground text-[10px] sm:text-[11px]">
               {q.type === "multiple-choice"
                 ? "Trắc nghiệm"
                 : q.type === "fill-blank"
@@ -739,36 +738,36 @@ function ActiveExamSession({
 
           {mode === "real_exam" && (
             <div
-              className={`flex items-center gap-2 rounded-2xl border px-4 py-2 font-mono text-sm font-extrabold transition-all ${
+              className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 sm:px-4 sm:py-2 font-mono text-xs sm:text-sm font-extrabold transition-all ${
                 isLowTime
                   ? "border-rose-500 bg-rose-500/10 text-rose-600 animate-pulse"
                   : "border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-300"
               }`}
             >
               <Timer className="size-4" />
-              <span>Thời Gian Còn Lại: {formattedTime}</span>
+              <span>Thời Gian: {formattedTime}</span>
             </div>
           )}
         </div>
 
         {/* Time up banner */}
         {isTimeUp && (
-          <div className="mb-5 flex items-center gap-2 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs font-bold text-rose-600">
+          <div className="mb-5 flex items-center gap-2 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-xs font-bold text-rose-600">
             <AlertTriangle className="size-5 shrink-0" />
-            <span>HẾT GIỜ BÀI THI THẬT! Hệ thống đã tự động thu bài và khóa quyền làm bài.</span>
+            <span>HẾT GIỜ BÀI THI THẬT! Hệ thống đã tự động nộp bài thi.</span>
           </div>
         )}
 
         {/* Reading Passage if available */}
         {q.passage && (
-          <div className="mb-5 rounded-2xl border border-border bg-muted/40 p-5 text-sm leading-relaxed font-serif text-foreground/90 max-h-56 overflow-y-auto">
-            <span className="block mb-1 text-xs font-bold text-primary uppercase font-sans">📄 Đoạn văn bài đọc:</span>
+          <div className="mb-5 rounded-2xl border border-border bg-muted/40 p-4 text-xs sm:text-sm leading-relaxed font-serif text-foreground/90 max-h-56 overflow-y-auto">
+            <span className="block mb-1 text-[11px] font-bold text-primary uppercase font-sans">📄 Đoạn văn bài đọc:</span>
             {q.passage}
           </div>
         )}
 
         {/* Question Prompt */}
-        <p className="mb-5 text-base sm:text-lg font-semibold leading-relaxed text-foreground">
+        <p className="mb-5 text-sm sm:text-base font-semibold leading-relaxed text-foreground">
           {q.prompt}
         </p>
 
@@ -776,7 +775,7 @@ function ActiveExamSession({
         {q.audioUrl && (
           <button
             type="button"
-            className="mb-5 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm font-bold text-primary hover:bg-primary/20 transition-all"
+            className="mb-5 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-xs sm:text-sm font-bold text-primary hover:bg-primary/20 transition-all"
             onClick={() => new Audio(q.audioUrl).play()}
           >
             <Volume2 className="size-4 animate-bounce" />
@@ -791,7 +790,7 @@ function ActiveExamSession({
               const isSelected = currentAnswer === c.id;
               const isAnswerChoice = c.id === q.answer;
               let cls =
-                "flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-sm text-left transition-all font-medium ";
+                "flex w-full items-center gap-3 rounded-2xl border px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs sm:text-sm text-left transition-all font-medium ";
               if (!submitted) {
                 cls += isSelected
                   ? "border-primary bg-primary/10 text-primary font-bold shadow-xs ring-2 ring-primary/20"
@@ -827,7 +826,7 @@ function ActiveExamSession({
             value={currentAnswer}
             onChange={(e) => handleSelectAnswer(e.target.value)}
             placeholder="Nhập câu trả lời của bạn vào đây..."
-            className="w-full rounded-2xl border border-border bg-background px-4 py-3.5 text-sm outline-none focus:border-primary transition-colors"
+            className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-xs sm:text-sm outline-none focus:border-primary transition-colors"
           />
         )}
 
@@ -839,18 +838,18 @@ function ActiveExamSession({
             value={currentAnswer}
             onChange={(e) => handleSelectAnswer(e.target.value)}
             placeholder="Nhập câu trả lời bài thi nói của bạn bằng ngôn ngữ thi..."
-            className="w-full rounded-2xl border border-border bg-background p-4 text-sm outline-none focus:border-primary"
+            className="w-full rounded-2xl border border-border bg-background p-3 sm:p-4 text-xs sm:text-sm outline-none focus:border-primary"
           />
         )}
 
         {/* Question Navigation & Submit */}
-        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
           <div className="flex gap-2">
             <Button
               variant="outline"
               disabled={current === 0}
               onClick={() => setCurrent((c) => Math.max(0, c - 1))}
-              className="rounded-xl"
+              className="rounded-xl h-9 text-xs sm:text-sm"
             >
               Câu Trước
             </Button>
@@ -858,7 +857,7 @@ function ActiveExamSession({
               variant="outline"
               disabled={isLast}
               onClick={() => setCurrent((c) => Math.min(questions.length - 1, c + 1))}
-              className="rounded-xl"
+              className="rounded-xl h-9 text-xs sm:text-sm"
             >
               Câu Sau
             </Button>
@@ -868,7 +867,7 @@ function ActiveExamSession({
             {!isLast ? (
               <Button
                 onClick={() => setCurrent((c) => c + 1)}
-                className="bg-primary text-white hover:bg-primary/90 font-bold rounded-xl"
+                className="bg-primary text-white hover:bg-primary/90 font-bold rounded-xl h-9 text-xs sm:text-sm"
               >
                 Tiếp Theo <ChevronRight className="ml-1 size-4" />
               </Button>
@@ -876,9 +875,9 @@ function ActiveExamSession({
               <Button
                 onClick={calculateFinalScore}
                 disabled={submitted}
-                className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl shadow-md hover:opacity-90"
+                className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl h-9 text-xs sm:text-sm shadow-md hover:opacity-90"
               >
-                🏆 Nộp Bài Thi Thật
+                🏆 Nộp Bài Thi
               </Button>
             )}
           </div>
@@ -888,7 +887,7 @@ function ActiveExamSession({
   );
 }
 
-// ─── Result Modal Component (Scaled Score chuẩn thi thật) ─────────────────────
+// ─── Result Modal Component ────────────────────────────────────────────────────
 function RealExamResultModal({
   score,
   total,
@@ -910,7 +909,6 @@ function RealExamResultModal({
   const cfg = EXAM_CONFIG[exam];
   const levelObj = cfg.levels.find((l) => l.id === level) || cfg.levels[0];
 
-  // Tính điểm quy đổi (Scaled Score)
   let scaledScoreText = "";
   if (exam === "TOEIC") {
     const scoreVal = Math.round((score / total) * 990);
@@ -932,7 +930,7 @@ function RealExamResultModal({
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="mt-6 rounded-3xl border border-border bg-surface p-8 text-center shadow-xl space-y-5"
+      className="mt-6 rounded-3xl border border-border bg-surface p-6 sm:p-8 text-center shadow-xl space-y-5"
     >
       <div
         className={`mx-auto flex size-20 items-center justify-center rounded-full ${
@@ -946,16 +944,16 @@ function RealExamResultModal({
         <span className="rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-bold uppercase tracking-wider">
           {mode === "real_exam" ? "KẾT QUẢ BÀI THI THẬT QUỐC TẾ" : "KẾT QUẢ ÔN TẬP"}
         </span>
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground mt-2">
-          {passed ? "CHÚC MỪNG BẠN ĐÃ ĐẠT KẾT QUẢ RẤT TỐT! 🎉" : "CỐ GẮNG RÈN LUYỆN LẦN SAU! 💪"}
+        <h2 className="text-xl sm:text-3xl font-extrabold text-foreground mt-2">
+          {passed ? "HOÀN THÀNH XUẤT SẮC! 🎉" : "CỐ GẮNG RÈN LUYỆN LẦN SAU! 💪"}
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
           Kỳ thi <span className="font-bold text-foreground">{exam}</span> — {level}
         </p>
       </div>
 
       <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-2">
-        <div className="text-base font-extrabold text-primary">{scaledScoreText}</div>
+        <div className="text-sm sm:text-base font-extrabold text-primary">{scaledScoreText}</div>
         <div className="text-xs text-muted-foreground">
           Trả lời đúng <span className="font-bold text-foreground">{score}/{total}</span> câu ({pct}%)
         </div>
@@ -971,10 +969,10 @@ function RealExamResultModal({
       </div>
 
       <div className="flex justify-center gap-3 pt-2">
-        <Button variant="outline" onClick={onRetry} className="font-bold rounded-xl">
+        <Button variant="outline" onClick={onRetry} className="font-bold rounded-xl h-10 text-xs sm:text-sm">
           Làm Lại Đề Này
         </Button>
-        <Button onClick={onRefresh} className="gap-2 bg-primary text-white hover:bg-primary/90 font-bold rounded-xl">
+        <Button onClick={onRefresh} className="gap-2 bg-primary text-white hover:bg-primary/90 font-bold rounded-xl h-10 text-xs sm:text-sm">
           <RefreshCw className="size-4" />
           Tạo Đề Mới (AI)
         </Button>
@@ -997,13 +995,15 @@ export default function ExamPrepPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [score, setScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingSource, setLoadingSource] = useState<"ai" | "library" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const currentCfg = EXAM_CONFIG[exam];
   const currentLevelObj = currentCfg.levels.find((l) => l.id === level) || currentCfg.levels[0];
 
-  const startPractice = async () => {
+  const startPractice = async (source: "ai" | "library") => {
     setLoading(true);
+    setLoadingSource(source);
     setError(null);
     setScore(null);
     setQuestions([]);
@@ -1025,6 +1025,7 @@ export default function ExamPrepPage() {
           level,
           format,
           mode,
+          source,
           questionCount: targetCount,
           fileUrls,
         }),
@@ -1042,6 +1043,7 @@ export default function ExamPrepPage() {
       setError(err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định.");
     } finally {
       setLoading(false);
+      setLoadingSource(null);
     }
   };
 
@@ -1052,7 +1054,7 @@ export default function ExamPrepPage() {
 
   const handleRetry = () => {
     setScore(null);
-    startPractice();
+    startPractice("ai");
   };
 
   const handleRefresh = () => {
@@ -1061,37 +1063,37 @@ export default function ExamPrepPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Banner Header */}
+    <div className="space-y-4 sm:space-y-6">
+      {/* Banner Header - Cinema Glassmorphism Style */}
       <div
-        className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${currentCfg.gradient} p-8 text-white shadow-xl`}
+        className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${currentCfg.gradient} p-6 sm:p-8 text-white shadow-2xl`}
       >
-        <div className="absolute -right-12 -top-12 size-56 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -right-12 -top-12 size-56 rounded-full bg-white/10 blur-3xl pointer-events-none" />
         <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md border border-white/20">
-              <GraduationCap className="size-8 text-white" />
+            <div className="flex size-12 sm:size-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 shadow-inner">
+              <GraduationCap className="size-7 sm:size-8 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="rounded-full bg-white/20 px-3 py-0.5 text-xs font-bold text-white uppercase backdrop-blur-sm">
-                  Ôn Tập Tùy Chọn & Thi Thật Chuẩn Quốc Tế
+                <span className="rounded-full bg-white/20 px-3 py-0.5 text-[10px] sm:text-xs font-bold text-white uppercase backdrop-blur-md border border-white/20">
+                  3 Môn Ngôn Ngữ • 4 Kỳ Thi Quốc Tế
                 </span>
               </div>
-              <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white mt-1">
+              <h1 className="font-display text-xl sm:text-3xl font-extrabold text-white mt-1">
                 Luyện Thi Chứng Chỉ Quốc Tế
               </h1>
-              <p className="text-sm text-white/80 mt-1 max-w-xl">
-                TOPIK (Hàn) • TOEIC & IELTS (Anh) • HSK (Trung) — Chế độ Ôn tập tự do & Bài Thi Thật chuẩn số câu, thời gian đếm ngược do AI trộn đề từ Thư viện.
+              <p className="text-xs sm:text-sm text-white/80 mt-1 max-w-xl leading-relaxed">
+                TOPIK (Hàn) • TOEIC & IELTS (Anh) • HSK (Trung) — Chế độ Ôn tập tự do & Thi Thật chuẩn số câu, đếm giờ real-time.
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Form lựa chọn */}
+      {/* Form Lựa Chọn */}
       {score === null && questions.length === 0 && (
-        <div className="rounded-3xl border border-border bg-surface p-6 sm:p-8 shadow-sm space-y-6">
+        <div className="rounded-3xl border border-border bg-surface p-4 sm:p-8 shadow-sm space-y-6">
           <ExamSelector
             exam={exam}
             level={level}
@@ -1109,37 +1111,61 @@ export default function ExamPrepPage() {
           />
 
           {error && (
-            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300 font-medium">
+            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-xs sm:text-sm text-rose-700 dark:text-rose-300 font-medium">
               ⚠️ {error}
             </div>
           )}
 
-          <Button
-            onClick={startPractice}
-            disabled={loading}
-            className={`w-full gap-2.5 py-6 text-base font-extrabold rounded-2xl bg-gradient-to-r ${currentCfg.gradient} text-white shadow-lg hover:opacity-95 transition-all`}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="size-5 animate-spin" />
-                Đang trích lọc đề & khởi tạo ({exam} - {level})...
-              </>
-            ) : mode === "real_exam" ? (
-              <>
-                <ShieldCheck className="size-5" />
-                Bắt Đầu Thi Thật ({currentLevelObj.realQuestions} câu / {currentLevelObj.realMinutes} phút đếm ngược)
-              </>
-            ) : (
-              <>
-                <Play className="size-5 fill-current" />
-                Tạo Bài Ôn Tập ({practiceQuestionCount} câu)
-              </>
-            )}
-          </Button>
+          {/* 2 NÚT TẠO ĐỀ CẠNH NHAU (Tạo AI vs Trộn Từ Thư Viện) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            {/* Nút 1: Tạo AI hoàn toàn / trên mạng */}
+            <Button
+              onClick={() => startPractice("ai")}
+              disabled={loading}
+              className={`w-full gap-2.5 py-6 text-xs sm:text-sm font-extrabold rounded-2xl bg-gradient-to-r ${currentCfg.gradient} text-white shadow-lg hover:opacity-95 transition-all`}
+            >
+              {loading && loadingSource === "ai" ? (
+                <>
+                  <Loader2 className="size-4 sm:size-5 animate-spin" />
+                  Đang khởi tạo bài AI ({exam})...
+                </>
+              ) : mode === "real_exam" ? (
+                <>
+                  <ShieldCheck className="size-4 sm:size-5" />
+                  🏆 Tạo Đề Thi AI Quốc Tế
+                </>
+              ) : (
+                <>
+                  <Sparkles className="size-4 sm:size-5" />
+                  ✨ Tạo Bài Ôn AI Tự Động
+                </>
+              )}
+            </Button>
+
+            {/* Nút 2: Trộn từ Thư Viện người dùng */}
+            <Button
+              onClick={() => startPractice("library")}
+              disabled={loading}
+              variant="outline"
+              className="w-full gap-2.5 py-6 text-xs sm:text-sm font-extrabold rounded-2xl border-2 border-purple-500/40 bg-purple-500/10 text-purple-600 dark:text-purple-300 hover:bg-purple-500/20 shadow-sm transition-all"
+            >
+              {loading && loadingSource === "library" ? (
+                <>
+                  <Loader2 className="size-4 sm:size-5 animate-spin" />
+                  Đang quét & trộn đề từ Thư viện...
+                </>
+              ) : (
+                <>
+                  <FolderKanban className="size-4 sm:size-5 text-purple-600 dark:text-purple-400" />
+                  📚 Tạo & Trộn Đề Từ Thư Viện
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       )}
 
-      {/* Phần thi đang chạy */}
+      {/* Phần Thi Đang Chạy */}
       {questions.length > 0 && score === null && (
         <ActiveExamSession
           questions={questions}
@@ -1149,7 +1175,7 @@ export default function ExamPrepPage() {
         />
       )}
 
-      {/* Hiển thị kết quả */}
+      {/* Hiển Thị Kết Quả */}
       {score !== null && (
         <RealExamResultModal
           score={score}

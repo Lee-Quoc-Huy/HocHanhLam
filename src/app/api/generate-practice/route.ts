@@ -452,12 +452,18 @@ function buildPrompt(
   format: string,
   mode: "practice" | "real_exam",
   count: number,
+  source: "ai" | "library",
   fileUrls: string[]
 ): string {
-  const context =
-    fileUrls.length > 0
-      ? `THAM KHẢO & TRỘN ĐỀ từ các tệp đề thi / tài liệu thư viện sau của người dùng: ${fileUrls.slice(0, 5).join(", ")}.`
-      : "Hãy tự động tạo bộ đề thi chuẩn quốc tế sát với đề thi thật.";
+  let context = "";
+
+  if (source === "library") {
+    context = fileUrls.length > 0
+      ? `BẮT BUỘC CHỈ DÙNG & TRỘN ĐỀ từ các tệp đề thi / tài liệu thư viện sau của người dùng: ${fileUrls.join(", ")}. Hãy trích lọc câu hỏi và trộn lại thành bộ đề mới.`
+      : "Người dùng yêu cầu lấy từ Thư viện nhưng Thư viện chưa có tệp tương ứng. Hãy trích lọc kiến thức chuẩn đề thi thật từ ngân hàng dữ liệu để tạo bộ đề phù hợp nhất.";
+  } else {
+    context = "HÃY TỰ TẠO HOẶC TỔNG HỢP KIẾN THỨC MỚI HOÀN TOÀN từ ngân hàng đề thi quốc tế trên mạng để tạo bài ôn/đề thi chuẩn nhất.";
+  }
 
   const modeInstruction =
     mode === "real_exam"
@@ -465,6 +471,7 @@ function buildPrompt(
       : `Đây là BÀI ÔN TẬP (Practice Session) cho kỳ thi ${exam} (${level}) với dạng bài ${format}. Số lượng câu hỏi yêu cầu là ${count} câu.`;
 
   return `Bạn là một giám khảo và chuyên gia soạn đề thi ${exam} quốc tế trình độ cao.
+[Nguồn tạo đề: ${source === "library" ? "TRỘN TỪ THƯ VIỆN NGƯỜI DÙNG" : "AI SÁNG TẠO / TỔNG HỢP MẠNG"}]
 ${modeInstruction}
 ${context}
 
@@ -500,6 +507,7 @@ export async function POST(req: NextRequest) {
       level,
       format = "all",
       mode = "practice",
+      source = "ai",
       questionCount = 10,
       fileUrls = [],
     } = body as {
@@ -507,6 +515,7 @@ export async function POST(req: NextRequest) {
       level: string;
       format?: string;
       mode?: "practice" | "real_exam";
+      source?: "ai" | "library";
       questionCount?: number;
       fileUrls?: string[];
     };
@@ -518,7 +527,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Giới hạn số câu hợp lý cho request AI (Tối đa 40 câu / batch AI để tránh timeout)
     const targetCount = Math.min(Math.max(questionCount, 5), 40);
 
     let questions: Question[];
@@ -526,7 +534,7 @@ export async function POST(req: NextRequest) {
     try {
       // ── Multi-AI Fallback Chain via OpenRouter ─────────────────────────────
       // Gemini 2.5 Flash → DeepSeek R1 → Qwen 72B → Nemotron → Llama 3.3
-      const prompt = buildPrompt(exam, level, format, mode, targetCount, fileUrls);
+      const prompt = buildPrompt(exam, level, format, mode, targetCount, source, fileUrls);
       const result = await createChatCompletion({
         task: "exam_generation",
         messages: [
@@ -552,7 +560,7 @@ export async function POST(req: NextRequest) {
       }
 
       console.info(
-        `[exam-prep] Generated ${questions.length} questions for ${exam} (${level}) mode=${mode} via model: ${result.model}`
+        `[exam-prep] Generated ${questions.length} questions for ${exam} (${level}) mode=${mode} source=${source} via model: ${result.model}`
       );
     } catch (aiErr) {
       console.warn("[exam-prep] All AI models failed, using fallback samples:", aiErr);
