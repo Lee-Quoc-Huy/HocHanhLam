@@ -17,21 +17,23 @@ const requestSchema = z.object({
   imageDataUrl: z.string().optional(),
   text: z.string().optional(),
   targetLanguage: z.enum(["en", "ko", "zh"]).default("en"),
+  focus: z.enum(["vocabulary", "grammar"]).default("vocabulary"),
 }).refine((v) => v.imageDataUrl || v.text, {
   message: "Cần có imageDataUrl hoặc text.",
 });
 
-const EXTRACTION_SYSTEM_PROMPT = (langLabel: string) =>
-  `Bạn là một trợ lý AI thông minh chuyên phân tích ảnh chụp/tài liệu học ngoại ngữ (${langLabel}).
+// ── Vocabulary-focused prompt ─────────────────────────────────────────────────
+const VOCABULARY_SYSTEM_PROMPT = (langLabel: string) =>
+  `Bạn là một trợ lý AI thông minh chuyên trích xuất TỪ VỰNG từ ảnh chụp tài liệu học ngoại ngữ (${langLabel}).
 
 Nhiệm vụ của bạn:
 1. Đọc và TỰ ĐỘNG SỬA LỖI CHÍNH TẢ / LỖI OCR (nếu chữ trong ảnh bị nhòe, sai nét hay lỗi đọc ký tự), chuyển về từ gốc đúng chuẩn từ điển.
 2. TỰ ĐỘNG PHÂN LOẠI CHỦ ĐỀ (collection) chính xác cho từng từ vựng (ví dụ: "Du lịch & Sân bay", "Giao tiếp công sở", "Ẩm thực & Gọi món", "TOPIK II", "HSK 4", "IELTS Academic"...).
-3. Đề xuất danh sách từ vựng và cấu trúc ngữ pháp có trong ảnh.
+3. Chỉ trích xuất TỪ VỰNG. Không trích xuất ngữ pháp.
 
-Trả về 1 khối JSON DUY NHẤT đúng cấu trúc (không thêm markdown code block, không thêm text ngoài JSON):
+Trả về 1 khối JSON DUY NHẤT (không thêm markdown code block, không thêm text ngoài JSON):
 {
-  "summary": "Tóm tắt ngắn gọn (1-2 câu tiếng Việt) về nội dung tài liệu này",
+  "summary": "Tóm tắt ngắn gọn (1-2 câu tiếng Việt) về danh sách từ vựng trong ảnh",
   "vocabulary": [
     {
       "language": "en",
@@ -46,21 +48,42 @@ Trả về 1 khối JSON DUY NHẤT đúng cấu trúc (không thêm markdown co
       "collection": "Tên chủ đề phân loại tự động"
     }
   ],
+  "grammar": []
+}
+
+language phải là "en", "ko", hoặc "zh".
+difficulty phải là "beginner", "intermediate", "advanced", hoặc "master".
+QUAN TRỌNG: "grammar" luôn là mảng rỗng [] vì bạn chỉ trích xuất từ vựng.`;
+
+// ── Grammar-focused prompt ────────────────────────────────────────────────────
+const GRAMMAR_SYSTEM_PROMPT = (langLabel: string) =>
+  `Bạn là một trợ lý AI thông minh chuyên phân tích NGỮ PHÁP từ ảnh chụp tài liệu học ngoại ngữ (${langLabel}).
+
+Nhiệm vụ của bạn:
+1. Đọc và TỰ ĐỘNG SỬA LỖI CHÍNH TẢ / LỖI OCR nếu chữ trong ảnh bị nhòe hoặc sai.
+2. Xác định các CẤU TRÚC NGỮ PHÁP, mẫu câu, công thức có trong ảnh.
+3. Chỉ trích xuất NGỮ PHÁP. Không trích xuất từ vựng đơn lẻ.
+
+Trả về 1 khối JSON DUY NHẤT (không thêm markdown code block, không thêm text ngoài JSON):
+{
+  "summary": "Tóm tắt ngắn gọn (1-2 câu tiếng Việt) về các cấu trúc ngữ pháp trong ảnh",
+  "vocabulary": [],
   "grammar": [
     {
       "language": "en",
-      "title": "Cấu trúc ngữ pháp",
-      "meaning": "Tóm tắt ý nghĩa bằng tiếng Việt",
-      "explanation": "Công thức & cách dùng chi tiết",
-      "examples": [{ "example": "...", "translation": "..." }],
-      "category": "Danh mục ngữ pháp tự động",
-      "difficulty": "intermediate"
+      "title": "Tên cấu trúc ngữ pháp (ví dụ: Present Perfect Tense)",
+      "meaning": "Tóm tắt ý nghĩa/công dụng bằng tiếng Việt",
+      "explanation": "Công thức & cách dùng chi tiết (tiếng Việt)",
+      "examples": [{ "example": "Câu ví dụ", "translation": "Dịch nghĩa" }],
+      "category": "Danh mục ngữ pháp (Tenses / Conditionals / Modals / ...)",
+      "difficulty": "beginner|intermediate|advanced|master"
     }
   ]
 }
 
 language phải là "en", "ko", hoặc "zh".
-difficulty phải là "beginner", "intermediate", "advanced", hoặc "master".`;
+difficulty phải là "beginner", "intermediate", "advanced", hoặc "master".
+QUAN TRỌNG: "vocabulary" luôn là mảng rỗng [] vì bạn chỉ trích xuất ngữ pháp.`;
 
 /**
  * Call OpenRouter with vision-capable free models (Engine 2).
@@ -174,7 +197,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { imageDataUrl, text, targetLanguage } = parsed.data;
+  const { imageDataUrl, text, targetLanguage, focus } = parsed.data;
   const langLabel =
     targetLanguage === "en"
       ? "tiếng Anh"
@@ -182,10 +205,16 @@ export async function POST(request: Request) {
         ? "tiếng Hàn"
         : "tiếng Trung";
 
-  const systemPrompt = EXTRACTION_SYSTEM_PROMPT(langLabel);
+  // Use focused system prompt based on what the caller needs
+  const systemPrompt = focus === "grammar"
+    ? GRAMMAR_SYSTEM_PROMPT(langLabel)
+    : VOCABULARY_SYSTEM_PROMPT(langLabel);
+
   const userText = text?.trim()
     ? text
-    : "Hãy phân tích ảnh này, sửa lỗi chính tả nếu có và tự lọc chủ đề.";
+    : focus === "grammar"
+      ? "Hãy phân tích ảnh này và trích xuất tất cả cấu trúc ngữ pháp có trong đó."
+      : "Hãy phân tích ảnh này và trích xuất tất cả từ vựng có trong đó.";
 
   let responseText = "";
 

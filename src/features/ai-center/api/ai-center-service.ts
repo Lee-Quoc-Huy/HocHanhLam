@@ -238,6 +238,7 @@ class AiCenterService {
     imageDataUrl?: string;
     text?: string;
     targetLanguage: TargetLanguage;
+    focus?: "vocabulary" | "grammar";
   }): Promise<{
     summary: string;
     vocabulary: any[];

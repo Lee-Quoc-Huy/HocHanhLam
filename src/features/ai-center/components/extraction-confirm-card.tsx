@@ -47,7 +47,15 @@ export interface ExtractionData {
 
 type SectionKey = "vocabulary" | "grammar" | "flashcards";
 
-export function ExtractionConfirmCard({ data, targetLanguage }: { data: ExtractionData; targetLanguage: "en" | "ko" | "zh" }) {
+export function ExtractionConfirmCard({
+  data,
+  targetLanguage,
+  focus,
+}: {
+  data: ExtractionData;
+  targetLanguage: "en" | "ko" | "zh";
+  focus?: "vocabulary" | "grammar";
+}) {
   const [checked, setChecked] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
     data.vocabulary.forEach((_, i) => (init[`vocabulary-${i}`] = true));
@@ -193,13 +201,7 @@ export function ExtractionConfirmCard({ data, targetLanguage }: { data: Extracti
     }
   }
 
-  const sections: {
-    key: SectionKey;
-    label: string;
-    icon: typeof BookOpenText;
-    items: { title: string; subtitle: string }[];
-    onSave: () => Promise<void>;
-  }[] = [
+  const sections = [
     {
       key: "vocabulary" as SectionKey,
       label: "Từ Vựng",
@@ -221,7 +223,12 @@ export function ExtractionConfirmCard({ data, targetLanguage }: { data: Extracti
       items: data.flashcards.map((f) => ({ title: f.front_text, subtitle: f.back_text })),
       onSave: saveFlashcards,
     },
-  ].filter((s) => s.items.length > 0);
+  ].filter((s) => {
+    if (s.items.length === 0) return false;
+    if (focus === "vocabulary" && s.key !== "vocabulary") return false;
+    if (focus === "grammar" && s.key !== "grammar") return false;
+    return true;
+  });
 
   if (sections.length === 0) return null;
 

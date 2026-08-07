@@ -196,6 +196,7 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
           const data = await aiCenterService.analyzeAttachment({
             imageDataUrl: slices[i],
             targetLanguage: "en",
+            focus,
           });
 
           if (data.summary && !summaryText) {
@@ -395,7 +396,7 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
                 </Button>
               )}
 
-              {result && <ExtractionConfirmCard data={result} targetLanguage="en" />}
+              {result && <ExtractionConfirmCard data={result} targetLanguage="en" focus={focus} />}
 
               {result && (
                 <Button type="button" variant="outline" onClick={reset} className="w-full mt-2">
