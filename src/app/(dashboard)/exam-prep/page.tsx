@@ -1181,8 +1181,7 @@ export default function ExamPrepPage() {
     setQuestions([]);
     setUserAnswers({});
 
-    const targetCount =
-      mode === "real_exam" ? currentLevelObj!.realQuestions : practiceQuestionCount;
+    const targetCount = mode === "real_exam" ? 10 : practiceQuestionCount;
 
     try {
       const files = getFilesByTag([exam, level]);
