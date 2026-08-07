@@ -89,26 +89,35 @@ export function ExtractionConfirmCard({ data, targetLanguage }: { data: Extracti
     try {
       const finalCollection = collection === "NEW" ? customCollection.trim() || "General" : collection;
       const items = data.vocabulary.filter((_, i) => checked[`vocabulary-${i}`]);
-      for (const item of items) {
-        await vocabularyService.createWord({
-          language: item.language ?? targetLanguage,
-          word: item.word,
-          ipa: item.ipa ?? "",
-          vietnamese: item.vietnamese,
-          english_meaning: item.english_meaning ?? "",
-          part_of_speech: item.part_of_speech ?? "noun",
-          example: item.example ?? "",
-          example_translation: item.example_translation ?? "",
-          audio_url: "",
-          image_url: "",
-          synonyms: [],
-          antonyms: [],
-          frequency: 3,
-          difficulty: item.difficulty ?? "intermediate",
-          is_favorite: false,
-          collection: finalCollection,
-        } as any);
+
+      // Batch save in chunks of 10 parallel requests for high speed
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < items.length; i += BATCH_SIZE) {
+        const chunk = items.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          chunk.map((item) =>
+            vocabularyService.createWord({
+              language: item.language ?? targetLanguage,
+              word: item.word,
+              ipa: item.ipa ?? "",
+              vietnamese: item.vietnamese,
+              english_meaning: item.english_meaning ?? "",
+              part_of_speech: item.part_of_speech ?? "noun",
+              example: item.example ?? "",
+              example_translation: item.example_translation ?? "",
+              audio_url: "",
+              image_url: "",
+              synonyms: [],
+              antonyms: [],
+              frequency: 3,
+              difficulty: item.difficulty ?? "intermediate",
+              is_favorite: false,
+              collection: finalCollection,
+            } as any)
+          )
+        );
       }
+
       toast.success(`Đã lưu ${items.length} từ vào Kho Từ Vựng (Bộ sưu tập: ${finalCollection}).`);
       setSaved((s) => ({ ...s, vocabulary: true }));
     } catch (err) {
@@ -122,19 +131,25 @@ export function ExtractionConfirmCard({ data, targetLanguage }: { data: Extracti
     setSaving("grammar");
     try {
       const items = data.grammar.filter((_, i) => checked[`grammar-${i}`]);
-      for (const item of items) {
-        await grammarService.createGrammar({
-          language: item.language ?? targetLanguage,
-          title: item.title,
-          meaning: item.meaning,
-          explanation: item.explanation ?? "",
-          examples: item.examples ?? [],
-          common_mistakes: [],
-          related_grammar: [],
-          difficulty: item.difficulty ?? "intermediate",
-          is_favorite: false,
-          category: item.category ?? "General",
-        } as any);
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < items.length; i += BATCH_SIZE) {
+        const chunk = items.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          chunk.map((item) =>
+            grammarService.createGrammar({
+              language: item.language ?? targetLanguage,
+              title: item.title,
+              meaning: item.meaning,
+              explanation: item.explanation ?? "",
+              examples: item.examples ?? [],
+              common_mistakes: [],
+              related_grammar: [],
+              difficulty: item.difficulty ?? "intermediate",
+              is_favorite: false,
+              category: item.category ?? "General",
+            } as any)
+          )
+        );
       }
       toast.success(`Đã lưu ${items.length} cấu trúc vào Ngữ Pháp.`);
       setSaved((s) => ({ ...s, grammar: true }));
@@ -149,19 +164,25 @@ export function ExtractionConfirmCard({ data, targetLanguage }: { data: Extracti
     setSaving("flashcards");
     try {
       const items = data.flashcards.filter((_, i) => checked[`flashcards-${i}`]);
-      for (const item of items) {
-        await flashcardService.createFlashcard({
-          language: targetLanguage,
-          collection_id: null,
-          front_text: item.front_text,
-          front_subtext: item.front_subtext ?? "",
-          back_text: item.back_text,
-          back_explanation: item.back_explanation ?? "",
-          audio_url: "",
-          image_url: "",
-          tags: item.tags && item.tags.length > 0 ? item.tags : ["Ảnh/Tài Liệu AI"],
-          is_favorite: false,
-        } as any);
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < items.length; i += BATCH_SIZE) {
+        const chunk = items.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          chunk.map((item) =>
+            flashcardService.createFlashcard({
+              language: targetLanguage,
+              collection_id: null,
+              front_text: item.front_text,
+              front_subtext: item.front_subtext ?? "",
+              back_text: item.back_text,
+              back_explanation: item.back_explanation ?? "",
+              audio_url: "",
+              image_url: "",
+              tags: item.tags && item.tags.length > 0 ? item.tags : ["Ảnh/Tài Liệu AI"],
+              is_favorite: false,
+            } as any)
+          )
+        );
       }
       toast.success(`Đã tạo ${items.length} flashcard mới.`);
       setSaved((s) => ({ ...s, flashcards: true }));
