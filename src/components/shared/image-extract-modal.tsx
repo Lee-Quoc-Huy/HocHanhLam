@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ImageUp, Loader2, X, Sparkles, CheckCircle2 } from "lucide-react";
+import { ImageUp, Loader2, X, Sparkles, Camera, Clipboard, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { aiCenterService } from "@/features/ai-center/api/ai-center-service";
@@ -31,12 +31,10 @@ async function createSlicesFromImage(imageSrc: string): Promise<string[]> {
       const scaledWidth = TARGET_WIDTH;
       const scaledHeight = img.height * scale;
 
-      // Slice height of ~700px at 1200px width (~20-25 lines of text per slice)
       const SLICE_HEIGHT = 700;
       const OVERLAP = 70; // 70px vertical overlap to catch boundary rows
 
       if (scaledHeight <= SLICE_HEIGHT * 1.3) {
-        // Single slice for normal / square / landscape images
         const canvas = document.createElement("canvas");
         canvas.width = scaledWidth;
         canvas.height = scaledHeight;
@@ -48,7 +46,6 @@ async function createSlicesFromImage(imageSrc: string): Promise<string[]> {
         }
       }
 
-      // Multi-slice for tall document photos (e.g. 50-100+ word tables)
       const slices: string[] = [];
       let currentY = 0;
 
@@ -89,17 +86,40 @@ async function createSlicesFromImage(imageSrc: string): Promise<string[]> {
 
 export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [rawFileSrc, setRawFileSrc] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [progressStatus, setProgressStatus] = useState<string>("");
   const [result, setResult] = useState<ExtractionData | null>(null);
 
   const title = focus === "vocabulary" ? "Đọc Từ Vựng Từ Ảnh (AI)" : "Đọc Ngữ Pháp Từ Ảnh (AI)";
   const description =
     focus === "vocabulary"
-      ? "Chụp hoặc tải lên ảnh bảng từ vựng, trang sách... AI hỗ trợ quét tự động phân đoạn các bảng dài (50-100+ từ)."
-      : "Chụp hoặc tải lên ảnh công thức ngữ pháp, trang sách... AI hỗ trợ đọc và trích xuất cấu trúc tự động.";
+      ? "Chụp camera, chọn ảnh tệp hoặc dán (Ctrl+V) bảng từ vựng... AI tự động đọc và cắt ảnh 100+ từ."
+      : "Chụp camera, chọn ảnh tệp hoặc dán (Ctrl+V) công thức ngữ pháp... AI tự động phân tích chi tiết.";
+
+  // Paste image from Clipboard (Ctrl+V) listener
+  useEffect(() => {
+    if (!open) return;
+    function handlePaste(e: ClipboardEvent) {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            processFile(file);
+            toast.success("Đã dán ảnh từ khay nhớ tạm!");
+            break;
+          }
+        }
+      }
+    }
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [open]);
 
   function reset() {
     setPreview(null);
@@ -114,17 +134,12 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
     onClose();
   }
 
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
-
+  function processFile(file: File) {
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
       setRawFileSrc(dataUrl);
 
-      // Create a quick display preview
       const img = new Image();
       img.onload = () => {
         const MAX_DIM = 1200;
@@ -143,7 +158,14 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
       img.onerror = () => setPreview(dataUrl);
       img.src = dataUrl;
     };
-    reader.readDataURL(file);
+    reader.readAsDataURL(file);
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    processFile(file);
   }
 
   async function handleAnalyze() {
@@ -155,7 +177,6 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
     setProgressStatus("Đang chuẩn bị phân tích ảnh...");
 
     try {
-      // Step 1: Create horizontal slices for tall images
       const slices = await createSlicesFromImage(sourceImage);
       const totalSlices = slices.length;
 
@@ -164,7 +185,6 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
       const allFlashcards: any[] = [];
       let summaryText = "";
 
-      // Step 2: Send each slice in sequence to avoid timeouts and keep requests fast
       for (let i = 0; i < totalSlices; i++) {
         if (totalSlices > 1) {
           setProgressStatus(`Đang đọc phân đoạn ${i + 1}/${totalSlices} (${Math.round(((i + 1) / totalSlices) * 100)}%)...`);
@@ -193,12 +213,10 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
           }
         } catch (err) {
           console.warn(`Error analyzing slice ${i + 1}:`, err);
-          // If a single slice fails, continue with remaining slices
           if (totalSlices === 1) throw err;
         }
       }
 
-      // Step 3: Deduplicate extracted vocabulary & grammar items
       const vocabMap = new Map<string, any>();
       allVocabulary.forEach((item) => {
         const key = (item.word || "").toLowerCase().trim();
@@ -272,17 +290,74 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
             </Dialog.Close>
           </div>
 
+          {/* Standard File Input */}
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
 
+          {/* Dedicated Direct Camera Capture Input (Mobile / Tablet) */}
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+
           {!preview && (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border py-10 text-muted-foreground transition-colors hover:border-emerald-500/50 hover:text-emerald-600"
-            >
-              <ImageUp className="size-8" />
-              <span className="text-sm font-medium">Bấm để chọn ảnh</span>
-            </button>
+            <div className="space-y-3">
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file && file.type.startsWith("image/")) {
+                    processFile(file);
+                  }
+                }}
+                className={`flex w-full flex-col items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed p-8 text-center transition-all ${
+                  isDragging
+                    ? "border-emerald-500 bg-emerald-500/10 text-emerald-600"
+                    : "border-border/80 bg-muted/20 text-muted-foreground hover:border-emerald-500/50 hover:bg-emerald-500/5"
+                }`}
+              >
+                <div className="flex size-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <UploadCloud className="size-6" />
+                </div>
+                <div>
+                  <span className="block text-sm font-bold text-foreground">Kéo thả ảnh vào đây</span>
+                  <span className="block text-xs text-muted-foreground mt-0.5">
+                    hoặc Dán trực tiếp từ khay nhớ tạm (<kbd className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground border border-border">Ctrl + V</kbd>)
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="gap-2 h-11 border-border font-medium text-foreground hover:border-emerald-500/40 hover:bg-emerald-500/5"
+                >
+                  <ImageUp className="size-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Chọn Ảnh Tệp</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="gap-2 h-11 border-border font-medium text-foreground hover:border-emerald-500/40 hover:bg-emerald-500/5"
+                >
+                  <Camera className="size-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Chụp Camera</span>
+                </Button>
+              </div>
+            </div>
           )}
 
           {preview && (
