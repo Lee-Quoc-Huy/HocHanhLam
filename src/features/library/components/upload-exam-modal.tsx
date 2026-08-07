@@ -69,11 +69,20 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
   const [pastedContent, setPastedContent] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
+  const isAudioFile = selectedFile
+    ? /\.(mp3|wav|m4a|ogg|aac|flac)$/i.test(selectedFile.name)
+    : false;
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const f = e.target.files[0];
       setSelectedFile(f);
       if (!title) setTitle(f.name.replace(/\.[^/.]+$/, ""));
+
+      // Auto-set paper type for audio files
+      if (/\.(mp3|wav|m4a|ogg|aac|flac)$/i.test(f.name)) {
+        setPaperType("audio_attachment");
+      }
 
       // Auto-read .txt files for instant content_text
       if (f.name.endsWith(".txt") || f.name.endsWith(".md")) {
@@ -244,17 +253,56 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
               </div>
             </div>
 
-            {/* ★ NEW: Paste Exam Content for AI ★ */}
+            {/* ★ Paste Content / Transcript for AI ★ */}
             <div className="space-y-1.5">
-              <label className="font-bold text-foreground flex items-center gap-1.5">
-                <ClipboardPaste className="size-4 text-emerald-500" />
-                3. Dán Nội Dung Đề Thi Vào Đây (để AI trích lọc):
-                <span className="text-[11px] text-muted-foreground font-normal">(Không bắt buộc nhưng giúp AI hiểu đề thi tốt hơn)</span>
-              </label>
-              <textarea
-                value={pastedContent}
-                onChange={(e) => setPastedContent(e.target.value)}
-                placeholder={`Copy & Paste toàn bộ nội dung đề thi vào đây (câu hỏi + đáp án + đoạn văn...).
+              {isAudioFile ? (
+                // ── AUDIO: show transcript paste UI ──────────────────────
+                <>
+                  <label className="font-bold text-foreground flex items-center gap-1.5">
+                    <ClipboardPaste className="size-4 text-blue-500" />
+                    3. Dán Transcript / Kịch Bản Bài Nghe (để AI tạo câu hỏi nghe hiểu):
+                    <span className="text-[11px] text-muted-foreground font-normal">(Không bắt buộc nhưng rất quan trọng!)</span>
+                  </label>
+                  <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-3 text-[11px] text-blue-400 space-y-1 mb-1">
+                    <p className="font-semibold">🎧 Hướng dẫn với File Nghe (MP3/WAV):</p>
+                    <p>• <strong>Cách 1 (Tốt nhất):</strong> Dán toàn bộ transcript/kịch bản bài nghe vào ô bên dưới → AI sẽ tạo câu hỏi nghe hiểu từ nội dung đó.</p>
+                    <p>• <strong>Cách 2:</strong> Để trống → AI sẽ tự tạo câu hỏi nghe hiểu chuẩn kỳ thi dựa trên chủ đề của file audio.</p>
+                  </div>
+                  <textarea
+                    value={pastedContent}
+                    onChange={(e) => setPastedContent(e.target.value)}
+                    placeholder={`Dán transcript/kịch bản bài nghe vào đây...
+
+Ví dụ (TOPIK):
+[Track 01]
+남자: 안녕하세요. 저는 김민수입니다.
+여자: 안녕하세요. 저는 이지영입니다.
+
+[문제 1] 두 사람은 지금 어디에 있습니까?
+① 학교  ② 회사  ③ 병원  ④ 식당
+정답: ②
+
+AI sẽ tạo câu hỏi nghe hiểu mới dựa trên transcript này!`}
+                    className="w-full min-h-[130px] rounded-xl border border-blue-500/40 bg-background px-3 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 resize-y transition-all"
+                  />
+                  {pastedContent.trim().length > 0 && (
+                    <p className="text-[11px] text-blue-500 font-medium">
+                      🎧 {pastedContent.trim().length.toLocaleString()} ký tự transcript — AI sẽ tạo câu hỏi nghe hiểu từ đây!
+                    </p>
+                  )}
+                </>
+              ) : (
+                // ── EXAM / DOC: show exam content paste UI ───────────────
+                <>
+                  <label className="font-bold text-foreground flex items-center gap-1.5">
+                    <ClipboardPaste className="size-4 text-emerald-500" />
+                    3. Dán Nội Dung Đề Thi Vào Đây (để AI trích lọc):
+                    <span className="text-[11px] text-muted-foreground font-normal">(Không bắt buộc nhưng giúp AI hiểu đề thi tốt hơn)</span>
+                  </label>
+                  <textarea
+                    value={pastedContent}
+                    onChange={(e) => setPastedContent(e.target.value)}
+                    placeholder={`Copy & Paste toàn bộ nội dung đề thi vào đây (câu hỏi + đáp án + đoạn văn...).
 
 Ví dụ:
 1. 다음 중 맞는 것을 고르십시오.
@@ -262,12 +310,14 @@ Ví dụ:
 정답: ①
 
 AI sẽ đọc toàn bộ nội dung này và tạo ra bộ đề thi mới đa dạng hơn!`}
-                className="w-full min-h-[120px] rounded-xl border border-border bg-background px-3 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 resize-y transition-all"
-              />
-              {pastedContent.trim().length > 0 && (
-                <p className="text-[11px] text-emerald-500 font-medium">
-                  ✅ {pastedContent.trim().length.toLocaleString()} ký tự nội dung — AI sẽ trích lọc và tạo đề mới từ đây!
-                </p>
+                    className="w-full min-h-[120px] rounded-xl border border-border bg-background px-3 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 resize-y transition-all"
+                  />
+                  {pastedContent.trim().length > 0 && (
+                    <p className="text-[11px] text-emerald-500 font-medium">
+                      ✅ {pastedContent.trim().length.toLocaleString()} ký tự nội dung — AI sẽ trích lọc và tạo đề mới từ đây!
+                    </p>
+                  )}
+                </>
               )}
             </div>
 

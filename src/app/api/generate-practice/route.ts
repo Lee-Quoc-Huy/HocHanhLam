@@ -48,15 +48,39 @@ function buildPrompt(
   const selectedTopics = getRandomTopics();
 
   let sourceGuidance = "";
+  const hasAudioContent = libraryContext && (
+    libraryContext.includes("AUDIO") ||
+    libraryContext.includes("audio_attachment") ||
+    libraryContext.includes("[AUDIO_ATTACHMENT]") ||
+    libraryContext.includes("transcript") ||
+    libraryContext.includes("Track") ||
+    libraryContext.includes("🎧")
+  );
+
   if (source === "library") {
-    sourceGuidance = libraryContext && libraryContext.trim().length > 0
-      ? `TRÍCH LỌC VÀ TÁI TẠO ĐỀ THƯ VIỆN THÔNG MINH (Seed: ${seed}):
+    if (libraryContext && libraryContext.trim().length > 0) {
+      if (hasAudioContent) {
+        sourceGuidance = `TRÍCH LỌC TỪ FILE NGHE & TẠO CÂU HỎI NGHE HIỂU CHUẨN KỲ THI (Seed: ${seed}):
+Dưới đây là transcript/kịch bản bài nghe từ Thư viện:
+--- TRANSCRIPT BÀI NGHE ---
+${libraryContext.slice(0, 1500)}
+---------------------------
+YÊU CẦU ĐẶC BIỆT CHO BÀI NGHE:
+1. Đọc và phân tích transcript bài nghe. Hiểu ngữ cảnh hội thoại, thông tin quan trọng.
+2. Tạo câu hỏi nghe hiểu (Listening Comprehension) chuẩn format kỳ thi ${exam}: ai đang nói, họ đang ở đâu, họ đang làm gì, thông tin quan trọng trong hội thoại.
+3. TẠO RA TRANSCRIPT MỚI TƯƠNG ĐƯƠNG (thay đổi tên, địa điểm, tình huống) và câu hỏi nghe hiểu mới từ đó — hoàn toàn khác biệt với bài gốc nhưng cùng cấu trúc ngữ pháp.
+4. Mỗi câu hỏi type "listening" phải có passage là đoạn hội thoại/transcript ngắn bằng ${lang}.`;
+      } else {
+        sourceGuidance = `TRÍCH LỌC & TÁI TẠO ĐỀ THƯ VIỆN THÔNG MINH (Seed: ${seed}):
 Dưới đây là nội dung từ Thư viện người dùng:
 --- THƯ VIỆN ---
 ${libraryContext.slice(0, 1500)}
 ---------------
-YÊU CẦU: Phân tích từ vựng, ngữ pháp cốt lõi rồi TẠO RA BỘ ĐỀ MỚI KHÁC BIỆT 100% dựa trên kiến thức này (đổi bối cảnh, câu hỏi mới, đáp án nhiễu sắc bén).`
-      : `BỘ ĐỀ TRỘN THƯ VIỆN CHUẨN (${exam} ${level}): Trích lọc ngữ pháp & từ vựng trọng tâm thành bộ đề trộn mới lạ.`;
+YÊU CẦU: Phân tích từ vựng, ngữ pháp cốt lõi rồi TẠO RA BỘ ĐỀ MỚI KHÁC BIỆT 100% dựa trên kiến thức này (đổi bối cảnh, câu hỏi mới, đáp án nhiễu sắc bén).`;
+      }
+    } else {
+      sourceGuidance = `BỘ ĐỀ TRỘN THƯ VIỆN CHUẨN (${exam} ${level}): Trích lọc ngữ pháp & từ vựng trọng tâm thành bộ đề trộn mới lạ.`;
+    }
   } else {
     sourceGuidance = `AI SÁNG TẠO ĐỘC ĐÁO (Seed: ${seed}): Đóng vai Giám khảo ${exam} (${level}). Sáng tạo bộ đề thi MỚI LẠ 100%, trộn ngẫu nhiên kiến thức thuộc các chủ đề: [${selectedTopics}]. Trộn lẫn từ vựng & ngữ pháp phong phú, tuyệt đối không lặp lại câu đơn điệu.`;
   }
