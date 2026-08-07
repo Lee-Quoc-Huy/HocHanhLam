@@ -450,6 +450,30 @@ const SAMPLES: Record<string, Question[]> = {
   ],
 };
 
+// ─── Dynamic Topic Bank for Unlimited Diversity ────────────────────────────────
+const TOPIC_BANK = [
+  "Công nghệ AI & Đời sống số",
+  "Văn hóa truyền thống & Lễ hội",
+  "Giao tiếp công sở & Phỏng vấn xin việc",
+  "Du lịch sinh thái & Khám phá thế giới",
+  "Ẩm thực đường phố & Phong cách sống",
+  "Y học hiện đại & Chăm sóc sức khỏe",
+  "Bảo vệ môi trường & Biến đổi khí hậu",
+  "Điện ảnh, Âm nhạc & Nghệ thuật",
+  "Kinh tế gia đình & Quản lý tài chính",
+  "Tâm lý xã hội & Mối quan hệ con người",
+  "Thể thao & Rèn luyện thể lực",
+  "Giáo dục đại học & Học bổng du học",
+  "Giao thông đô thị & Hạ tầng thông minh",
+  "Mua sắm trực tuyến & Xu hướng tiêu dùng",
+  "Khoa học vũ trụ & Phát minh mới",
+];
+
+function getRandomTopics(): string {
+  const shuffled = [...TOPIC_BANK].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, 3).join(", ");
+}
+
 // ─── Build prompt for AI ──────────────────────────────────────────────────────
 function buildPrompt(
   exam: string,
@@ -461,7 +485,8 @@ function buildPrompt(
   fileUrls: string[]
 ): string {
   const lang = exam === "TOPIK" ? "Tiếng Hàn" : exam === "HSK" ? "Tiếng Trung" : "Tiếng Anh";
-  const seed = Math.floor(Math.random() * 10000);
+  const seed = Math.floor(Math.random() * 100000);
+  const selectedTopics = getRandomTopics();
 
   let sourceGuidance = "";
   if (source === "library") {
@@ -469,7 +494,7 @@ function buildPrompt(
       ? `TRÍCH LỌC VÀ TRỘN ĐỀ THƯ VIỆN (Seed: ${seed}): Dựa trên các tài liệu thư viện (${fileUrls.slice(0, 3).join(", ")}), hãy trích xuất từ vựng & cấu trúc cốt lõi rồi tái cấu trúc thành các dạng câu hỏi hoàn toàn mới (thay đổi bối cảnh, đảo đáp án, tạo bài đọc tương đương).`
       : `BỘ ĐỀ TRỘN THƯ VIỆN MỚI (Seed: ${seed}): Trích lọc kiến thức chuẩn từ kho đề để tổng hợp bộ câu hỏi trộn mới lạ.`;
   } else {
-    sourceGuidance = `AI SÁNG TẠO ĐỘC ĐÁO & ĐA DẠNG (Seed: ${seed}): Hãy sáng tạo bộ đề thi mới 100%, trộn lẫn nhiều chủ đề (giao tiếp, văn hóa, kinh tế, đời sống, khoa học) thuộc cấp độ ${level}. Không lặp lại các mẫu câu đơn điệu cũ.`;
+    sourceGuidance = `AI SÁNG TẠO ĐỘC ĐÁO & ĐA DẠNG (Seed: ${seed}): Hãy sáng tạo bộ đề thi mới 100%, tập trung xoay quanh các chủ đề: [${selectedTopics}] thuộc cấp độ ${level}. MỖI LẦN TẠO LÀ BỘ ĐỀ MỚI KHÁC BIỆT HOÀN TOÀN, KHÔNG ĐƯỢC LẶP LẠI CÁC CÂU HỎI CŨ MẪU ĐƠN ĐIỆU.`;
   }
 
   const examFormatGuide = `
@@ -549,8 +574,8 @@ export async function POST(req: NextRequest) {
     const generateAiQuestions = async (): Promise<Question[] | null> => {
       // KÊNH 1: Google AI Studio Direct (Gemini 2.5 Flash → 2.5 Flash Lite)
       const directResult = await callGoogleAIDirect(prompt, {
-        maxOutputTokens: 2000,
-        temperature: 0.6,
+        maxOutputTokens: 2200,
+        temperature: 0.85, // High temperature for rich diversity
       });
 
       if (directResult?.text) {
@@ -575,11 +600,11 @@ export async function POST(req: NextRequest) {
           messages: [
             {
               role: "system",
-              content: `Giám khảo soạn đề thi ${exam}. CHỈ trả về JSON array/object.`,
+              content: `Giám khảo soạn đề thi ${exam}. CHỈ trả về JSON array/object. MỖI LẦN SÁNG TẠO ĐỀ MỚI KHÁC NHAU HOÀN TOÀN.`,
             },
             { role: "user", content: prompt },
           ],
-          temperature: 0.6,
+          temperature: 0.85, // High temperature for rich diversity
         });
 
         const jsonStr = result.content
@@ -603,9 +628,15 @@ export async function POST(req: NextRequest) {
     if (aiResult && aiResult.length > 0) {
       questions = aiResult;
     } else {
-      console.warn("[exam-prep] AI timeout or error, serving high-quality preset questions.");
+      console.warn("[exam-prep] AI timeout or error, serving dynamically shuffled preset questions.");
       const key = exam.toUpperCase() as keyof typeof SAMPLES;
-      questions = (SAMPLES[key] ?? SAMPLES["TOPIK"]).slice(0, targetCount);
+      const baseSamples = SAMPLES[key] ?? SAMPLES["TOPIK"];
+      // Dynamically shuffle questions & options so fallback never feels static
+      const shuffled = [...baseSamples].sort(() => 0.5 - Math.random());
+      questions = shuffled.slice(0, targetCount).map((q, idx) => ({
+        ...q,
+        id: `gen-${idx + 1}-${Date.now()}`,
+      }));
     }
 
     let sessionId = `session-${Date.now()}`;
