@@ -1,4 +1,3 @@
-import { queryNeon } from "@/lib/neon/client";
 import type {
   GrammarItem,
   CreateGrammarInput,
@@ -6,39 +5,11 @@ import type {
 } from "../types";
 
 /**
- * Grammar data layer — 100% Độc lập trên Neon DB.
- * Supabase KHÔNG còn liên quan hay bị ảnh hưởng bởi Ngữ pháp nữa.
+ * Grammar data layer — Gọi Server API Route (/api/grammar).
+ *
+ * Mọi thao tác đều được gửi đến Next.js API route trên server,
+ * nơi NEON_DATABASE_URL được truy cập bảo mật và kết nối đến Neon DB.
  */
-
-let tableChecked = false;
-
-async function ensureTableExists() {
-  if (tableChecked) return;
-  try {
-    await queryNeon(`
-      CREATE TABLE IF NOT EXISTS grammar (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID,
-        language TEXT NOT NULL DEFAULT 'en',
-        title TEXT NOT NULL,
-        meaning TEXT NOT NULL DEFAULT '',
-        explanation TEXT NOT NULL DEFAULT '',
-        examples JSONB NOT NULL DEFAULT '[]'::jsonb,
-        common_mistakes JSONB NOT NULL DEFAULT '[]'::jsonb,
-        related_grammar TEXT[] NOT NULL DEFAULT '{}',
-        difficulty TEXT NOT NULL DEFAULT 'intermediate',
-        is_favorite BOOLEAN NOT NULL DEFAULT false,
-        category TEXT NOT NULL DEFAULT 'General',
-        ai_explanation TEXT NOT NULL DEFAULT '',
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-    `);
-    tableChecked = true;
-  } catch (err) {
-    console.error("[GrammarService] Lỗi tạo bảng Neon:", err);
-  }
-}
 
 export const SAMPLE_GRAMMAR: GrammarItem[] = [
   {
@@ -155,98 +126,56 @@ export const SAMPLE_GRAMMAR: GrammarItem[] = [
 
 class GrammarService {
   async fetchGrammar(): Promise<GrammarItem[]> {
-    await ensureTableExists();
-    const rows = await queryNeon<any>(
-      `SELECT * FROM grammar ORDER BY created_at DESC`
-    );
-
-    if (rows && rows.length > 0) {
-      return rows.map(this.parseRow);
+    try {
+      const res = await fetch("/api/grammar", { cache: "no-store" });
+      if (!res.ok) throw new Error("API call failed");
+      const items = (await res.json()) as GrammarItem[];
+      return items && items.length > 0 ? items : SAMPLE_GRAMMAR;
+    } catch {
+      return SAMPLE_GRAMMAR;
     }
-
-    return SAMPLE_GRAMMAR;
   }
 
   async createGrammar(input: CreateGrammarInput): Promise<GrammarItem> {
-    await ensureTableExists();
-    const rows = await queryNeon<any>(
-      `INSERT INTO grammar (
-        user_id, language, title, meaning, explanation, examples,
-        common_mistakes, related_grammar, difficulty, is_favorite,
-        category, ai_explanation
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6::jsonb,
-        $7::jsonb, $8, $9, $10,
-        $11, $12
-      ) RETURNING *`,
-      [
-        input.user_id ?? null,
-        input.language ?? "en",
-        input.title ?? "",
-        input.meaning ?? "",
-        input.explanation ?? "",
-        JSON.stringify(input.examples ?? []),
-        JSON.stringify(input.common_mistakes ?? []),
-        input.related_grammar ?? [],
-        input.difficulty ?? "intermediate",
-        input.is_favorite ?? false,
-        input.category ?? "General",
-        input.ai_explanation ?? "",
-      ]
-    );
+    const res = await fetch("/api/grammar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
 
-    if (!rows[0]) {
-      throw new Error("Không thể lưu ngữ pháp mới vào Neon DB.");
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || "Không thể lưu ngữ pháp mới vào Neon DB.");
     }
-    return this.parseRow(rows[0]);
+    return (await res.json()) as GrammarItem;
   }
 
   async updateGrammar(
     id: string,
     updates: UpdateGrammarInput
   ): Promise<GrammarItem> {
-    await ensureTableExists();
-    const fields = Object.keys(updates).filter((k) => k !== "id");
-    if (fields.length === 0) {
-      const existing = await queryNeon<any>(
-        `SELECT * FROM grammar WHERE id = $1`,
-        [id]
-      );
-      if (!existing[0]) throw new Error(`Không tìm thấy ngữ pháp id=${id}.`);
-      return this.parseRow(existing[0]);
-    }
-
-    const jsonbFields = new Set(["examples", "common_mistakes"]);
-    const setClauses = fields
-      .map((field, idx) =>
-        jsonbFields.has(field)
-          ? `${field} = $${idx + 1}::jsonb`
-          : `${field} = $${idx + 1}`
-      )
-      .join(", ");
-
-    const values = fields.map((f) => {
-      const val = (updates as any)[f];
-      return jsonbFields.has(f) ? JSON.stringify(val) : val;
+    const res = await fetch(`/api/grammar/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
     });
-    values.push(new Date().toISOString());
-    values.push(id);
 
-    const rows = await queryNeon<any>(
-      `UPDATE grammar SET ${setClauses}, updated_at = $${fields.length + 1}
-       WHERE id = $${fields.length + 2} RETURNING *`,
-      values
-    );
-
-    if (!rows[0]) {
-      throw new Error(`Không tìm thấy ngữ pháp id=${id} để cập nhật.`);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Không thể cập nhật ngữ pháp id=${id}.`);
     }
-    return this.parseRow(rows[0]);
+    return (await res.json()) as GrammarItem;
   }
 
   async deleteGrammar(id: string): Promise<boolean> {
-    await ensureTableExists();
-    await queryNeon(`DELETE FROM grammar WHERE id = $1`, [id]);
+    const res = await fetch(`/api/grammar/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Không thể xoá ngữ pháp id=${id}.`);
+    }
     return true;
   }
 
@@ -279,22 +208,6 @@ class GrammarService {
 
   subscribeToRealtime(onRealtimeUpdate: (items: GrammarItem[]) => void) {
     return () => {};
-  }
-
-  private parseRow(row: any): GrammarItem {
-    if (!row) return row;
-    return {
-      ...row,
-      examples:
-        typeof row.examples === "string"
-          ? JSON.parse(row.examples)
-          : row.examples ?? [],
-      common_mistakes:
-        typeof row.common_mistakes === "string"
-          ? JSON.parse(row.common_mistakes)
-          : row.common_mistakes ?? [],
-      related_grammar: row.related_grammar ?? [],
-    };
   }
 }
 
