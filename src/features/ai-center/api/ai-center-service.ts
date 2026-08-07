@@ -249,9 +249,16 @@ class AiCenterService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),
     });
-    const data = await res.json();
+
+    let data: any;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error("Quá thời gian xử lý hoặc tệp ảnh quá lớn. Vui lòng thử lại với ảnh nhỏ hơn.");
+    }
+
     if (!res.ok) {
-      throw new Error(data.error || "Không thể phân tích tệp đính kèm.");
+      throw new Error(data?.error || "Không thể phân tích tệp đính kèm.");
     }
     return data;
   }

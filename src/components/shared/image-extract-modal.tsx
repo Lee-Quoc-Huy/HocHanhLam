@@ -52,7 +52,7 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
     const reader = new FileReader();
     reader.onload = () => {
       img.onload = () => {
-        const MAX_DIM = 1600;
+        const MAX_DIM = 1200;
         const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
         const canvas = document.createElement("canvas");
         canvas.width = Math.round(img.width * scale);
@@ -63,7 +63,7 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
           return;
         }
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        setPreview(canvas.toDataURL("image/jpeg", 0.85));
+        setPreview(canvas.toDataURL("image/jpeg", 0.70));
       };
       img.onerror = () => setPreview(reader.result as string);
       img.src = reader.result as string;
