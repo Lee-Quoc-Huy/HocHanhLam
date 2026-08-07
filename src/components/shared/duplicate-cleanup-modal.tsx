@@ -104,7 +104,7 @@ export function DuplicateCleanupModal<T extends { id: string; created_at: string
                   Dọn {entityLabel.charAt(0).toUpperCase() + entityLabel.slice(1)} Trùng Lặp
                 </Dialog.Title>
                 <Dialog.Description className="text-xs text-muted-foreground">
-                  Tự động phát hiện các mục trùng hoặc rất giống nhau (kể cả gõ khác cách viết hoa, thừa khoảng trắng, sai chính tả nhẹ).
+                  Tự động phát hiện các mục trùng chính xác hoặc biến thể trình bày (viết hoa, khoảng trắng, ký tự ~ -).
                 </Dialog.Description>
               </div>
             </div>
@@ -150,7 +150,7 @@ export function DuplicateCleanupModal<T extends { id: string; created_at: string
                             : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
                         }`}
                       >
-                        {group.matchType === "exact" ? "Trùng chính xác" : "Gần giống (nghi sai chính tả)"}
+                        {group.matchType === "exact" ? "Trùng chính xác" : "Biến thể ký tự / Trình bày"}
                       </span>
                       <span className="text-[11px] text-muted-foreground">{group.items.length} bản</span>
                     </div>
