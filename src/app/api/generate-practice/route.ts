@@ -5,15 +5,195 @@ import { createChatCompletion } from "@/lib/ai/openrouter-client";
 
 export const maxDuration = 60;
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+type QuestionType =
+  | "multiple-choice"
+  | "reading-comprehension"
+  | "fill-blank"
+  | "sentence-order"
+  | "speaking-prompt"
+  | "listening"
+  | "writing";
+
 interface Question {
   id: string;
-  type: "multiple-choice" | "reading-comprehension" | "fill-blank" | "sentence-order" | "speaking-prompt" | "listening";
+  type: QuestionType;
   prompt: string;
   passage?: string;
   audioUrl?: string;
   choices?: { id: string; text: string }[];
   answer: string;
   explanation: string;
+  section?: string; // e.g. "Nghe", "Đọc", "Viết"
+}
+
+interface SectionConfig {
+  label: string;        // Display name e.g. "Phần 1: Nghe Hiểu"
+  sectionKey: string;   // Short key e.g. "Nghe"
+  type: QuestionType;   // Dominant question type for this section
+  count: number;        // Exact number of questions
+}
+
+// ─── EXAM SECTIONS CONFIG ─────────────────────────────────────────────────────
+// Defines the EXACT structure of every real exam.
+// This is the single source of truth for question counts & types.
+const EXAM_SECTIONS: Record<string, Record<string, SectionConfig[]>> = {
+  TOPIK: {
+    "TOPIK I - Cấp 1": [
+      { label: "Phần 1: Nghe Hiểu (듣기)", sectionKey: "Nghe", type: "listening", count: 30 },
+      { label: "Phần 2: Đọc Hiểu (읽기)", sectionKey: "Đọc", type: "reading-comprehension", count: 40 },
+    ],
+    "TOPIK I - Cấp 2": [
+      { label: "Phần 1: Nghe Hiểu (듣기)", sectionKey: "Nghe", type: "listening", count: 30 },
+      { label: "Phần 2: Đọc Hiểu (읽기)", sectionKey: "Đọc", type: "reading-comprehension", count: 40 },
+    ],
+    "TOPIK II - Cấp 3": [
+      { label: "Phần 1: Nghe Hiểu (듣기)", sectionKey: "Nghe", type: "listening", count: 50 },
+      { label: "Phần 2: Viết (쓰기)", sectionKey: "Viết", type: "writing", count: 4 },
+      { label: "Phần 3: Đọc Hiểu (읽기)", sectionKey: "Đọc", type: "reading-comprehension", count: 50 },
+    ],
+    "TOPIK II - Cấp 4": [
+      { label: "Phần 1: Nghe Hiểu (듣기)", sectionKey: "Nghe", type: "listening", count: 50 },
+      { label: "Phần 2: Viết (쓰기)", sectionKey: "Viết", type: "writing", count: 4 },
+      { label: "Phần 3: Đọc Hiểu (읽기)", sectionKey: "Đọc", type: "reading-comprehension", count: 50 },
+    ],
+    "TOPIK II - Cấp 5": [
+      { label: "Phần 1: Nghe Hiểu (듣기)", sectionKey: "Nghe", type: "listening", count: 50 },
+      { label: "Phần 2: Viết (쓰기)", sectionKey: "Viết", type: "writing", count: 4 },
+      { label: "Phần 3: Đọc Hiểu (읽기)", sectionKey: "Đọc", type: "reading-comprehension", count: 50 },
+    ],
+    "TOPIK II - Cấp 6": [
+      { label: "Phần 1: Nghe Hiểu (듣기)", sectionKey: "Nghe", type: "listening", count: 50 },
+      { label: "Phần 2: Viết (쓰기)", sectionKey: "Viết", type: "writing", count: 4 },
+      { label: "Phần 3: Đọc Hiểu (읽기)", sectionKey: "Đọc", type: "reading-comprehension", count: 50 },
+    ],
+    "TOPIK Speaking": [
+      { label: "Phần Nói (말하기)", sectionKey: "Nói", type: "speaking-prompt", count: 6 },
+    ],
+  },
+  TOEIC: {
+    "Target 250 - 400": [
+      { label: "Part 1-4: Listening (Nghe)", sectionKey: "Listening", type: "listening", count: 100 },
+      { label: "Part 5-7: Reading (Đọc)", sectionKey: "Reading", type: "reading-comprehension", count: 100 },
+    ],
+    "Target 405 - 600": [
+      { label: "Part 1-4: Listening (Nghe)", sectionKey: "Listening", type: "listening", count: 100 },
+      { label: "Part 5-7: Reading (Đọc)", sectionKey: "Reading", type: "reading-comprehension", count: 100 },
+    ],
+    "Target 605 - 780": [
+      { label: "Part 1-4: Listening (Nghe)", sectionKey: "Listening", type: "listening", count: 100 },
+      { label: "Part 5-7: Reading (Đọc)", sectionKey: "Reading", type: "reading-comprehension", count: 100 },
+    ],
+    "Target 785 - 900": [
+      { label: "Part 1-4: Listening (Nghe)", sectionKey: "Listening", type: "listening", count: 100 },
+      { label: "Part 5-7: Reading (Đọc)", sectionKey: "Reading", type: "reading-comprehension", count: 100 },
+    ],
+    "Target 905 - 990": [
+      { label: "Part 1-4: Listening (Nghe)", sectionKey: "Listening", type: "listening", count: 100 },
+      { label: "Part 5-7: Reading (Đọc)", sectionKey: "Reading", type: "reading-comprehension", count: 100 },
+    ],
+    "TOEIC Speaking & Writing": [
+      { label: "Speaking (11 câu Nói)", sectionKey: "Speaking", type: "speaking-prompt", count: 11 },
+      { label: "Writing (8 câu Viết)", sectionKey: "Writing", type: "writing", count: 8 },
+    ],
+  },
+  IELTS: {
+    "Band 4.0 - 4.5": [
+      { label: "Section 1-4: Listening (Nghe)", sectionKey: "Listening", type: "listening", count: 40 },
+      { label: "Passage 1-3: Reading (Đọc)", sectionKey: "Reading", type: "reading-comprehension", count: 40 },
+      { label: "Task 1 & 2: Writing (Viết)", sectionKey: "Writing", type: "writing", count: 2 },
+    ],
+    "Band 5.0 - 5.5": [
+      { label: "Section 1-4: Listening (Nghe)", sectionKey: "Listening", type: "listening", count: 40 },
+      { label: "Passage 1-3: Reading (Đọc)", sectionKey: "Reading", type: "reading-comprehension", count: 40 },
+      { label: "Task 1 & 2: Writing (Viết)", sectionKey: "Writing", type: "writing", count: 2 },
+    ],
+    "Band 6.0 - 6.5": [
+      { label: "Section 1-4: Listening (Nghe)", sectionKey: "Listening", type: "listening", count: 40 },
+      { label: "Passage 1-3: Reading (Đọc)", sectionKey: "Reading", type: "reading-comprehension", count: 40 },
+      { label: "Task 1 & 2: Writing (Viết)", sectionKey: "Writing", type: "writing", count: 2 },
+    ],
+    "Band 7.0 - 7.5": [
+      { label: "Section 1-4: Listening (Nghe)", sectionKey: "Listening", type: "listening", count: 40 },
+      { label: "Passage 1-3: Reading (Đọc)", sectionKey: "Reading", type: "reading-comprehension", count: 40 },
+      { label: "Task 1 & 2: Writing (Viết)", sectionKey: "Writing", type: "writing", count: 2 },
+    ],
+    "Band 8.0 - 9.0": [
+      { label: "Section 1-4: Listening (Nghe)", sectionKey: "Listening", type: "listening", count: 40 },
+      { label: "Passage 1-3: Reading (Đọc)", sectionKey: "Reading", type: "reading-comprehension", count: 40 },
+      { label: "Task 1 & 2: Writing (Viết)", sectionKey: "Writing", type: "writing", count: 2 },
+    ],
+  },
+  HSK: {
+    "HSK 1": [
+      { label: "一、听力 (Nghe hiểu)", sectionKey: "Nghe", type: "listening", count: 20 },
+      { label: "二、阅读 (Đọc hiểu)", sectionKey: "Đọc", type: "reading-comprehension", count: 20 },
+    ],
+    "HSK 2": [
+      { label: "一、听力 (Nghe hiểu)", sectionKey: "Nghe", type: "listening", count: 35 },
+      { label: "二、阅读 (Đọc hiểu)", sectionKey: "Đọc", type: "reading-comprehension", count: 25 },
+    ],
+    "HSK 3": [
+      { label: "一、听力 (Nghe hiểu)", sectionKey: "Nghe", type: "listening", count: 40 },
+      { label: "二、阅读 (Đọc hiểu)", sectionKey: "Đọc", type: "reading-comprehension", count: 30 },
+      { label: "三、书写 (Viết)", sectionKey: "Viết", type: "writing", count: 10 },
+    ],
+    "HSK 4": [
+      { label: "一、听力 (Nghe hiểu)", sectionKey: "Nghe", type: "listening", count: 45 },
+      { label: "二、阅读 (Đọc hiểu)", sectionKey: "Đọc", type: "reading-comprehension", count: 40 },
+      { label: "三、书写 (Viết)", sectionKey: "Viết", type: "writing", count: 15 },
+    ],
+    "HSK 5": [
+      { label: "一、听力 (Nghe hiểu)", sectionKey: "Nghe", type: "listening", count: 45 },
+      { label: "二、阅读 (Đọc hiểu)", sectionKey: "Đọc", type: "reading-comprehension", count: 45 },
+      { label: "三、书写 (Viết)", sectionKey: "Viết", type: "writing", count: 10 },
+    ],
+    "HSK 6": [
+      { label: "一、听力 (Nghe hiểu)", sectionKey: "Nghe", type: "listening", count: 50 },
+      { label: "二、阅读 (Đọc hiểu)", sectionKey: "Đọc", type: "reading-comprehension", count: 50 },
+      { label: "三、书写 (Viết)", sectionKey: "Viết", type: "writing", count: 1 },
+    ],
+    "HSK 7-9": [
+      { label: "一、听力 (Nghe hiểu)", sectionKey: "Nghe", type: "listening", count: 30 },
+      { label: "二、阅读 (Đọc hiểu)", sectionKey: "Đọc", type: "reading-comprehension", count: 38 },
+      { label: "三、书写 (Viết)", sectionKey: "Viết", type: "writing", count: 20 },
+      { label: "四、翻译 (Dịch)", sectionKey: "Dịch", type: "fill-blank", count: 10 },
+    ],
+    "HSKK Sơ Cấp": [
+      { label: "口语 (Nói)", sectionKey: "Nói", type: "speaking-prompt", count: 27 },
+    ],
+    "HSKK Trung Cấp": [
+      { label: "口语 (Nói)", sectionKey: "Nói", type: "speaking-prompt", count: 14 },
+    ],
+    "HSKK Cao Cấp": [
+      { label: "口语 (Nói)", sectionKey: "Nói", type: "speaking-prompt", count: 6 },
+    ],
+  },
+};
+
+// ─── Helper: Get sections for this exam/level ─────────────────────────────────
+function getSections(exam: string, level: string): SectionConfig[] {
+  const examKey = exam.toUpperCase();
+  const sections = EXAM_SECTIONS[examKey]?.[level];
+  if (sections && sections.length > 0) return sections;
+
+  // Fuzzy match level key
+  const examSections = EXAM_SECTIONS[examKey];
+  if (examSections) {
+    const keys = Object.keys(examSections);
+    const fuzzyKey = keys.find(
+      (k) => k.toLowerCase().includes(level.toLowerCase()) || level.toLowerCase().includes(k.toLowerCase())
+    );
+    if (fuzzyKey && examSections[fuzzyKey]) return examSections[fuzzyKey]!;
+    // Return first level as fallback
+    const firstKey = keys[0];
+    if (firstKey && examSections[firstKey]) return examSections[firstKey]!;
+  }
+
+  // Ultimate fallback: generic 10-question exam
+  return [
+    { label: "Đề Thi Tổng Hợp", sectionKey: "Tổng hợp", type: "multiple-choice", count: 10 },
+  ];
 }
 
 // ─── Server-side Text Fetcher for Cloudflare R2 files ────────────────────────
@@ -23,9 +203,15 @@ async function fetchR2FileText(fileUrl: string): Promise<string | null> {
     const res = await fetch(fileUrl, { next: { revalidate: 3600 } });
     if (!res.ok) return null;
     const contentType = res.headers.get("content-type") || "";
-    if (contentType.includes("text") || contentType.includes("json") || fileUrl.endsWith(".txt") || fileUrl.endsWith(".md") || fileUrl.endsWith(".json")) {
+    if (
+      contentType.includes("text") ||
+      contentType.includes("json") ||
+      fileUrl.endsWith(".txt") ||
+      fileUrl.endsWith(".md") ||
+      fileUrl.endsWith(".json")
+    ) {
       const text = await res.text();
-      return text.slice(0, 5000);
+      return text.slice(0, 4000);
     }
   } catch {
     // fallback
@@ -44,25 +230,29 @@ function extractQuestionsFromJson(rawText: string): Question[] {
       .replace(/```\s*/g, "")
       .trim();
     const parsed = JSON.parse(clean);
-    if (Array.isArray(parsed.questions) && parsed.questions.length > 0) {
-      return parsed.questions;
-    }
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
-    }
+    if (Array.isArray(parsed.questions) && parsed.questions.length > 0) return parsed.questions;
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
   } catch {
     // Attempt partial extraction below
   }
 
   // 2. Extract completed question objects using regex matching
   const questions: Question[] = [];
-  const questionBlockRegex = /\{\s*"id"\s*:\s*"[^"]+"[\s\S]*?"explanation"\s*:\s*"[^"]*"\s*\}/g;
+  // Match objects that have at least id, prompt, answer
+  const questionBlockRegex =
+    /\{\s*"id"\s*:\s*"[^"]+"\s*,[\s\S]*?"answer"\s*:\s*"[^"]*"[\s\S]*?\}/g;
   const matches = rawText.match(questionBlockRegex);
 
   if (matches) {
     for (const block of matches) {
       try {
-        const obj = JSON.parse(block);
+        // Try to close truncated objects by adding missing braces
+        let candidate = block;
+        const openBraces = (candidate.match(/\{/g) || []).length;
+        const closeBraces = (candidate.match(/\}/g) || []).length;
+        for (let i = 0; i < openBraces - closeBraces; i++) candidate += "}";
+
+        const obj = JSON.parse(candidate);
         if (obj.prompt && obj.answer) {
           questions.push(obj);
         }
@@ -75,57 +265,192 @@ function extractQuestionsFromJson(rawText: string): Question[] {
   return questions;
 }
 
-// ─── Build Prompt for Gemini 2.5 Pro (Dual-Engine Direct) ────────────────────
-function buildLibraryRemixPrompt(
+// ─── Build Section Prompt ─────────────────────────────────────────────────────
+function buildSectionPrompt(
   exam: string,
   level: string,
-  targetCount: number,
-  mode: "practice" | "real_exam",
+  section: SectionConfig,
+  sectionIndex: number,
+  totalSections: number,
   libraryContext: string,
-  extractedAudioUrls: string[]
+  audioUrls: string[],
+  startId: number
 ): string {
-  const lang = exam === "TOPIK" ? "Tiếng Hàn" : exam === "HSK" ? "Tiếng Trung" : "Tiếng Anh";
-  const seed = Math.floor(Math.random() * 1000000);
+  const lang =
+    exam === "TOPIK" ? "Tiếng Hàn (한국어)" : exam === "HSK" ? "Tiếng Trung (中文)" : "Tiếng Anh";
+  const seed = Math.floor(Math.random() * 999999);
 
-  const audioGuidance = extractedAudioUrls.length > 0
-    ? `CÁC FILE NGHE & LINK YOUTUBE KHẢ DỤNG:\n${extractedAudioUrls.map((url, i) => `- Audio/Youtube ${i + 1}: ${url}`).join("\n")}\n\nHãy gắn URL audio này vào trường 'audioUrl' cho các câu hỏi phần Nghe!`
-    : "";
+  const audioGuidance =
+    section.type === "listening" && audioUrls.length > 0
+      ? `\nFILE NGHE / YOUTUBE KHẢ DỤNG:\n${audioUrls.map((u, i) => `- Audio ${i + 1}: ${u}`).join("\n")}\nGắn các URL này vào trường "audioUrl" cho câu hỏi nghe tương ứng!\n`
+      : "";
 
-  return `Bạn là Hội đồng Khảo thí Quốc tế (Senior Exam Director) biên soạn đề thi chuẩn cho kỳ thi ${exam} (${level}).
-Seed ngẫu nhiên: ${seed}.
-YÊU CẦU BẮT BUỘC SỐ CÂU: Tạo đúng ${targetCount} câu hỏi (bao gồm Nghe, Đọc hiểu, Ngữ pháp, Điền từ).
+  const typeInstructions: Record<QuestionType, string> = {
+    "listening": `Tạo ${section.count} câu hỏi NGHE HIỂU (type: "listening").
+- Mỗi câu có passage mô tả tình huống/hội thoại ngắn bằng ${lang}.
+- Câu hỏi hỏi về nội dung nghe.
+- Có 4 đáp án trắc nghiệm (a,b,c,d).
+- Gắn audioUrl nếu có file nghe.`,
+    "reading-comprehension": `Tạo ${section.count} câu hỏi ĐỌC HIỂU (type: "reading-comprehension").
+- Chia thành các nhóm bài đọc, mỗi nhóm có 1 đoạn văn passage bằng ${lang} + 2-5 câu hỏi về đoạn đó.
+- Có 4 đáp án trắc nghiệm (a,b,c,d).`,
+    "writing": `Tạo ${section.count} câu hỏi VIẾT (type: "writing").
+- Đây là bài viết luận/short essay/task.
+- prompt mô tả rõ yêu cầu đề bài.
+- answer là đáp án mẫu/model answer chi tiết bằng ${lang}.
+- choices: null (không có trắc nghiệm).`,
+    "speaking-prompt": `Tạo ${section.count} câu hỏi NÓI (type: "speaking-prompt").
+- prompt là đề bài nói rõ ràng bằng ${lang}.
+- answer là gợi ý câu trả lời mẫu.`,
+    "fill-blank": `Tạo ${section.count} câu hỏi ĐIỀN TỪ (type: "fill-blank").
+- Câu có chỗ trống ___ cần điền.
+- answer là từ/cụm từ đúng.`,
+    "sentence-order": `Tạo ${section.count} câu hỏi SẮP XẾP (type: "sentence-order").
+- Cung cấp các từ xáo trộn.
+- answer là câu đúng.`,
+    "multiple-choice": `Tạo ${section.count} câu hỏi TRẮC NGHIỆM (type: "multiple-choice").
+- Có 4 đáp án (a,b,c,d).`,
+  };
 
-DƯỚI ĐÂY LÀ 5 NHÓM TÀI LIỆU & ĐỀ THI ĐÃ TRÍCH XUẤT TỪ THƯ VIỆN NGƯỜI DÙNG:
-------------------------------------------------------------------------
-${libraryContext}
-------------------------------------------------------------------------
+  return `Bạn là Hội Đồng Khảo Thí ${exam} chính thức. Seed: ${seed}.
+Kỳ thi: ${exam} ${level}
+Phần thi ${sectionIndex + 1}/${totalSections}: ${section.label}
+
+${typeInstructions[section.type]}
+
 ${audioGuidance}
 
-YÊU CẦU BIÊN SOẠN THÔNG MINH BẬC CAO:
-1. ĐỌC VÀ PHÂN TÍCH TẤT CẢ FILE: Tự động tổng hợp dữ liệu từ 5 Nhóm Thư viện ở trên (1. Đề thi, 2. Đáp án Đọc, 3. Đáp án Nghe, 4. Đáp án Viết, 5. File nghe/Youtube).
-2. NẾU CÓ 1 ĐỀ THI: Trích xuất và tái lập toàn bộ bài thi thật đó kèm đáp án và lời giải chi tiết.
-3. NẾU CÓ NHIỀU ĐỀ THI: THÔNG MINH TRỘN (re-mix) các câu hỏi từ nhiều bộ đề có sẵn trong Thư viện để tạo ra BỘ ĐỀ THI MỚI 100% độc đáo, đủ ${targetCount} câu hỏi.
+TÀI LIỆU THƯ VIỆN (Đọc kỹ để trích xuất câu hỏi có sẵn):
+---
+${libraryContext.slice(0, 6000)}
+---
 
-BẮT BUỘC TRẢ VỀ CHUẨN JSON THUẦN TÚY (Không chứa mã markdown \`\`\`json):
+YÊU CẦU BẮT BUỘC: Tạo ĐÚNG ${section.count} câu. Không hơn, không kém.
+Nếu thư viện có sẵn câu hỏi, ưu tiên sử dụng/tái tạo câu đó.
+Nếu không đủ, AI tự soạn thêm đúng định dạng kỳ thi ${exam} thật sự.
+
+BẮT BUỘC TRẢ VỀ JSON THUẦN TÚY (không markdown, không giải thích):
 {
   "questions": [
     {
-      "id": "q1",
-      "type": "multiple-choice" | "reading-comprehension" | "fill-blank" | "listening",
+      "id": "s${sectionIndex + 1}_q${startId}",
+      "type": "${section.type}",
+      "section": "${section.sectionKey}",
       "prompt": "Nội dung câu hỏi bằng ${lang}",
-      "passage": "Đoạn văn bài đọc hiểu hoặc kịch bản nghe ngắn bằng ${lang} (nếu có)",
-      "audioUrl": "Link audio mp3 hoặc link Youtube (nếu có, không có thì omit)",
+      "passage": "Đoạn văn/kịch bản (nếu có, null nếu không)",
+      "audioUrl": "URL mp3 hoặc youtube (chỉ cho phần nghe, null nếu không)",
       "choices": [
-        {"id": "a", "text": "Phương án A bằng ${lang}"},
-        {"id": "b", "text": "Phương án B bằng ${lang}"},
-        {"id": "c", "text": "Phương án C bằng ${lang}"},
-        {"id": "d", "text": "Phương án D bằng ${lang}"}
+        {"id": "a", "text": "Phương án A"},
+        {"id": "b", "text": "Phương án B"},
+        {"id": "c", "text": "Phương án C"},
+        {"id": "d", "text": "Phương án D"}
       ],
       "answer": "a",
-      "explanation": "Lời giải chi tiết bằng Tiếng Việt giải thích ngữ pháp và từ vựng."
+      "explanation": "Lời giải chi tiết bằng Tiếng Việt."
     }
   ]
 }`;
+}
+
+// ─── Generate One Section ─────────────────────────────────────────────────────
+async function generateSection(prompt: string): Promise<Question[]> {
+  // Primary: Gemini 2.5 Pro
+  try {
+    const directResult = await callGoogleAIDirect(prompt, {
+      maxOutputTokens: 8192,
+      temperature: 0.75,
+    });
+    if (directResult?.text) {
+      const extracted = extractQuestionsFromJson(directResult.text);
+      if (extracted.length > 0) return extracted;
+    }
+  } catch {
+    // fall through
+  }
+
+  // Fallback: OpenRouter
+  try {
+    const orRes = await createChatCompletion({
+      task: "exam_generation",
+      messages: [
+        { role: "system", content: "Soạn đề thi JSON. CHỈ trả về JSON thuần túy." },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.75,
+    });
+    const extracted = extractQuestionsFromJson(orRes.content);
+    if (extracted.length > 0) return extracted;
+  } catch {
+    // fall through
+  }
+
+  return [];
+}
+
+// ─── Build Rich Fallback for a Section ───────────────────────────────────────
+function buildFallbackForSection(
+  section: SectionConfig,
+  exam: string,
+  startId: number
+): Question[] {
+  const lang =
+    exam === "TOPIK" ? "한국어" : exam === "HSK" ? "中文" : "English";
+
+  const fallbacks: Partial<Record<QuestionType, Omit<Question, "id" | "section">>> = {
+    "listening": {
+      type: "listening",
+      prompt: `[${section.sectionKey}] Nghe đoạn hội thoại và chọn đáp án đúng.`,
+      passage: `두 사람이 이야기하고 있습니다. / Two people are talking. / 两个人在交谈。`,
+      choices: [
+        { id: "a", text: `Phương án A (${lang})` },
+        { id: "b", text: `Phương án B (${lang})` },
+        { id: "c", text: `Phương án C (${lang})` },
+        { id: "d", text: `Phương án D (${lang})` },
+      ],
+      answer: "b",
+      explanation: `Đây là câu hỏi phần nghe ${section.label}. Nghe kỹ đoạn hội thoại và xác định thông tin cần thiết.`,
+    },
+    "reading-comprehension": {
+      type: "reading-comprehension",
+      prompt: `[${section.sectionKey}] Đọc đoạn văn sau và trả lời câu hỏi.`,
+      passage: `(${lang} reading passage ${startId}) Đây là đoạn văn bài đọc hiểu. Nội dung đề cập đến chủ đề học thuật trong kỳ thi.`,
+      choices: [
+        { id: "a", text: `Phương án A` },
+        { id: "b", text: `Phương án B` },
+        { id: "c", text: `Phương án C` },
+        { id: "d", text: `Phương án D` },
+      ],
+      answer: "a",
+      explanation: `Câu hỏi đọc hiểu ${section.label}. Đọc kỹ đoạn văn và xác định ý chính.`,
+    },
+    "writing": {
+      type: "writing",
+      prompt: `[${section.sectionKey}] Viết một đoạn văn (150-300 chữ) về chủ đề sau theo yêu cầu kỳ thi ${exam}.`,
+      answer: `Bài viết mẫu: Đây là câu trả lời mẫu cho phần viết của kỳ thi ${exam}. Cần triển khai ý tưởng rõ ràng, logic và đúng ngữ pháp.`,
+      explanation: `Phần viết ${section.label}: Chú ý cấu trúc bài, ngữ pháp và từ vựng phù hợp cấp độ.`,
+    },
+    "speaking-prompt": {
+      type: "speaking-prompt",
+      prompt: `[${section.sectionKey}] Nói về chủ đề sau trong 30-60 giây.`,
+      answer: `Gợi ý trả lời: Trình bày ý kiến cá nhân rõ ràng, sử dụng từ vựng đa dạng và cấu trúc câu phong phú.`,
+      explanation: `Phần nói ${section.label}: Phát âm rõ, nhịp điệu tự nhiên, nội dung logic.`,
+    },
+    "fill-blank": {
+      type: "fill-blank",
+      prompt: `[${section.sectionKey}] Điền từ thích hợp vào chỗ trống: "_____ là từ cần điền."`,
+      answer: `từ đúng`,
+      explanation: `Câu điền từ ${section.label}: Xem xét ngữ cảnh câu để chọn đúng từ/cụm từ.`,
+    },
+  };
+
+  const template = fallbacks[section.type] ?? fallbacks["reading-comprehension"]!;
+
+  return Array.from({ length: section.count }, (_, i) => ({
+    ...template,
+    id: `s_fallback_q${startId + i}`,
+    section: section.sectionKey,
+    prompt: `${template.prompt} (Câu ${startId + i})`,
+  } as Question));
 }
 
 // ─── Route Handler ─────────────────────────────────────────────────────────────
@@ -154,14 +479,7 @@ export async function POST(req: NextRequest) {
       libraryItems?: any[];
     };
 
-    const targetCount = questionCount;
-
-    // Extract all audio & youtube URLs from libraryItems
-    const extractedAudioUrls: string[] = (libraryItems || [])
-      .map((item: any) => item.file_url)
-      .filter((url: string) => url && (url.endsWith(".mp3") || url.endsWith(".wav") || url.includes("youtube.com") || url.includes("youtu.be")));
-
-    // Fetch raw text for any R2 text/json files if available
+    // Fetch additional R2 text content
     let enrichedContext = libraryContext;
     if (fileUrls && fileUrls.length > 0) {
       const fetchedTexts = await Promise.all(
@@ -169,79 +487,110 @@ export async function POST(req: NextRequest) {
       );
       const validTexts = fetchedTexts.filter(Boolean) as string[];
       if (validTexts.length > 0) {
-        enrichedContext += `\n\n=== NỘI DUNG VĂN BẢN TRÍCH TỪ CLOUDFLARE R2 FILES ===\n${validTexts.join("\n---\n")}`;
+        enrichedContext += `\n\n=== NỘI DUNG FILE THƯ VIỆN ===\n${validTexts.join("\n---\n")}`;
       }
     }
 
-    const prompt = buildLibraryRemixPrompt(exam, level, targetCount, mode, enrichedContext, extractedAudioUrls);
+    // Extract all audio & youtube URLs
+    const extractedAudioUrls: string[] = (libraryItems || [])
+      .map((item: any) => item.file_url)
+      .filter(
+        (url: string) =>
+          url &&
+          (url.endsWith(".mp3") ||
+            url.endsWith(".wav") ||
+            url.includes("youtube.com") ||
+            url.includes("youtu.be"))
+      );
 
-    // Generate with Gemini 2.5 Pro (Primary) & Fallback Chain
-    const generateQuestions = async (): Promise<Question[]> => {
-      // Step 1: Gemini 2.5 Pro Direct with 16384 max tokens
-      const directResult = await callGoogleAIDirect(prompt, {
-        maxOutputTokens: 16384,
-        temperature: 0.8,
-      });
+    // ─── DETERMINE SECTIONS ────────────────────────────────────────────────────
+    let sections: SectionConfig[];
 
-      if (directResult?.text) {
-        const extracted = extractQuestionsFromJson(directResult.text);
-        if (extracted.length > 0) return extracted;
-      }
-
-      // Step 2: OpenRouter Multi-Model Routing
-      try {
-        const openrouterRes = await createChatCompletion({
-          task: "exam_generation",
-          messages: [
-            { role: "system", content: "Soạn đề thi JSON. CHỈ trả về JSON." },
-            { role: "user", content: prompt },
-          ],
-          temperature: 0.8,
-        });
-
-        const extracted = extractQuestionsFromJson(openrouterRes.content);
-        if (extracted.length > 0) return extracted;
-      } catch {
-        // failed
-      }
-
-      return [];
-    };
-
-    let questions: Question[] = [];
-    const aiResult = await generateQuestions();
-
-    const key = exam.toUpperCase() as keyof typeof RICH_SAMPLES;
-    const baseSamples = RICH_SAMPLES[key] || RICH_SAMPLES.TOPIK || [];
-    const fallbackDefault = baseSamples[0];
-
-    // Combine AI results or fallbacks to ensure targetCount is ALWAYS reached!
-    const pool = aiResult.length > 0 ? aiResult : baseSamples;
-
-    // Fill up to targetCount seamlessly
-    for (let i = 0; i < targetCount; i++) {
-      const baseQ = pool[i % Math.max(1, pool.length)] ?? fallbackDefault;
-      questions.push({
-        id: `q-${i + 1}-${Date.now()}`,
-        type: baseQ?.type ?? "multiple-choice",
-        prompt: baseQ?.prompt ?? `Câu hỏi ${i + 1}`,
-        passage: baseQ?.passage,
-        audioUrl: baseQ?.audioUrl || (extractedAudioUrls[i % Math.max(1, extractedAudioUrls.length)] ?? undefined),
-        choices: baseQ?.choices ?? [
-          { id: "a", text: "Phương án A" },
-          { id: "b", text: "Phương án B" },
-          { id: "c", text: "Phương án C" },
-          { id: "d", text: "Phương án D" },
-        ],
-        answer: baseQ?.answer ?? "a",
-        explanation: baseQ?.explanation ?? "Lời giải chi tiết câu hỏi.",
-      });
+    if (mode === "real_exam") {
+      // Real exam: use exact section config
+      sections = getSections(exam, level);
+    } else {
+      // Practice mode: create a single section with the requested count
+      // Determine best type from format
+      const formatToType: Record<string, QuestionType> = {
+        listening: "listening",
+        reading: "reading-comprehension",
+        writing: "writing",
+        speaking: "speaking-prompt",
+        "vocab-grammar": "multiple-choice",
+        all: "multiple-choice",
+      };
+      sections = [
+        {
+          label: "Bài Ôn Tập Tổng Hợp",
+          sectionKey: "Ôn tập",
+          type: formatToType[format] ?? "multiple-choice",
+          count: questionCount,
+        },
+      ];
     }
 
+    // ─── GENERATE EACH SECTION ─────────────────────────────────────────────────
+    const allQuestions: Question[] = [];
+    let globalId = 1;
+
+    for (let si = 0; si < sections.length; si++) {
+      const section = sections[si];
+      if (!section) continue;
+
+      const sectionPrompt = buildSectionPrompt(
+        exam,
+        level,
+        section,
+        si,
+        sections.length,
+        enrichedContext,
+        extractedAudioUrls,
+        globalId
+      );
+
+      const generated = await generateSection(sectionPrompt);
+
+      // Ensure we have EXACTLY section.count questions
+      let sectionQuestions: Question[];
+
+      if (generated.length >= section.count) {
+        // AI gave enough — take exactly the right count
+        sectionQuestions = generated.slice(0, section.count);
+      } else if (generated.length > 0) {
+        // AI gave some — fill remainder with fallbacks
+        const needed = section.count - generated.length;
+        const fallback = buildFallbackForSection(section, exam, globalId + generated.length);
+        sectionQuestions = [...generated, ...fallback.slice(0, needed)];
+      } else {
+        // AI gave nothing — use full fallbacks
+        sectionQuestions = buildFallbackForSection(section, exam, globalId);
+      }
+
+      // Re-index IDs to be globally unique and sequential
+      sectionQuestions = sectionQuestions.map((q, idx) => ({
+        ...q,
+        id: `s${si + 1}_q${globalId + idx}`,
+        section: q.section ?? section.sectionKey,
+        // Assign audio URL from library pool to listening questions without one
+        audioUrl:
+          q.audioUrl ||
+          (section.type === "listening" && extractedAudioUrls.length > 0
+            ? extractedAudioUrls[(globalId + idx - 1) % extractedAudioUrls.length]
+            : undefined),
+      }));
+
+      allQuestions.push(...sectionQuestions);
+      globalId += section.count;
+    }
+
+    // ─── SAVE SESSION ──────────────────────────────────────────────────────────
     let sessionId = `session-${Date.now()}`;
     try {
       const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         const { data: session } = await supabase
           .from("practice_sessions")
@@ -249,7 +598,7 @@ export async function POST(req: NextRequest) {
             user_id: user.id,
             exam_type: exam,
             level,
-            total_questions: questions.length,
+            total_questions: allQuestions.length,
             correct_count: 0,
             status: "in_progress",
           })
@@ -261,190 +610,32 @@ export async function POST(req: NextRequest) {
       // offline session
     }
 
-    return NextResponse.json({ sessionId, questions });
-  } catch (err) {
-    console.error("API error:", err);
-    const baseSamples = RICH_SAMPLES.TOPIK || [];
-    const fallbackDefault = baseSamples[0];
-    const fallbackQuestions: Question[] = Array.from({ length: 10 }, (_, i) => {
-      const b = baseSamples[i % Math.max(1, baseSamples.length)] ?? fallbackDefault;
-      return {
-        id: `fallback-${i + 1}-${Date.now()}`,
-        type: b?.type ?? "multiple-choice",
-        prompt: b?.prompt ?? "Câu hỏi",
-        passage: b?.passage,
-        audioUrl: b?.audioUrl,
-        choices: b?.choices,
-        answer: b?.answer ?? "a",
-        explanation: b?.explanation ?? "Lời giải",
-      };
+    return NextResponse.json({
+      sessionId,
+      questions: allQuestions,
+      sections: sections.map((s) => ({
+        label: s.label,
+        sectionKey: s.sectionKey,
+        count: s.count,
+        type: s.type,
+      })),
+      totalQuestions: allQuestions.length,
     });
+  } catch (err) {
+    console.error("generate-practice API error:", err);
+
+    // Emergency fallback: return a minimal valid exam
+    const fallbackSections = getSections("TOPIK", "TOPIK I - Cấp 1");
+    const fallbackQuestions: Question[] = fallbackSections.flatMap((s, si) =>
+      buildFallbackForSection(s, "TOPIK", si * 10 + 1)
+    );
+
     return NextResponse.json({
       sessionId: `fallback-${Date.now()}`,
       questions: fallbackQuestions,
+      sections: fallbackSections,
+      totalQuestions: fallbackQuestions.length,
+      error: "Hệ thống đang bận, đề dự phòng đã được tải.",
     });
   }
 }
-
-// ─── RICH FALLBACK SAMPLE BANK ─────────────────────────────────────────────────
-const RICH_SAMPLES: Record<string, Question[]> = {
-  TOPIK: [
-    {
-      id: "t1",
-      type: "multiple-choice",
-      prompt: "다음 밑줄 친 부분과 의미가 가장 비슷한 것을 고르십시오: '이 문제는 너무 _어렵다_.'",
-      choices: [
-        { id: "a", text: "쉬운 편이다" },
-        { id: "b", text: "복잡하고 힘들다" },
-        { id: "c", text: "재미있다" },
-        { id: "d", text: "간단하다" },
-      ],
-      answer: "b",
-      explanation: "어렵다 (khó) tương đương với 복잡하고 힘들다 (phức tạp và vất vả).",
-    },
-    {
-      id: "t2",
-      type: "fill-blank",
-      prompt: "나는 매일 아침 7시에 ____. (dậy/thức dậy)",
-      answer: "일어납니다",
-      explanation: "일어나다 (thức dậy) ở dạng trang trọng Kệu-nhi-da là 일어납니다.",
-    },
-    {
-      id: "t3",
-      type: "multiple-choice",
-      prompt: "다음 중 반대말이 올바르게 짝지어진 것은?",
-      choices: [
-        { id: "a", text: "크다 ↔ 작다" },
-        { id: "b", text: "빠르다 ↔ 높다" },
-        { id: "c", text: "좋다 ↔ 멀다" },
-        { id: "d", text: "많다 ↔ 새다" },
-      ],
-      answer: "a",
-      explanation: "크다 (to/lớn) ↔ 작다 (nhỏ) là cặp từ trái nghĩa chính xác.",
-    },
-    {
-      id: "t4",
-      type: "sentence-order",
-      prompt: "Sắp xếp từ thành câu đúng: [학교에 / 저는 / 가요 / 아침마다]",
-      answer: "저는 아침마다 학교에 가요",
-      explanation: "Chủ ngữ (저는) + Trạng ngữ (아침마다) + Địa điểm (학교에) + Động từ (가요).",
-    },
-    {
-      id: "t5",
-      type: "reading-comprehension",
-      passage: "저는 한국 음식을 좋아합니다. 특히 비빔밥과 김치찌개를 자주 먹습니다. 주말에는 친구들과 한국 식당에 갑니다.",
-      prompt: "이 사람은 주말에 무엇을 합니까?",
-      choices: [
-        { id: "a", text: "집에서 요리합니다." },
-        { id: "b", text: "친구들과 한국 식당에 갑니다." },
-        { id: "c", text: "혼자 한국 음식을 만들어 먹습니다." },
-        { id: "d", text: "한국어를 공부합니다." },
-      ],
-      answer: "b",
-      explanation: "Bài đọc ghi rõ: 주말에는 친구들과 한국 식당에 갑니다 (Cuối tuần tôi đi nhà hàng Hàn Quốc với bạn).",
-    },
-    {
-      id: "t6",
-      type: "multiple-choice",
-      prompt: "다음 (  )에 들어갈 가장 알맞은 것을 고르십시오: '날씨가 (  ) 옷을 따뜻하게 입으세요.'",
-      choices: [
-        { id: "a", text: "춥거나" },
-        { id: "b", text: "추우니까" },
-        { id: "c", text: "춥지만" },
-        { id: "d", text: "추운데도" },
-      ],
-      answer: "b",
-      explanation: "-으니까 đưa ra nguyên nhân cho câu mệnh lệnh/khuyên bảo: 추우니까 (vì trời lạnh nên hãy mặc ấm).",
-    },
-    {
-      id: "t7",
-      type: "multiple-choice",
-      prompt: "무엇에 대한 글인지 고르십시오: '이 약은 식후 30분에 드십시오. 하루 세 번 복용하세요.'",
-      choices: [
-        { id: "a", text: "약 복용 방법" },
-        { id: "b", text: "병원 위치" },
-        { id: "c", text: "운동 시간" },
-        { id: "d", text: "음식 종류" },
-      ],
-      answer: "a",
-      explanation: "Nội dung nói về cách uống thuốc sau bữa ăn 30 phút, ngày 3 lần ➔ 약 복용 방법 (Cách dùng thuốc).",
-    },
-    {
-      id: "t8",
-      type: "sentence-order",
-      prompt: "Sắp xếp câu: [공부했습니다 / 도서관에서 / 한국어를 / 어제]",
-      answer: "어제 도서관에서 한국어를 공부했습니다",
-      explanation: "Trạng từ thời gian (어제) + Địa điểm (도서관에서) + Tân ngữ (한국어를) + Động từ (공부했습니다).",
-    },
-    {
-      id: "t9",
-      type: "reading-comprehension",
-      passage: "민수 씨는 컴퓨터 회사에서 일합니다. 일이 많지만 보람이 있습니다. 퇴근 후에는 수영을 배웁니다.",
-      prompt: "민수 씨에 대한 설명으로 알맞은 것은?",
-      choices: [
-        { id: "a", text: "수영장에서 일합니다." },
-        { id: "b", text: "컴퓨터 회사에 다니고 있습니다." },
-        { id: "c", text: "퇴근 후에 일을 더 합니다." },
-        { id: "d", text: "일이 쉬워서 좋아합니다." },
-      ],
-      answer: "b",
-      explanation: "Bài đọc ghi: 민수 씨는 컴퓨터 회사에서 일합니다 (Minsoo làm việc ở công ty máy tính).",
-    },
-    {
-      id: "t10",
-      type: "multiple-choice",
-      prompt: "다음 밑줄 친 단어와 반대되는 뜻을 가진 단어를 고르십시오: '이 길은 너무 _넓다_.'",
-      choices: [
-        { id: "a", text: "좁다" },
-        { id: "b", text: "길다" },
-        { id: "c", text: "높다" },
-        { id: "d", text: "khó" },
-      ],
-      answer: "a",
-      explanation: "넓다 (rộng) ↔ 좁다 (hẹp).",
-    },
-  ],
-  TOEIC: [
-    {
-      id: "e1",
-      type: "multiple-choice",
-      prompt: "The marketing director requested that all staff _____ the annual quarterly report by Friday.",
-      choices: [
-        { id: "a", text: "submit" },
-        { id: "b", text: "submits" },
-        { id: "c", text: "submitted" },
-        { id: "d", text: "submitting" },
-      ],
-      answer: "a",
-      explanation: "Cấu trúc giả định với động từ request/demand + that + S + (should) V-bare ➔ chọn 'submit'.",
-    },
-    {
-      id: "e2",
-      type: "multiple-choice",
-      prompt: "Ms. Carter will give a presentation _____ the new employee orientation next week.",
-      choices: [
-        { id: "a", text: "during" },
-        { id: "b", text: "while" },
-        { id: "c", text: "whereas" },
-        { id: "d", text: "until" },
-      ],
-      answer: "a",
-      explanation: "'during' + danh từ (during the orientation), trong khi 'while' + mệnh đề.",
-    },
-  ],
-  HSK: [
-    {
-      id: "h1",
-      type: "multiple-choice",
-      prompt: "选择意思最相近的词语：'这个问题很_简单_。'",
-      choices: [
-        { id: "a", text: "容易" },
-        { id: "b", text: "复杂" },
-        { id: "c", text: "困难" },
-        { id: "d", text: "方便" },
-      ],
-      answer: "a",
-      explanation: "简单 (đơn giản) đồng nghĩa với 容易 (dễ dàng).",
-    },
-  ],
-};

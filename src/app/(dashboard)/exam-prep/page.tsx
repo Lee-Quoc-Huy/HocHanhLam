@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLibrary } from "@/features/library/hooks/use-library";
 import { Button } from "@/components/ui/button";
 import {
@@ -651,7 +651,13 @@ function ActiveExamSession({
   const [submitted, setSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(realMinutes * 60);
   const [isTimeUp, setIsTimeUp] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  // Track which question index we have auto-played audio for (avoid double-play)
+  const audioPlayedRef = useRef<Set<number>>(new Set());
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
+  // ─── Countdown Timer (Real Exam Mode) ──────────────────────────────────────
   useEffect(() => {
     if (mode !== "real_exam" || submitted) return;
 
@@ -668,7 +674,46 @@ function ActiveExamSession({
     }, 1000);
 
     return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, submitted]);
+
+  // ─── Auto-Play Listening Audio When Question Changes ───────────────────────
+  useEffect(() => {
+    const q = questions[current];
+    if (!q || submitted) return;
+
+    // Only auto-play if this question has audio AND we haven't played it yet
+    if (q.audioUrl && !audioPlayedRef.current.has(current)) {
+      audioPlayedRef.current.add(current);
+
+      // For YouTube iframes: reload with autoplay=1
+      if (iframeRef.current && (q.audioUrl.includes("youtube.com") || q.audioUrl.includes("youtu.be"))) {
+        let videoId = "";
+        if (q.audioUrl.includes("youtu.be/")) {
+          videoId = q.audioUrl.split("youtu.be/")[1]?.split("?")[0] || "";
+        } else if (q.audioUrl.includes("v=")) {
+          videoId = q.audioUrl.split("v=")[1]?.split("&")[0] || "";
+        }
+        if (videoId) {
+          iframeRef.current.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+        }
+      }
+
+      // For MP3/audio files: call .play() on the audio element
+      if (audioRef.current && !q.audioUrl.includes("youtube") && !q.audioUrl.includes("youtu.be")) {
+        audioRef.current.currentTime = 0;
+        const playPromise = audioRef.current.play();
+        if (playPromise) {
+          playPromise
+            .then(() => setIsAudioPlaying(true))
+            .catch(() => {
+              // Browser blocked auto-play — user must tap manually
+              setIsAudioPlaying(false);
+            });
+        }
+      }
+    }
+  }, [current, questions, submitted]);
 
   const handleTimeUpSubmit = () => {
     setSubmitted(true);
@@ -711,6 +756,23 @@ function ActiveExamSession({
   const formattedTime = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
   const isLowTime = timeLeft < 300 && mode === "real_exam";
 
+  // Determine if this is a listening question with audio
+  const isListeningQuestion = q.type === "listening" && q.audioUrl;
+  const isYoutubeAudio = q.audioUrl && (q.audioUrl.includes("youtube.com") || q.audioUrl.includes("youtu.be"));
+
+  // Build YouTube embed URL
+  const buildYouTubeEmbed = (url: string, autoplay = false) => {
+    let videoId = "";
+    if (url.includes("youtu.be/")) {
+      videoId = url.split("youtu.be/")[1]?.split("?")[0] || "";
+    } else if (url.includes("v=")) {
+      videoId = url.split("v=")[1]?.split("&")[0] || "";
+    }
+    return videoId
+      ? `https://www.youtube.com/embed/${videoId}?autoplay=${autoplay ? 1 : 0}&rel=0`
+      : url;
+  };
+
   // Fallback choices for multiple-choice questions if choices array is omitted by AI
   const displayChoices =
     q.choices && q.choices.length > 0
@@ -751,6 +813,12 @@ function ActiveExamSession({
                 ? "Sắp xếp câu"
                 : "Thi nói / Khẩu ngữ"}
             </span>
+            {/* Auto-playing indicator */}
+            {q.audioUrl && isAudioPlaying && (
+              <span className="flex items-center gap-1 rounded-full border border-rose-500/40 bg-rose-500/10 px-2.5 py-0.5 text-[10px] font-bold text-rose-600 animate-pulse">
+                <Volume2 className="size-3" /> Đang phát...
+              </span>
+            )}
           </div>
 
           {mode === "real_exam" && (
@@ -788,39 +856,50 @@ function ActiveExamSession({
           {q.prompt}
         </p>
 
-        {/* Audio / Youtube Player */}
+        {/* Audio / YouTube Player — Auto-plays when navigating to a listening question */}
         {q.audioUrl && (
           <div className="mb-5">
-            {q.audioUrl.includes("youtube.com") || q.audioUrl.includes("youtu.be") ? (
-              <div className="space-y-1.5">
-                <span className="flex items-center gap-1.5 text-xs font-bold text-rose-500">
-                  <Volume2 className="size-4 animate-pulse" /> Video / Audio Nghe (Youtube):
-                </span>
-                {(() => {
-                  let videoId = "";
-                  if (q.audioUrl.includes("youtu.be/")) {
-                    videoId = q.audioUrl.split("youtu.be/")[1]?.split("?")[0] || "";
-                  } else if (q.audioUrl.includes("v=")) {
-                    videoId = q.audioUrl.split("v=")[1]?.split("&")[0] || "";
-                  }
-                  const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=0` : q.audioUrl;
-                  return (
-                    <iframe
-                      src={embedUrl}
-                      title="Youtube Listening Audio"
-                      className="w-full aspect-video rounded-2xl border border-border shadow-sm"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  );
-                })()}
+            {isYoutubeAudio ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-rose-500">
+                    <Volume2 className="size-4 animate-pulse" /> 🎧 Bài Nghe (YouTube) — Tự động phát:
+                  </span>
+                  <span className="rounded-full bg-rose-500/10 border border-rose-500/30 px-2 py-0.5 text-[10px] font-bold text-rose-600">
+                    Bấm ▶ nếu không tự phát
+                  </span>
+                </div>
+                <iframe
+                  ref={iframeRef}
+                  key={`yt-${current}`}
+                  src={buildYouTubeEmbed(q.audioUrl, true)}
+                  title="YouTube Listening Audio"
+                  className="w-full aspect-video rounded-2xl border border-rose-500/30 shadow-md"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
               </div>
             ) : (
-              <div className="space-y-1.5">
-                <span className="flex items-center gap-1.5 text-xs font-bold text-primary">
-                  <Volume2 className="size-4 animate-bounce" /> Trình phát bài nghe (Audio MP3):
-                </span>
-                <audio controls src={q.audioUrl} className="w-full rounded-xl border border-primary/20 bg-muted/40 p-2 shadow-xs" />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                    <Volume2 className="size-4 animate-bounce" /> 🎧 Bài Nghe (Audio MP3) — Tự động phát:
+                  </span>
+                  <span className="rounded-full bg-primary/10 border border-primary/30 px-2 py-0.5 text-[10px] font-bold text-primary">
+                    Bấm ▶ nếu không tự phát
+                  </span>
+                </div>
+                <audio
+                  ref={audioRef}
+                  key={`audio-${current}`}
+                  src={q.audioUrl}
+                  controls
+                  autoPlay
+                  onPlay={() => setIsAudioPlaying(true)}
+                  onPause={() => setIsAudioPlaying(false)}
+                  onEnded={() => setIsAudioPlaying(false)}
+                  className="w-full rounded-xl border border-primary/30 bg-muted/40 p-2 shadow-xs"
+                />
               </div>
             )}
           </div>
@@ -891,7 +970,11 @@ function ActiveExamSession({
             <Button
               variant="outline"
               disabled={current === 0}
-              onClick={() => setCurrent((c) => Math.max(0, c - 1))}
+              onClick={() => {
+                setIsAudioPlaying(false);
+                if (audioRef.current) audioRef.current.pause();
+                setCurrent((c) => Math.max(0, c - 1));
+              }}
               className="rounded-xl h-9 text-xs sm:text-sm"
             >
               Câu Trước
@@ -899,7 +982,11 @@ function ActiveExamSession({
             <Button
               variant="outline"
               disabled={isLast}
-              onClick={() => setCurrent((c) => Math.min(questions.length - 1, c + 1))}
+              onClick={() => {
+                setIsAudioPlaying(false);
+                if (audioRef.current) audioRef.current.pause();
+                setCurrent((c) => Math.min(questions.length - 1, c + 1));
+              }}
               className="rounded-xl h-9 text-xs sm:text-sm"
             >
               Câu Sau
@@ -909,7 +996,11 @@ function ActiveExamSession({
           <div className="flex gap-2">
             {!isLast ? (
               <Button
-                onClick={() => setCurrent((c) => c + 1)}
+                onClick={() => {
+                  setIsAudioPlaying(false);
+                  if (audioRef.current) audioRef.current.pause();
+                  setCurrent((c) => c + 1);
+                }}
                 className="bg-primary text-white hover:bg-primary/90 font-bold rounded-xl h-9 text-xs sm:text-sm"
               >
                 Tiếp Theo <ChevronRight className="ml-1 size-4" />
@@ -1187,12 +1278,14 @@ export default function ExamPrepPage() {
   const [practiceQuestionCount, setPracticeQuestionCount] = useState<number>(10);
 
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [examSections, setExamSections] = useState<{ label: string; sectionKey: string; count: number; type: string }[]>([]);
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [score, setScore] = useState<number | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingSource, setLoadingSource] = useState<"ai" | "library" | null>(null);
+  const [loadingStep, setLoadingStep] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
   const currentCfg = EXAM_CONFIG[exam];
@@ -1205,7 +1298,9 @@ export default function ExamPrepPage() {
     setScore(null);
     setIsReviewing(false);
     setQuestions([]);
+    setExamSections([]);
     setUserAnswers({});
+    setLoadingStep("");
 
     const targetCount =
       mode === "real_exam" ? currentLevelObj!.realQuestions : practiceQuestionCount;
@@ -1262,6 +1357,13 @@ export default function ExamPrepPage() {
         libraryContext += `[Audio ${idx + 1}] ${item.title} | Audio/Youtube URL: ${item.file_url || "Không có URL"}\n\n`;
       });
 
+      // Show loading step info
+      if (mode === "real_exam") {
+        setLoadingStep(`⏳ AI đang biên soạn đề thi ${exam} ${level} theo đúng cấu trúc thật...`);
+      } else {
+        setLoadingStep(`⏳ AI đang tạo ${targetCount} câu hỏi ôn tập...`);
+      }
+
       const res = await fetch("/api/generate-practice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1290,14 +1392,18 @@ export default function ExamPrepPage() {
         throw new Error(errData?.error ?? `Lỗi hệ thống (${res.status})`);
       }
 
-      const data: GenerateResponse = await res.json();
-      setQuestions(data.questions);
-      setSessionId(data.sessionId);
+      const data = await res.json();
+      setQuestions(data.questions ?? []);
+      setSessionId(data.sessionId ?? null);
+      if (data.sections && data.sections.length > 0) {
+        setExamSections(data.sections);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định.");
     } finally {
       setLoading(false);
       setLoadingSource(null);
+      setLoadingStep("");
     }
   };
 
@@ -1421,6 +1527,67 @@ export default function ExamPrepPage() {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Loading Overlay */}
+      {loading && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-3xl border border-border bg-surface p-8 shadow-md text-center space-y-4"
+        >
+          <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-primary/10">
+            <Loader2 className="size-8 animate-spin text-primary" />
+          </div>
+          <div>
+            <p className="font-extrabold text-foreground text-sm sm:text-base">
+              {loadingSource === "library" ? "📚 Quét & Trộn Đề Từ Thư Viện..." : "🤖 AI đang biên soạn đề thi..."}
+            </p>
+            {loadingStep && (
+              <p className="text-xs text-muted-foreground mt-2 animate-pulse">{loadingStep}</p>
+            )}
+            {mode === "real_exam" && (
+              <div className="mt-4 rounded-2xl border border-purple-500/30 bg-purple-500/10 p-3 text-xs text-purple-700 dark:text-purple-300">
+                ⚡ Đang tạo đề thi <b>{exam} {level}</b> với đúng cấu trúc: {currentLevelObj?.desc}<br />
+                <span className="opacity-75">AI sẽ tạo từng phần riêng lẻ và ghép lại. Vui lòng chờ 20-40 giây...</span>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Section Summary Bar (shown when exam is active) */}
+      {questions.length > 0 && score === null && examSections.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-border bg-muted/40 px-4 py-3 flex flex-wrap gap-3 items-center"
+        >
+          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Cấu Trúc Đề:</span>
+          {examSections.map((sec, i) => {
+            const sectionTypeIcon =
+              sec.type === "listening" ? "🎧" :
+              sec.type === "reading-comprehension" ? "📖" :
+              sec.type === "writing" ? "✍️" :
+              sec.type === "speaking-prompt" ? "🎤" : "📝";
+            const sectionColor =
+              sec.type === "listening" ? "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300" :
+              sec.type === "reading-comprehension" ? "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-300" :
+              sec.type === "writing" ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" :
+              "border-purple-500/40 bg-purple-500/10 text-purple-700 dark:text-purple-300";
+            return (
+              <span
+                key={i}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${sectionColor}`}
+              >
+                {sectionTypeIcon} {sec.sectionKey}: <b>{sec.count} câu</b>
+              </span>
+            );
+          })}
+          <span className="ml-auto text-xs font-extrabold text-foreground">
+            Tổng: {questions.length} câu
+          </span>
+        </motion.div>
       )}
 
       {/* Phần Thi Đang Chạy */}
