@@ -131,6 +131,7 @@ export default function LibraryPage() {
                 className="h-9 rounded-md border border-border bg-background px-3 font-medium text-foreground outline-none"
               >
                 <option value="all">Tất Cả Định Dạng</option>
+                <option value="exam_paper">Đề Thi & File Kèm</option>
                 <option value="document">Tài Liệu (PDF/DOCX)</option>
                 <option value="audio">Âm Thanh (Audio)</option>
                 <option value="video">Video Bài Giảng</option>

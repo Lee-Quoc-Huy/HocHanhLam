@@ -147,8 +147,9 @@ export function AutoGenerateFlashcardsModal({ open, onClose, onCreateCard, targe
 
       for (const g of picked) {
         try {
-          const exText = g.examples && g.examples.length > 0
-            ? `Ví dụ: ${g.examples[0].example}\n(${g.examples[0].translation})`
+          const firstEx = g.examples && g.examples[0];
+          const exText = firstEx
+            ? `Ví dụ: ${firstEx.example}\n(${firstEx.translation})`
             : "";
 
           await onCreateCard({

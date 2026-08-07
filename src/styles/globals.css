@@ -3,14 +3,7 @@
 @tailwind utilities;
 
 /*
-  LinguaVerse AI — design tokens
-  Palette rationale: cool "paper" neutrals (not the cliché warm cream)
-  paired with a deep ink-indigo primary, evoking notebooks/ink rather than
-  a generic SaaS look. Each target language keeps a fixed accent hue used
-  consistently across tags, progress rings, and per-language states:
-    English  -> teal      (#0EA5A0)
-    Korean   -> vermilion  (#FF6551)
-    Chinese  -> ochre/gold (#D99A1B)
+  LinguaVerse AI — Design System & Design Tokens
 */
 
 @layer base {
@@ -47,7 +40,7 @@
     --lang-kr: 8 100% 66%;
     --lang-zh: 40 76% 47%;
 
-    --radius: 0.625rem;
+    --radius: 0.875rem;
 
     --font-display: "Sora", var(--font-sans);
     --font-sans: "Inter", system-ui, sans-serif;
@@ -93,14 +86,13 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground font-sans antialiased selection:bg-primary/20 selection:text-primary;
   }
 
   html {
     scroll-behavior: smooth;
   }
 
-  /* Respect reduced-motion preference platform-wide */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -112,17 +104,13 @@
     }
   }
 
-  /* Visible keyboard focus ring everywhere, not just form controls */
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 }
 
 /*
-  Dashboard glassmorphism utilities.
-  Kept additive/scoped (no changes to existing tokens or components) so the
-  rest of the app is unaffected. Built on the existing --surface/--border
-  tokens rather than hardcoded colors, so it still respects dark mode.
+  Glassmorphism & Rich Aesthetics Utilities
 */
 @layer components {
   .glass-panel {
@@ -138,32 +126,49 @@
     @apply transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_1px_2px_rgba(16,24,40,0.04),0_20px_40px_-16px_rgba(79,70,229,0.28)];
   }
 
+  .glass-card {
+    @apply rounded-3xl border border-border/70 bg-surface/80 p-5 shadow-sm backdrop-blur-md transition-all duration-300 hover:border-primary/40 hover:shadow-lg;
+  }
+
   .glass-chip {
     @apply inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-surface/80 px-2.5 py-1 text-xs font-medium backdrop-blur-md;
+  }
+
+  .gradient-badge {
+    @apply rounded-full border border-primary/30 bg-gradient-to-r from-primary/15 via-emerald-500/10 to-teal-500/15 px-2.5 py-0.5 font-mono text-[10px] font-extrabold uppercase tracking-wider text-primary shadow-xs;
   }
 }
 
 @layer utilities {
   .animate-in-up {
-    animation: dash-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: dash-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
-  .scrollbar-thin {
-    scrollbar-width: thin;
+  /* Custom scrollbar */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
-  .scrollbar-thin::-webkit-scrollbar {
-    height: 6px;
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
   }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply rounded-full bg-border;
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-border/80 hover:bg-muted-foreground/30 transition-colors;
   }
 }
 
 @keyframes dash-in-up {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;

@@ -17,7 +17,7 @@ export function MobileShell({ children }: { children: React.ReactNode }) {
 
       <MobileTopbar />
       <MobileNavSheet />
-      <main className="relative flex-1 px-3.5 py-4 pb-28 max-w-lg mx-auto w-full animate-in fade-in duration-300">
+      <main className="relative flex-1 px-3.5 py-4 pb-28 max-w-3xl mx-auto w-full animate-in fade-in duration-300">
         {children}
       </main>
       <MobileTabBar />

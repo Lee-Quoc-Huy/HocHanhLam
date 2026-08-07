@@ -51,8 +51,9 @@ export function FlashcardReflexEngine({
         const distractors = distractorPool.filter(
           (c) => c.id !== card.id && c.back_text !== card.back_text
         );
-        if (distractors.length > 0) {
-          shownMeaning = distractors[Math.floor(Math.random() * distractors.length)].back_text;
+        const distractor = distractors[Math.floor(Math.random() * distractors.length)];
+        if (distractor) {
+          shownMeaning = distractor.back_text;
         } else {
           shownMeaning = "Nghĩa khác";
         }

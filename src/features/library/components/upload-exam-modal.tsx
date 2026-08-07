@@ -173,9 +173,9 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
                 <select
                   value={examCategory}
                   onChange={(e) => {
-                    const cat = e.target.value as any;
+                    const cat = e.target.value as "TOPIK" | "TOEIC" | "IELTS" | "HSK";
                     setExamCategory(cat);
-                    setExamLevel(EXAM_LEVELS[cat][0]);
+                    setExamLevel(EXAM_LEVELS[cat]?.[0] ?? "");
                   }}
                   className="w-full h-10 rounded-xl border border-border bg-background px-3 font-medium outline-none text-xs"
                 >
@@ -193,7 +193,7 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
                   onChange={(e) => setExamLevel(e.target.value)}
                   className="w-full h-10 rounded-xl border border-border bg-background px-3 font-medium outline-none text-xs"
                 >
-                  {EXAM_LEVELS[examCategory].map((l) => (
+                  {(EXAM_LEVELS[examCategory] ?? []).map((l) => (
                     <option key={l} value={l}>
                       {l}
                     </option>

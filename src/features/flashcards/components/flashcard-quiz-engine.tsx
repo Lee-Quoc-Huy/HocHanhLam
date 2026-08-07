@@ -187,6 +187,7 @@ export function FlashcardQuizEngine({
   }
 
   const currentQ = questions[currentIndex];
+  if (!currentQ) return null;
   const currentCard = currentQ.card;
   const isLastQuestion = currentIndex === questions.length - 1;
 

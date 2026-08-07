@@ -5,28 +5,25 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
  * Uploads a file to Cloudflare R2 (free tier, S3-compatible object storage)
  * and returns its public URL so it can be saved as `library_items.file_url`.
  *
- * Required environment variables (set these in .env.local and in Vercel →
- * Project Settings → Environment Variables):
- *
- *   CLOUDFLARE_R2_ACCOUNT_ID       — your Cloudflare account ID
+ * Required environment variables:
+ *   CLOUDFLARE_R2_ACCOUNT_ID       — R2 endpoint URL or bare account ID
  *   CLOUDFLARE_R2_ACCESS_KEY_ID    — R2 API token access key ID
  *   CLOUDFLARE_R2_SECRET_ACCESS_KEY— R2 API token secret access key
- *   CLOUDFLARE_R2_BUCKET_NAME      — the R2 bucket name to upload into
+ *   CLOUDFLARE_R2_BUCKET_NAME      — the R2 bucket name
  *   CLOUDFLARE_R2_PUBLIC_URL       — the public base URL for the bucket
- *                                    (either the bucket's r2.dev public URL,
- *                                    or a custom domain you attached to it),
- *                                    e.g. https://pub-xxxx.r2.dev or
- *                                    https://files.yourdomain.com
  *
- * The upload itself never touches the browser's memory-only blob URL —
- * previously `handleUploadFiles` used `URL.createObjectURL(file)`, which
- * only exists inside that one browser tab and disappears on reload / is
- * invisible to any other device. This route makes storage real and shared.
+ * TROUBLESHOOTING "Access Denied":
+ *   1. Go to Cloudflare Dashboard → R2 → API Tokens
+ *   2. Create/edit the token: set "Permissions" to "Object Read & Write"
+ *      and "Bucket" to your specific bucket (or "All buckets")
+ *   3. Make sure the bucket exists and has "Public Access" enabled via
+ *      R2 → your bucket → Settings → Public Access → Allow Access
+ *   4. Add the env vars to Vercel: Project → Settings → Environment Variables
  */
 
 export const maxDuration = 60;
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB — Cloudflare R2 free tier friendly cap
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 function getR2Client() {
   const accountId = process.env.CLOUDFLARE_R2_ACCOUNT_ID;
@@ -35,15 +32,11 @@ function getR2Client() {
 
   if (!accountId || !accessKeyId || !secretAccessKey) {
     throw new Error(
-      "Thiếu cấu hình Cloudflare R2. Vui lòng đặt CLOUDFLARE_R2_ACCOUNT_ID, CLOUDFLARE_R2_ACCESS_KEY_ID, CLOUDFLARE_R2_SECRET_ACCESS_KEY trong biến môi trường."
+      "Thiếu cấu hình Cloudflare R2. Vui lòng đặt CLOUDFLARE_R2_ACCOUNT_ID, CLOUDFLARE_R2_ACCESS_KEY_ID, CLOUDFLARE_R2_SECRET_ACCESS_KEY trong biến môi trường Vercel."
     );
   }
 
-  // CLOUDFLARE_R2_ACCOUNT_ID can be given either as the bare account ID
-  // (e.g. "eec1498b59d592a9d2cc3bf6c0e39eb6") or as the full R2 endpoint
-  // (e.g. "https://eec1498b59d592a9d2cc3bf6c0e39eb6.r2.cloudflarestorage.com"
-  // — this is exactly what appears in .env.local for this project). Accept
-  // both so the same env file works without renaming anything.
+  // Accept both bare account ID and full endpoint URL
   const endpoint = accountId.startsWith("http")
     ? accountId
     : `https://${accountId}.r2.cloudflarestorage.com`;
@@ -57,15 +50,12 @@ function getR2Client() {
 
 export async function POST(req: NextRequest) {
   try {
-    // Personal single-user app — no login wall. Files are still namespaced
-    // under a fixed "local-user" folder in R2 so the key layout stays the
-    // same shape as before (in case multi-user support is added later).
     const bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME;
     const publicUrl = process.env.CLOUDFLARE_R2_PUBLIC_URL;
 
     if (!bucketName || !publicUrl) {
       return NextResponse.json(
-        { error: "Thiếu CLOUDFLARE_R2_BUCKET_NAME hoặc CLOUDFLARE_R2_PUBLIC_URL trong biến môi trường." },
+        { error: "Thiếu CLOUDFLARE_R2_BUCKET_NAME hoặc CLOUDFLARE_R2_PUBLIC_URL trong biến môi trường Vercel." },
         { status: 500 }
       );
     }
@@ -84,8 +74,8 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const key = `library/local-user/${Date.now()}-${safeName}`;
+    const safeName = file.name.replace(/[^a-zA-Z0-9._\-()]/g, "_");
+    const key = `library/uploads/${Date.now()}-${safeName}`;
 
     const client = getR2Client();
     await client.send(

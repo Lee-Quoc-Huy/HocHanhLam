@@ -46,11 +46,11 @@ export function DuplicateCleanupModal<T extends { id: string; created_at: string
   const [done, setDone] = useState(false);
 
   function isMarked(group: DuplicateGroup<T>, item: T): boolean {
-    if (item.id in markedForDeletion) return markedForDeletion[item.id];
-    const oldestId = [...group.items].sort(
+    if (item.id in markedForDeletion) return Boolean(markedForDeletion[item.id]);
+    const oldestItem = [...group.items].sort(
       (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    )[0].id;
-    return item.id !== oldestId; // default: everything except the oldest is marked
+    )[0];
+    return oldestItem ? item.id !== oldestItem.id : false;
   }
 
   function toggleMark(id: string, current: boolean) {

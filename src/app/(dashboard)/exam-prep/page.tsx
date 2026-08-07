@@ -449,7 +449,7 @@ function ExamSelector({
 }) {
   const exams: ExamType[] = ["TOPIK", "TOEIC", "IELTS", "HSK"];
   const currentConfig = EXAM_CONFIG[exam];
-  const currentLevelObj = currentConfig.levels.find((l) => l.id === level) || currentConfig.levels[0];
+  const currentLevelObj = (currentConfig.levels.find((l) => l.id === level) ?? currentConfig.levels[0])!;
 
   return (
     <div className="space-y-6">
@@ -496,7 +496,7 @@ function ExamSelector({
                 type="button"
                 onClick={() => {
                   setExam(e);
-                  setLevel(cfg.levels[0].id);
+                  setLevel(cfg.levels[0]?.id ?? "");
                 }}
                 className={`group relative flex flex-col items-start justify-between rounded-2xl border p-3.5 sm:p-4 text-left transition-all ${
                   isSelected
@@ -702,6 +702,7 @@ function ActiveExamSession({
   };
 
   const q = questions[current];
+  if (!q) return null;
   const isLast = current === questions.length - 1;
   const currentAnswer = answers[current] || "";
 
@@ -1070,7 +1071,7 @@ function RealExamResultModal({
 }) {
   const pct = Math.round((score / total) * 100);
   const cfg = EXAM_CONFIG[exam];
-  const levelObj = cfg.levels.find((l) => l.id === level) || cfg.levels[0];
+  const levelObj = (cfg.levels.find((l) => l.id === level) ?? cfg.levels[0])!;
 
   let scaledScoreText = "";
   if (exam === "TOEIC") {
@@ -1151,7 +1152,7 @@ function RealExamResultModal({
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function ExamPrepPage() {
-  const { getFilesByTag } = useLibrary();
+  const { items, getFilesByTag } = useLibrary();
 
   const [exam, setExam] = useState<ExamType>("TOPIK");
   const [level, setLevel] = useState<string>("TOPIK I - Cấp 1");
@@ -1181,13 +1182,35 @@ export default function ExamPrepPage() {
     setUserAnswers({});
 
     const targetCount =
-      mode === "real_exam" ? currentLevelObj.realQuestions : practiceQuestionCount;
+      mode === "real_exam" ? currentLevelObj!.realQuestions : practiceQuestionCount;
 
     try {
       const files = getFilesByTag([exam, level]);
       const fileUrls = files
         .map((f: any) => f.file_url)
         .filter(Boolean) as string[];
+
+      // Build rich text context from user's active Library items
+      let libraryContext = "";
+      if (source === "library") {
+        const activeLibraryItems = items.filter((i: any) => !i.is_trashed);
+        const matchingOrAll = activeLibraryItems.filter(
+          (i: any) =>
+            i.tags?.some((t: string) => t.toUpperCase().includes(exam.toUpperCase())) ||
+            i.item_type === "exam_paper" ||
+            i.item_type === "document" ||
+            i.item_type === "note"
+        );
+        const targetList = matchingOrAll.length > 0 ? matchingOrAll : activeLibraryItems;
+        
+        libraryContext = targetList
+          .slice(0, 8)
+          .map(
+            (item: any, idx: number) =>
+              `Tài liệu ${idx + 1}: [${item.item_type.toUpperCase()}] ${item.title} (Thẻ: ${(item.tags || []).join(", ")})\nNội dung/Mô tả: ${(item.content_text || "").slice(0, 500)}`
+          )
+          .join("\n\n");
+      }
 
       const res = await fetch("/api/generate-practice", {
         method: "POST",
@@ -1200,6 +1223,7 @@ export default function ExamPrepPage() {
           source,
           questionCount: targetCount,
           fileUrls,
+          libraryContext,
         }),
       });
 
@@ -1278,7 +1302,7 @@ export default function ExamPrepPage() {
             practiceQuestionCount={practiceQuestionCount}
             setExam={(e) => {
               setExam(e);
-              setLevel(EXAM_CONFIG[e].levels[0].id);
+              setLevel(EXAM_CONFIG[e].levels[0]?.id ?? "");
             }}
             setLevel={setLevel}
             setFormat={setFormat}
@@ -1346,7 +1370,7 @@ export default function ExamPrepPage() {
         <ActiveExamSession
           questions={questions}
           mode={mode}
-          realMinutes={currentLevelObj.realMinutes}
+          realMinutes={currentLevelObj!.realMinutes}
           onFinish={handleFinish}
         />
       )}

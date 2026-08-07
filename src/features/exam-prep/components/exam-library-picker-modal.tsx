@@ -24,7 +24,8 @@ export function ExamLibraryPickerModal({
 
   const filteredLibraryItems = useMemo(() => {
     return items.filter((item) => {
-      if (item.status === "trashed") return false;
+      // Filter out trashed items using is_trashed field
+      if (item.is_trashed) return false;
       if (!search.trim()) return true;
       return (
         item.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -45,7 +46,7 @@ export function ExamLibraryPickerModal({
               </div>
               <div>
                 <Dialog.Title className="font-display text-lg font-bold text-foreground">
-                  Chọn Tài Liệu Thư Viện Đồ Ôn
+                  Chọn Tài Liệu Thư Viện Đồ Ôn
                 </Dialog.Title>
                 <p className="text-xs text-muted-foreground">
                   AI sẽ trích xuất từ vựng, bài đọc, câu nghe từ file trong Thư viện để biên soạn đề thi
@@ -81,12 +82,12 @@ export function ExamLibraryPickerModal({
             ) : (
               filteredLibraryItems.map((item) => {
                 const isSelected = selectedFileId === item.id;
-                const isAudio = item.type === "audio";
+                const isAudio = item.item_type === "audio";
                 return (
                   <div
                     key={item.id}
                     onClick={() => {
-                      onSelectFile(item.id, item.title, item.content || item.summary || item.title);
+                      onSelectFile(item.id, item.title, item.content_text || item.title);
                       onClose();
                     }}
                     className={`flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition-all active:scale-98 ${
@@ -102,7 +103,7 @@ export function ExamLibraryPickerModal({
                       <div>
                         <div className="text-xs font-bold line-clamp-1">{item.title}</div>
                         <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                          <span>{(item.type || "DOC").toUpperCase()}</span>
+                          <span>{item.item_type.toUpperCase()}</span>
                           {item.tags && item.tags.length > 0 && (
                             <span className="truncate max-w-[150px]">· {item.tags.join(", ")}</span>
                           )}

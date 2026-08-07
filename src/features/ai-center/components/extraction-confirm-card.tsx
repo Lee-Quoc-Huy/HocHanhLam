@@ -73,9 +73,9 @@ export function ExtractionConfirmCard({ data, targetLanguage }: { data: Extracti
     vocabularyService
       .fetchVocabulary()
       .then((items) => {
-        const distinct = Array.from(new Set(items.map((i) => i.collection).filter(Boolean)));
+        const distinct = Array.from(new Set(items.map((i) => i.collection).filter((c): c is string => Boolean(c))));
         setExistingCollections(distinct);
-        if (distinct.length > 0) setCollection(distinct[0]);
+        if (distinct[0]) setCollection(distinct[0]);
       })
       .catch(() => {
         // Offline / fetch failed — fall back to the "General" default already set.
@@ -198,24 +198,24 @@ export function ExtractionConfirmCard({ data, targetLanguage }: { data: Extracti
     label: string;
     icon: typeof BookOpenText;
     items: { title: string; subtitle: string }[];
-    onSave: () => void;
+    onSave: () => Promise<void>;
   }[] = [
     {
-      key: "vocabulary",
+      key: "vocabulary" as SectionKey,
       label: "Từ Vựng",
       icon: BookOpenText,
       items: data.vocabulary.map((v) => ({ title: v.word, subtitle: v.vietnamese })),
       onSave: saveVocabulary,
     },
     {
-      key: "grammar",
+      key: "grammar" as SectionKey,
       label: "Ngữ Pháp",
       icon: BookMarked,
       items: data.grammar.map((g) => ({ title: g.title, subtitle: g.meaning })),
       onSave: saveGrammar,
     },
     {
-      key: "flashcards",
+      key: "flashcards" as SectionKey,
       label: "Flashcard",
       icon: Layers,
       items: data.flashcards.map((f) => ({ title: f.front_text, subtitle: f.back_text })),

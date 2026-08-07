@@ -1,22 +1,19 @@
 /**
- * Smart duplicate detection — groups items that are effectively the same
- * even if typed slightly differently (extra spaces, different
- * capitalization, trailing punctuation). Two matching strategies are
- * combined so it catches more than a naive exact-string comparison:
+ * Utility for detecting duplicate items (vocabulary, grammar, flashcards)
+ * across the application.
  *
- * 1. Exact key match (normalized): same language + same word/title →
- *    almost certainly a true duplicate.
- * 2. Fuzzy key match: same language + very similar normalized string
- *    (Levenshtein distance within a small threshold relative to length) →
- *    likely a duplicate with a typo (e.g. "necessary" vs "neccessary").
+ * Normalizes text (lowercased, stripped of accents/special characters,
+ * trimmed) and supports both EXACT matching and FUZZY (Levenshtein distance)
+ * matching for typo tolerance.
  */
 
-export function normalizeForCompare(value: string): string {
-  return value
+export function normalizeForCompare(text: string): string {
+  if (!text) return "";
+  return text
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // strip accents/diacritics for looser matching
-    .replace(/[^\p{L}\p{N}\s]/gu, "") // strip punctuation
+    .replace(/[\u0300-\u036f]/g, "") // strip accents
+    .replace(/[^\w\s\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af]/g, "") // keep alpha, spaces, CJK, Hangul
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -26,27 +23,40 @@ function levenshtein(a: string, b: string): number {
   const n = b.length;
   if (m === 0) return n;
   if (n === 0) return m;
-  const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) {
+    const row = dp[i];
+    if (row) row[0] = i;
+  }
+  for (let j = 0; j <= n; j++) {
+    const row = dp[0];
+    if (row) row[j] = j;
+  }
+
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
-      dp[i][j] =
-        a[i - 1] === b[j - 1]
-          ? dp[i - 1][j - 1]
-          : 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]);
+      const prevRow = dp[i - 1];
+      const currRow = dp[i];
+      if (prevRow && currRow) {
+        currRow[j] =
+          a[i - 1] === b[j - 1]
+            ? (prevRow[j - 1] ?? 0)
+            : 1 + Math.min(prevRow[j - 1] ?? 0, prevRow[j] ?? 0, currRow[j - 1] ?? 0);
+      }
     }
   }
-  return dp[m][n];
+
+  const lastRow = dp[m];
+  return lastRow ? (lastRow[n] ?? 0) : 0;
 }
 
 function isFuzzyMatch(a: string, b: string): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
   const maxLen = Math.max(a.length, b.length);
-  if (maxLen < 4) return false; // too short to fuzzy-match reliably
+  if (maxLen < 4) return false;
   const distance = levenshtein(a, b);
-  // Allow ~1 edit per 6 characters, capped at 2 edits — catches typos
-  // without merging genuinely different short words.
   const threshold = Math.min(2, Math.floor(maxLen / 6) + 1);
   return distance <= threshold;
 }
@@ -57,12 +67,6 @@ export interface DuplicateGroup<T> {
   matchType: "exact" | "fuzzy";
 }
 
-/**
- * Finds duplicate groups within `items` based on a normalized comparison
- * key extracted per item (e.g. `${language}:${word}`). Items are grouped by
- * exact normalized key first; then remaining singleton groups are checked
- * pairwise for fuzzy (near-typo) matches within the same language.
- */
 export function findDuplicateGroups<T>(
   items: T[],
   getCompareText: (item: T) => string,
@@ -74,12 +78,11 @@ export function findDuplicateGroups<T>(
     lang: getLanguage(item),
   }));
 
-  // Pass 1: exact normalized-key groups (within the same language)
   const exactMap = new Map<string, typeof normalized>();
   for (const entry of normalized) {
     const groupKey = `${entry.lang}::${entry.key}`;
     if (!exactMap.has(groupKey)) exactMap.set(groupKey, []);
-    exactMap.get(groupKey)!.push(entry);
+    exactMap.get(groupKey)?.push(entry);
   }
 
   const groups: DuplicateGroup<T>[] = [];
@@ -92,15 +95,14 @@ export function findDuplicateGroups<T>(
     }
   }
 
-  // Pass 2: fuzzy matches among items not already grouped, same language only
   const remaining = normalized.filter((e) => !consumed.has(e.item));
   for (let i = 0; i < remaining.length; i++) {
     const a = remaining[i];
-    if (consumed.has(a.item)) continue;
+    if (!a || consumed.has(a.item)) continue;
     const cluster = [a];
     for (let j = i + 1; j < remaining.length; j++) {
       const b = remaining[j];
-      if (consumed.has(b.item)) continue;
+      if (!b || consumed.has(b.item)) continue;
       if (a.lang === b.lang && isFuzzyMatch(a.key, b.key)) {
         cluster.push(b);
       }

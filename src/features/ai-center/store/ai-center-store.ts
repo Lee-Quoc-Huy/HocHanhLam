@@ -186,7 +186,7 @@ export const useAiCenterStore = create<AiCenterState>((set, get) => ({
       let displayText = fullText;
       let extraction: { vocabulary: any[]; grammar: any[]; flashcards: any[] } | undefined;
 
-      if (actionMatch) {
+      if (actionMatch && actionMatch[1]) {
         displayText = fullText.replace(actionMatch[0], "").trim();
         try {
           const parsed = JSON.parse(actionMatch[1].trim());

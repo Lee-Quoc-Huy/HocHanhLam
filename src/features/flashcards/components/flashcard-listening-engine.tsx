@@ -259,7 +259,9 @@ export function FlashcardListeningEngine({
       setCurrentIndex(nextIdx);
       setIsAnswered(false);
       setSelectedOption(null);
-      playSentenceAudio(aiSentences[nextIdx].fullSentence, selectedLang);
+      if (aiSentences[nextIdx]?.fullSentence) {
+        playSentenceAudio(aiSentences[nextIdx].fullSentence, selectedLang);
+      }
     } else {
       setCompleted(true);
     }
@@ -404,27 +406,31 @@ export function FlashcardListeningEngine({
 
             {/* Play Audio Button */}
             <div className="py-4 space-y-3">
-              <Button onClick={() => playSentenceAudio(currentAiSentence.fullSentence, selectedLang)} size="lg"
-                className={cn("size-24 rounded-full text-white shadow-xl hover:scale-105 transition-transform mx-auto flex flex-col items-center justify-center gap-1",
-                  isPlayingAudio ? "bg-amber-500 animate-pulse" : "bg-gradient-to-br from-purple-600 via-indigo-600 to-teal-600")}>
-                <Volume2 className="size-8" />
-                <span className="text-[10px] font-bold uppercase tracking-wider">{isPlayingAudio ? "Đang phát..." : "Nghe Cả Câu"}</span>
-              </Button>
+              {currentAiSentence && (
+                <>
+                  <Button onClick={() => playSentenceAudio(currentAiSentence.fullSentence, selectedLang)} size="lg"
+                    className={cn("size-24 rounded-full text-white shadow-xl hover:scale-105 transition-transform mx-auto flex flex-col items-center justify-center gap-1",
+                      isPlayingAudio ? "bg-amber-500 animate-pulse" : "bg-gradient-to-br from-purple-600 via-indigo-600 to-teal-600")}>
+                    <Volume2 className="size-8" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">{isPlayingAudio ? "Đang phát..." : "Nghe Cả Câu"}</span>
+                  </Button>
 
-              <div className="rounded-2xl border border-border bg-background/90 p-5 text-lg font-bold text-foreground leading-relaxed">
-                {currentAiSentence.sentenceWithBlank}
-              </div>
+                  <div className="rounded-2xl border border-border bg-background/90 p-5 text-lg font-bold text-foreground leading-relaxed">
+                    {currentAiSentence.sentenceWithBlank}
+                  </div>
 
-              {isAnswered && (
-                <p className="text-xs text-muted-foreground italic">
-                  Nghĩa: &ldquo;{currentAiSentence.vietnameseTranslation}&rdquo;
-                </p>
+                  {isAnswered && (
+                    <p className="text-xs text-muted-foreground italic">
+                      Nghĩa: &ldquo;{currentAiSentence.vietnameseTranslation}&rdquo;
+                    </p>
+                  )}
+                </>
               )}
             </div>
 
             {/* 4 Choices */}
             <div className="grid gap-3 sm:grid-cols-2 pt-2">
-              {currentAiSentence.options.map((opt, idx) => {
+              {currentAiSentence?.options.map((opt, idx) => {
                 const isSelected = selectedOption === opt;
                 const isCorrectOpt = opt.trim().toLowerCase() === currentAiSentence.missingWord.trim().toLowerCase();
                 let buttonStyle = "border-border bg-background text-foreground hover:border-purple-500/50";
@@ -444,7 +450,7 @@ export function FlashcardListeningEngine({
               })}
             </div>
 
-            {isAnswered && (
+            {isAnswered && currentAiSentence && (
               <div className="space-y-3 pt-2">
                 <div className="text-xs font-bold">
                   {isCorrect ? (
@@ -495,13 +501,15 @@ export function FlashcardListeningEngine({
             </div>
 
             <div className="py-6 space-y-4">
-              <Button
-                onClick={() => speak(currentCard.front_text, currentCard.language, currentCard.audio_url)}
-                size="lg"
-                className="size-24 rounded-full bg-gradient-to-br from-purple-600 via-indigo-600 to-teal-600 text-white shadow-xl hover:scale-105 transition-transform mx-auto flex flex-col items-center justify-center gap-1">
-                <Volume2 className="size-8 animate-pulse" />
-                <span className="text-[10px] font-bold uppercase tracking-wider">Nghe Âm Thanh</span>
-              </Button>
+              {currentCard && (
+                <Button
+                  onClick={() => speak(currentCard.front_text, currentCard.language, currentCard.audio_url)}
+                  size="lg"
+                  className="size-24 rounded-full bg-gradient-to-br from-purple-600 via-indigo-600 to-teal-600 text-white shadow-xl hover:scale-105 transition-transform mx-auto flex flex-col items-center justify-center gap-1">
+                  <Volume2 className="size-8 animate-pulse" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Nghe Âm Thanh</span>
+                </Button>
+              )}
               <p className="text-xs text-muted-foreground">Nghe kỹ phát âm và chọn từ đúng — đáp án nhiễu lấy từ toàn bộ từ vựng trong web!</p>
             </div>
 
@@ -509,7 +517,7 @@ export function FlashcardListeningEngine({
             <div className="grid gap-3 sm:grid-cols-2 pt-2">
               {options.map((opt, idx) => {
                 const isSelected = selectedOption === opt;
-                const isRight = opt.trim().toLowerCase() === currentCard.front_text.trim().toLowerCase();
+                const isRight = opt.trim().toLowerCase() === currentCard?.front_text.trim().toLowerCase();
                 let buttonStyle = "border-border bg-background text-foreground hover:border-purple-500/50";
                 if (isAnswered) {
                   if (isRight) buttonStyle = "border-emerald-500 bg-emerald-500/20 text-emerald-600 font-bold shadow-md";
@@ -527,7 +535,7 @@ export function FlashcardListeningEngine({
               })}
             </div>
 
-            {isAnswered && (
+            {isAnswered && currentCard && (
               <div className="space-y-3 pt-2">
                 <div className="text-xs font-bold">
                   {isCorrect ? (

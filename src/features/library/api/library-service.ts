@@ -102,10 +102,15 @@ class LibraryService {
     const supabase = createClient();
     try {
       const { data, error } = await supabase.from("library_items").select("*").order("created_at", { ascending: false });
-      if (error) return this.getLocalItems();
-      const items = (data as unknown) as LibraryItem[];
-      this.setLocalItems(items);
-      return items;
+      const localItems = this.getLocalItems();
+      if (error || !data) return localItems;
+      const remoteItems = (data as unknown) as LibraryItem[];
+      
+      // Merge remote & local items so locally created items never get wiped on reload!
+      const remoteIds = new Set(remoteItems.map((i) => i.id));
+      const merged = [...remoteItems, ...localItems.filter((l) => !remoteIds.has(l.id))];
+      this.setLocalItems(merged);
+      return merged;
     } catch {
       return this.getLocalItems();
     }
@@ -306,6 +311,19 @@ class LibraryService {
 
   // Download File Helper
   downloadItemFile(item: LibraryItem, format: "txt" | "md" | "json" = "txt") {
+    // If file is stored on Cloudflare R2 (or any cloud storage URL), open/download directly!
+    if (item.file_url) {
+      const link = document.createElement("a");
+      link.href = item.file_url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.download = item.title;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
     let content = item.content_text;
     const filename = `${item.title.replace(/\.[^/.]+$/, "")}.${format}`;
 
