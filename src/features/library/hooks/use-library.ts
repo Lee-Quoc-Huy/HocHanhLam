@@ -117,43 +117,47 @@ export function useLibrary() {
     }
   };
 
-  // Upload Đề thi & File kèm chuyên biệt vào Cloudflare R2 + lưu metadata
+  // Upload Đề thi & File kèm chuyên biệt (Phân loại 5 Nhóm Thư Viện)
   const handleUploadExamPaper = async (input: {
-    file: File;
+    file?: File;
     examCategory: "TOPIK" | "TOEIC" | "IELTS" | "HSK";
     examLevel: string;
-    paperType: "full_exam" | "audio_attachment" | "reading_passage" | "answer_key";
+    paperType: "full_exam" | "reading_answer" | "listening_answer" | "writing_answer" | "audio_attachment";
     title?: string;
     pastedContent?: string;
+    youtubeUrl?: string;
   }) => {
-    const { file, examCategory, examLevel, paperType, title, pastedContent } = input;
-    const ext = file.name.split(".").pop()?.toLowerCase() || "";
-    const formattedSize =
-      file.size > 1024 * 1024
+    const { file, examCategory, examLevel, paperType, title, pastedContent, youtubeUrl } = input;
+    const ext = file ? file.name.split(".").pop()?.toLowerCase() || "" : "link";
+    const formattedSize = file
+      ? file.size > 1024 * 1024
         ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
-        : `${Math.round(file.size / 1024)} KB`;
+        : `${Math.round(file.size / 1024)} KB`
+      : "Link";
 
-    let fileUrl: string | null = null;
+    let fileUrl: string | null = youtubeUrl || null;
 
     let contentText = pastedContent && pastedContent.trim().length > 0
       ? pastedContent.trim()
-      : `Đề thi ${file.name} — Kỳ thi: ${examCategory} (${examLevel}). Loại: ${paperType}.`;
+      : `[PHÂN LOẠI 5 NHÓM: ${paperType.toUpperCase()}] ${title || (file ? file.name : "Tài liệu")} — Kỳ thi: ${examCategory} (${examLevel}).`;
 
-    if (!pastedContent && (ext === "txt" || ext === "md")) {
-      try {
-        contentText = await file.text();
-      } catch {
-        // keep placeholder
+    if (file) {
+      if (!pastedContent && (ext === "txt" || ext === "md")) {
+        try {
+          contentText = await file.text();
+        } catch {
+          // keep placeholder
+        }
       }
-    }
 
-    try {
-      fileUrl = await uploadFileToR2(file);
-    } catch (err) {
-      console.error("Lỗi tải đề thi lên R2:", err);
-      contentText = `⚠️ Không thể tải "${file.name}" lên bộ nhớ đám mây. ${
-        err instanceof Error ? err.message : ""
-      }`;
+      try {
+        fileUrl = await uploadFileToR2(file);
+      } catch (err) {
+        console.error("Lỗi tải đề thi lên R2:", err);
+        contentText = `⚠️ Không thể tải "${file.name}" lên bộ nhớ đám mây. ${
+          err instanceof Error ? err.message : ""
+        }`;
+      }
     }
 
     const tags = [
@@ -165,7 +169,7 @@ export function useLibrary() {
     ];
 
     await store.createItem({
-      title: title || file.name,
+      title: title || (file ? file.name : `Bài Thi ${examCategory}`),
       item_type: "exam_paper",
       file_url: fileUrl,
       file_size: formattedSize,
@@ -175,7 +179,7 @@ export function useLibrary() {
       folder_id: store.filter.folderId || null,
       exam_category: examCategory,
       exam_level: examLevel,
-      exam_paper_type: paperType,
+      exam_paper_type: paperType as any,
     });
   };
 

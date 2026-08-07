@@ -4,18 +4,40 @@ import { useState, useRef } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, FileSpreadsheet, UploadCloud, Music, FileText, CheckCircle2, Loader2, ClipboardPaste } from "lucide-react";
+import {
+  X,
+  FileSpreadsheet,
+  UploadCloud,
+  Music,
+  FileText,
+  CheckCircle2,
+  Loader2,
+  ClipboardPaste,
+  BookOpen,
+  Headphones,
+  PenTool,
+  Youtube,
+  Link as LinkIcon,
+} from "lucide-react";
+
+export type PaperCategoryType =
+  | "full_exam"
+  | "reading_answer"
+  | "listening_answer"
+  | "writing_answer"
+  | "audio_attachment";
 
 interface UploadExamModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUploadExam: (input: {
-    file: File;
+    file?: File;
     examCategory: "TOPIK" | "TOEIC" | "IELTS" | "HSK";
     examLevel: string;
-    paperType: "full_exam" | "audio_attachment" | "reading_passage" | "answer_key";
+    paperType: PaperCategoryType;
     title?: string;
     pastedContent?: string;
+    youtubeUrl?: string;
   }) => Promise<void>;
 }
 
@@ -64,14 +86,13 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [examCategory, setExamCategory] = useState<"TOPIK" | "TOEIC" | "IELTS" | "HSK">("TOPIK");
   const [examLevel, setExamLevel] = useState<string>("TOPIK I - Cấp 1");
-  const [paperType, setPaperType] = useState<"full_exam" | "audio_attachment" | "reading_passage" | "answer_key">("full_exam");
+  const [paperType, setPaperType] = useState<PaperCategoryType>("full_exam");
   const [title, setTitle] = useState("");
   const [pastedContent, setPastedContent] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
-  const isAudioFile = selectedFile
-    ? /\.(mp3|wav|m4a|ogg|aac|flac)$/i.test(selectedFile.name)
-    : false;
+  const isAudioType = paperType === "audio_attachment";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -79,12 +100,10 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
       setSelectedFile(f);
       if (!title) setTitle(f.name.replace(/\.[^/.]+$/, ""));
 
-      // Auto-set paper type for audio files
       if (/\.(mp3|wav|m4a|ogg|aac|flac)$/i.test(f.name)) {
         setPaperType("audio_attachment");
       }
 
-      // Auto-read .txt files for instant content_text
       if (f.name.endsWith(".txt") || f.name.endsWith(".md")) {
         f.text().then((text) => {
           if (!pastedContent) setPastedContent(text);
@@ -95,21 +114,23 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFile) return;
+    if (!selectedFile && !youtubeUrl.trim() && !pastedContent.trim()) return;
 
     setIsUploading(true);
     try {
       await onUploadExam({
-        file: selectedFile,
+        file: selectedFile || undefined,
         examCategory,
         examLevel,
         paperType,
-        title: title.trim() || selectedFile.name,
+        title: title.trim() || (selectedFile ? selectedFile.name : `Tài liệu ${examCategory}`),
         pastedContent: pastedContent.trim(),
+        youtubeUrl: youtubeUrl.trim(),
       });
       setSelectedFile(null);
       setTitle("");
       setPastedContent("");
+      setYoutubeUrl("");
       onClose();
     } catch (err) {
       console.error("Lỗi khi tải đề thi lên:", err);
@@ -122,7 +143,7 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs animate-in fade-in" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border bg-surface p-6 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border bg-surface p-6 shadow-2xl animate-in zoom-in-95 max-h-[92vh] overflow-y-auto">
           <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
             <div className="flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400">
@@ -130,10 +151,10 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
               </div>
               <div>
                 <Dialog.Title className="font-display text-lg font-bold text-foreground">
-                  Upload Đề Thi & Tệp Đính Kèm
+                  Upload Đề Thi & Tài Liệu (Phân Loại 5 Nhóm)
                 </Dialog.Title>
                 <p className="text-xs text-muted-foreground">
-                  Phân loại đề thi để AI dễ dàng trích lọc & tạo đề thi thật chuẩn xác
+                  AI sẽ tự động đọc file và trộn các đề thi thông minh thành bài thi thật
                 </p>
               </div>
             </div>
@@ -145,47 +166,6 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 text-xs sm:text-sm">
-            {/* Choose File */}
-            <div className="space-y-1.5">
-              <label className="font-bold text-foreground block">1. Chọn Tệp Đề Thi / Audio / Bài Đọc:</label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.docx,.doc,.txt,.mp3,.wav,.m4a,.jpg,.jpeg,.png"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/40 p-5 hover:border-primary hover:bg-muted transition-all"
-              >
-                {selectedFile ? (
-                  <div className="flex items-center gap-2 text-primary font-bold">
-                    <CheckCircle2 className="size-5 text-emerald-500" />
-                    <span className="line-clamp-1">{selectedFile.name} ({(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)</span>
-                  </div>
-                ) : (
-                  <>
-                    <UploadCloud className="size-8 text-muted-foreground mb-1" />
-                    <span className="font-bold text-foreground text-xs">Nhấn để chọn tệp (PDF, DOCX, MP3, Audio, Bài đọc...)</span>
-                    <span className="text-[11px] text-muted-foreground mt-0.5">Tải lên tệp đề thi hoặc file nghe tương ứng</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Title */}
-            <div className="space-y-1.5">
-              <label className="font-bold text-foreground block">2. Tên Đề Thi / Tệp Mô Tả:</label>
-              <Input
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ví dụ: Đề Thi Thử TOPIK I Đề số 64 hoặc TOEIC Test 2026 Audio Part 1-4"
-              />
-            </div>
-
             {/* Category & Level */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -222,15 +202,16 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
               </div>
             </div>
 
-            {/* Paper Type */}
+            {/* 5 Paper Categories */}
             <div className="space-y-1.5">
-              <label className="font-bold text-foreground block">Phân Loại Nội Dung Tệp:</label>
-              <div className="grid grid-cols-2 gap-2">
+              <label className="font-bold text-foreground block">Phân Loại 5 Nhóm Thư Viện (AI Đọc Tự Động):</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {[
-                  { id: "full_exam", label: "Đề Thi Chính (PDF/DOC)", icon: FileSpreadsheet },
-                  { id: "audio_attachment", label: "File Nghe (Audio MP3)", icon: Music },
-                  { id: "reading_passage", label: "Bài Đọc / Đoạn Văn", icon: FileText },
-                  { id: "answer_key", label: "Đáp Án & Lời Giải", icon: CheckCircle2 },
+                  { id: "full_exam", label: "1. Đề thi (PDF / Text)", desc: "File đề bài thi thật", icon: FileSpreadsheet, color: "text-purple-500" },
+                  { id: "reading_answer", label: "2. Đáp án Đọc", desc: "Lời giải & đáp án bài đọc", icon: BookOpen, color: "text-emerald-500" },
+                  { id: "listening_answer", label: "3. Đáp án Nghe", desc: "Transcript & đáp án bài nghe", icon: Headphones, color: "text-blue-500" },
+                  { id: "writing_answer", label: "4. Đáp án Viết (nếu có)", desc: "Bài viết mẫu & hướng dẫn", icon: PenTool, color: "text-amber-500" },
+                  { id: "audio_attachment", label: "5. File nghe (Audio/Youtube)", desc: "File MP3 hoặc Link Youtube bài nghe", icon: Music, color: "text-rose-500" },
                 ].map((pt) => {
                   const Icon = pt.icon;
                   const isSelected = paperType === pt.id;
@@ -238,87 +219,99 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
                     <button
                       key={pt.id}
                       type="button"
-                      onClick={() => setPaperType(pt.id as any)}
-                      className={`flex items-center gap-2 rounded-xl border p-2.5 text-left text-xs transition-all ${
+                      onClick={() => setPaperType(pt.id as PaperCategoryType)}
+                      className={`flex items-start gap-2.5 rounded-2xl border p-3 text-left transition-all ${
                         isSelected
-                          ? "border-purple-500 bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold"
+                          ? "border-primary bg-primary/10 text-primary font-bold shadow-xs ring-1 ring-primary/30"
                           : "border-border bg-background text-muted-foreground hover:bg-muted"
                       }`}
                     >
-                      <Icon className="size-4 shrink-0" />
-                      <span>{pt.label}</span>
+                      <Icon className={`size-4 shrink-0 mt-0.5 ${pt.color}`} />
+                      <div>
+                        <span className="block text-xs font-bold text-foreground">{pt.label}</span>
+                        <span className="block text-[11px] text-muted-foreground font-normal">{pt.desc}</span>
+                      </div>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* ★ Paste Content / Transcript for AI ★ */}
+            {/* Choose File (PDF/DOCX/MP3) */}
             <div className="space-y-1.5">
-              {isAudioFile ? (
-                // ── AUDIO: show transcript paste UI ──────────────────────
-                <>
-                  <label className="font-bold text-foreground flex items-center gap-1.5">
-                    <ClipboardPaste className="size-4 text-blue-500" />
-                    3. Dán Transcript / Kịch Bản Bài Nghe (để AI tạo câu hỏi nghe hiểu):
-                    <span className="text-[11px] text-muted-foreground font-normal">(Không bắt buộc nhưng rất quan trọng!)</span>
-                  </label>
-                  <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-3 text-[11px] text-blue-400 space-y-1 mb-1">
-                    <p className="font-semibold">🎧 Hướng dẫn với File Nghe (MP3/WAV):</p>
-                    <p>• <strong>Cách 1 (Tốt nhất):</strong> Dán toàn bộ transcript/kịch bản bài nghe vào ô bên dưới → AI sẽ tạo câu hỏi nghe hiểu từ nội dung đó.</p>
-                    <p>• <strong>Cách 2:</strong> Để trống → AI sẽ tự tạo câu hỏi nghe hiểu chuẩn kỳ thi dựa trên chủ đề của file audio.</p>
+              <label className="font-bold text-foreground block">Tải Lên Tệp (PDF, DOCX, MP3, TXT...):</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.docx,.doc,.txt,.mp3,.wav,.m4a,.jpg,.jpeg,.png"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/40 p-4 hover:border-primary hover:bg-muted transition-all"
+              >
+                {selectedFile ? (
+                  <div className="flex items-center gap-2 text-primary font-bold">
+                    <CheckCircle2 className="size-5 text-emerald-500" />
+                    <span className="line-clamp-1">{selectedFile.name} ({(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)</span>
                   </div>
-                  <textarea
-                    value={pastedContent}
-                    onChange={(e) => setPastedContent(e.target.value)}
-                    placeholder={`Dán transcript/kịch bản bài nghe vào đây...
+                ) : (
+                  <>
+                    <UploadCloud className="size-7 text-muted-foreground mb-1" />
+                    <span className="font-bold text-foreground text-xs">Nhấn để chọn tệp từ máy (AI sẽ tự động đọc trực tiếp file)</span>
+                    <span className="text-[11px] text-muted-foreground mt-0.5">PDF, Word, MP3, Text file (Cloudflare R2 lưu trữ an toàn)</span>
+                  </>
+                )}
+              </button>
+            </div>
 
-Ví dụ (TOPIK):
-[Track 01]
-남자: 안녕하세요. 저는 김민수입니다.
-여자: 안녕하세요. 저는 이지영입니다.
+            {/* Title */}
+            <div className="space-y-1.5">
+              <label className="font-bold text-foreground block">Tên Đề Thi / Tệp Mô Tả:</label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Ví dụ: TOPIK II Đề 64 - Đề thi Đọc & Đáp án"
+              />
+            </div>
 
-[문제 1] 두 사람은 지금 어디에 있습니까?
-① 학교  ② 회사  ③ 병원  ④ 식당
-정답: ②
-
-AI sẽ tạo câu hỏi nghe hiểu mới dựa trên transcript này!`}
-                    className="w-full min-h-[130px] rounded-xl border border-blue-500/40 bg-background px-3 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 resize-y transition-all"
+            {/* Youtube Link (If Audio Category 5 selected) */}
+            {isAudioType && (
+              <div className="space-y-1.5 rounded-2xl border border-rose-500/30 bg-rose-500/5 p-3.5">
+                <label className="font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 text-xs">
+                  <Youtube className="size-4 text-rose-500" />
+                  Hoặc Nhập Link Youtube Bài Nghe (nếu không có file .mp3):
+                </label>
+                <div className="flex items-center gap-2">
+                  <LinkIcon className="size-4 text-muted-foreground shrink-0" />
+                  <Input
+                    value={youtubeUrl}
+                    onChange={(e) => setYoutubeUrl(e.target.value)}
+                    placeholder="https://www.youtube.com/watch?v=... hoặc https://youtu.be/..."
+                    className="bg-background text-xs"
                   />
-                  {pastedContent.trim().length > 0 && (
-                    <p className="text-[11px] text-blue-500 font-medium">
-                      🎧 {pastedContent.trim().length.toLocaleString()} ký tự transcript — AI sẽ tạo câu hỏi nghe hiểu từ đây!
-                    </p>
-                  )}
-                </>
-              ) : (
-                // ── EXAM / DOC: show exam content paste UI ───────────────
-                <>
-                  <label className="font-bold text-foreground flex items-center gap-1.5">
-                    <ClipboardPaste className="size-4 text-emerald-500" />
-                    3. Dán Nội Dung Đề Thi Vào Đây (để AI trích lọc):
-                    <span className="text-[11px] text-muted-foreground font-normal">(Không bắt buộc nhưng giúp AI hiểu đề thi tốt hơn)</span>
-                  </label>
-                  <textarea
-                    value={pastedContent}
-                    onChange={(e) => setPastedContent(e.target.value)}
-                    placeholder={`Copy & Paste toàn bộ nội dung đề thi vào đây (câu hỏi + đáp án + đoạn văn...).
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  AI sẽ phát trực tiếp video/audio Youtube này trong giao diện thi thật cho người làm bài!
+                </p>
+              </div>
+            )}
 
-Ví dụ:
-1. 다음 중 맞는 것을 고르십시오.
-① 저는 학생입니다  ② 저는 선생님입니다
-정답: ①
-
-AI sẽ đọc toàn bộ nội dung này và tạo ra bộ đề thi mới đa dạng hơn!`}
-                    className="w-full min-h-[120px] rounded-xl border border-border bg-background px-3 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 resize-y transition-all"
-                  />
-                  {pastedContent.trim().length > 0 && (
-                    <p className="text-[11px] text-emerald-500 font-medium">
-                      ✅ {pastedContent.trim().length.toLocaleString()} ký tự nội dung — AI sẽ trích lọc và tạo đề mới từ đây!
-                    </p>
-                  )}
-                </>
-              )}
+            {/* Optional Manual Paste Text */}
+            <div className="space-y-1.5">
+              <label className="font-bold text-foreground flex items-center gap-1.5">
+                <ClipboardPaste className="size-4 text-emerald-500" />
+                Ghi Chú Hoặc Paste Nội Dung (Tùy Chọn):
+                <span className="text-[11px] text-muted-foreground font-normal">(AI tự đọc file, chỉ paste nếu muốn bổ sung)</span>
+              </label>
+              <textarea
+                value={pastedContent}
+                onChange={(e) => setPastedContent(e.target.value)}
+                placeholder="Dán thêm lời giải, ghi chú hoặc transcript nếu có..."
+                className="w-full min-h-[70px] rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none resize-y"
+              />
             </div>
 
             {/* Submit Buttons */}
@@ -328,12 +321,12 @@ AI sẽ đọc toàn bộ nội dung này và tạo ra bộ đề thi mới đa 
               </Button>
               <Button
                 type="submit"
-                disabled={!selectedFile || isUploading}
+                disabled={(!selectedFile && !youtubeUrl.trim() && !pastedContent.trim()) || isUploading}
                 className="bg-purple-600 hover:bg-purple-700 text-white font-bold gap-2"
               >
                 {isUploading ? (
                   <>
-                    <Loader2 className="size-4 animate-spin" /> Đang tải lên...
+                    <Loader2 className="size-4 animate-spin" /> Đang lưu vào Thư Viện...
                   </>
                 ) : (
                   <>

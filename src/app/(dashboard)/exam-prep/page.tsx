@@ -788,16 +788,42 @@ function ActiveExamSession({
           {q.prompt}
         </p>
 
-        {/* Audio Player */}
+        {/* Audio / Youtube Player */}
         {q.audioUrl && (
-          <button
-            type="button"
-            className="mb-5 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-xs sm:text-sm font-bold text-primary hover:bg-primary/20 transition-all"
-            onClick={() => new Audio(q.audioUrl).play()}
-          >
-            <Volume2 className="size-4 animate-bounce" />
-            Phát âm thanh bài nghe (Audio)
-          </button>
+          <div className="mb-5">
+            {q.audioUrl.includes("youtube.com") || q.audioUrl.includes("youtu.be") ? (
+              <div className="space-y-1.5">
+                <span className="flex items-center gap-1.5 text-xs font-bold text-rose-500">
+                  <Volume2 className="size-4 animate-pulse" /> Video / Audio Nghe (Youtube):
+                </span>
+                {(() => {
+                  let videoId = "";
+                  if (q.audioUrl.includes("youtu.be/")) {
+                    videoId = q.audioUrl.split("youtu.be/")[1]?.split("?")[0] || "";
+                  } else if (q.audioUrl.includes("v=")) {
+                    videoId = q.audioUrl.split("v=")[1]?.split("&")[0] || "";
+                  }
+                  const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=0` : q.audioUrl;
+                  return (
+                    <iframe
+                      src={embedUrl}
+                      title="Youtube Listening Audio"
+                      className="w-full aspect-video rounded-2xl border border-border shadow-sm"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <span className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                  <Volume2 className="size-4 animate-bounce" /> Trình phát bài nghe (Audio MP3):
+                </span>
+                <audio controls src={q.audioUrl} className="w-full rounded-xl border border-primary/20 bg-muted/40 p-2 shadow-xs" />
+              </div>
+            )}
+          </div>
         )}
 
         {/* Multiple Choice Options (Supports multiple-choice & reading-comprehension) */}
@@ -1181,35 +1207,60 @@ export default function ExamPrepPage() {
     setQuestions([]);
     setUserAnswers({});
 
-    const targetCount = mode === "real_exam" ? 10 : practiceQuestionCount;
+    const targetCount =
+      mode === "real_exam" ? currentLevelObj!.realQuestions : practiceQuestionCount;
 
     try {
-      const files = getFilesByTag([exam, level]);
-      const fileUrls = files
+      const activeLibraryItems = items.filter((i: any) => !i.is_trashed);
+      const matchingOrAll = activeLibraryItems.filter(
+        (i: any) =>
+          i.tags?.some((t: string) => t.toUpperCase().includes(exam.toUpperCase())) ||
+          i.exam_category?.toUpperCase() === exam.toUpperCase() ||
+          i.item_type === "exam_paper" ||
+          i.item_type === "document" ||
+          i.item_type === "note" ||
+          i.item_type === "audio"
+      );
+      const targetList = matchingOrAll.length > 0 ? matchingOrAll : activeLibraryItems;
+
+      // Group active items into 5 categories
+      const group1_exam = targetList.filter((i: any) => i.tags?.includes("FULL_EXAM") || i.exam_paper_type === "full_exam" || i.item_type === "exam_paper");
+      const group2_reading = targetList.filter((i: any) => i.tags?.includes("READING_ANSWER") || i.exam_paper_type === "reading_answer");
+      const group3_listening = targetList.filter((i: any) => i.tags?.includes("LISTENING_ANSWER") || i.exam_paper_type === "listening_answer");
+      const group4_writing = targetList.filter((i: any) => i.tags?.includes("WRITING_ANSWER") || i.exam_paper_type === "writing_answer");
+      const group5_audio = targetList.filter((i: any) => i.tags?.includes("AUDIO_ATTACHMENT") || i.exam_paper_type === "audio_attachment" || i.item_type === "audio" || i.file_url?.includes("youtube") || i.file_url?.includes("youtu.be"));
+
+      const fileUrls = targetList
         .map((f: any) => f.file_url)
         .filter(Boolean) as string[];
 
-      // Build rich text context from user's active Library items
-      let libraryContext = "";
-      if (source === "library") {
-        const activeLibraryItems = items.filter((i: any) => !i.is_trashed);
-        const matchingOrAll = activeLibraryItems.filter(
-          (i: any) =>
-            i.tags?.some((t: string) => t.toUpperCase().includes(exam.toUpperCase())) ||
-            i.item_type === "exam_paper" ||
-            i.item_type === "document" ||
-            i.item_type === "note"
-        );
-        const targetList = matchingOrAll.length > 0 ? matchingOrAll : activeLibraryItems;
-        
-        libraryContext = targetList
-          .slice(0, 8)
-          .map(
-            (item: any, idx: number) =>
-              `Tài liệu ${idx + 1}: [${item.item_type.toUpperCase()}] ${item.title} (Thẻ: ${(item.tags || []).join(", ")})\nNội dung/Mô tả: ${(item.content_text || "").slice(0, 500)}`
-          )
-          .join("\n\n");
-      }
+      // Format structured prompt context for AI with 5 categories
+      let libraryContext = `PHÂN LOẠI 5 NHÓM TÀI LIỆU THƯ VIỆN CHO KỲ THI ${exam} (${level}):\n\n`;
+
+      libraryContext += `=== 1. ĐỀ THI (Exam Papers - ${group1_exam.length} tệp) ===\n`;
+      group1_exam.slice(0, 5).forEach((item: any, idx: number) => {
+        libraryContext += `[Đề ${idx + 1}] ${item.title} | File: ${item.file_url || "Không có URL"}\nNội dung/Text: ${(item.content_text || "").slice(0, 1000)}\n\n`;
+      });
+
+      libraryContext += `=== 2. ĐÁP ÁN ĐỌC (Reading Answer Keys - ${group2_reading.length} tệp) ===\n`;
+      group2_reading.slice(0, 5).forEach((item: any, idx: number) => {
+        libraryContext += `[Đáp án Đọc ${idx + 1}] ${item.title}\nNội dung/Text: ${(item.content_text || "").slice(0, 1000)}\n\n`;
+      });
+
+      libraryContext += `=== 3. ĐÁP ÁN NGHE & TRANSCRIPT (Listening Answer Keys - ${group3_listening.length} tệp) ===\n`;
+      group3_listening.slice(0, 5).forEach((item: any, idx: number) => {
+        libraryContext += `[Đáp án Nghe ${idx + 1}] ${item.title}\nNội dung/Transcript: ${(item.content_text || "").slice(0, 1000)}\n\n`;
+      });
+
+      libraryContext += `=== 4. ĐÁP ÁN VIẾT (Writing Model Answers - ${group4_writing.length} tệp) ===\n`;
+      group4_writing.slice(0, 3).forEach((item: any, idx: number) => {
+        libraryContext += `[Đáp án Viết ${idx + 1}] ${item.title}\nNội dung/Bài mẫu: ${(item.content_text || "").slice(0, 1000)}\n\n`;
+      });
+
+      libraryContext += `=== 5. FILE NGHE & LINK YOUTUBE (Audio Attachments - ${group5_audio.length} tệp) ===\n`;
+      group5_audio.slice(0, 5).forEach((item: any, idx: number) => {
+        libraryContext += `[Audio ${idx + 1}] ${item.title} | Audio/Youtube URL: ${item.file_url || "Không có URL"}\n\n`;
+      });
 
       const res = await fetch("/api/generate-practice", {
         method: "POST",
@@ -1223,6 +1274,14 @@ export default function ExamPrepPage() {
           questionCount: targetCount,
           fileUrls,
           libraryContext,
+          libraryItems: targetList.slice(0, 15).map((i: any) => ({
+            id: i.id,
+            title: i.title,
+            file_url: i.file_url,
+            item_type: i.item_type,
+            content_text: i.content_text,
+            exam_paper_type: i.exam_paper_type,
+          })),
         }),
       });
 
