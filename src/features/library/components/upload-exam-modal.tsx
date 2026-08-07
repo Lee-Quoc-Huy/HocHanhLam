@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, FileSpreadsheet, UploadCloud, Music, FileText, CheckCircle2, Loader2 } from "lucide-react";
+import { X, FileSpreadsheet, UploadCloud, Music, FileText, CheckCircle2, Loader2, ClipboardPaste } from "lucide-react";
 
 interface UploadExamModalProps {
   isOpen: boolean;
@@ -15,6 +15,7 @@ interface UploadExamModalProps {
     examLevel: string;
     paperType: "full_exam" | "audio_attachment" | "reading_passage" | "answer_key";
     title?: string;
+    pastedContent?: string;
   }) => Promise<void>;
 }
 
@@ -65,6 +66,7 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
   const [examLevel, setExamLevel] = useState<string>("TOPIK I - Cấp 1");
   const [paperType, setPaperType] = useState<"full_exam" | "audio_attachment" | "reading_passage" | "answer_key">("full_exam");
   const [title, setTitle] = useState("");
+  const [pastedContent, setPastedContent] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,6 +74,13 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
       const f = e.target.files[0];
       setSelectedFile(f);
       if (!title) setTitle(f.name.replace(/\.[^/.]+$/, ""));
+
+      // Auto-read .txt files for instant content_text
+      if (f.name.endsWith(".txt") || f.name.endsWith(".md")) {
+        f.text().then((text) => {
+          if (!pastedContent) setPastedContent(text);
+        }).catch(() => {});
+      }
     }
   };
 
@@ -87,9 +96,11 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
         examLevel,
         paperType,
         title: title.trim() || selectedFile.name,
+        pastedContent: pastedContent.trim(),
       });
       setSelectedFile(null);
       setTitle("");
+      setPastedContent("");
       onClose();
     } catch (err) {
       console.error("Lỗi khi tải đề thi lên:", err);
@@ -102,7 +113,7 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs animate-in fade-in" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border bg-surface p-6 shadow-2xl animate-in zoom-in-95">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border bg-surface p-6 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
             <div className="flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400">
@@ -231,6 +242,33 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
                   );
                 })}
               </div>
+            </div>
+
+            {/* ★ NEW: Paste Exam Content for AI ★ */}
+            <div className="space-y-1.5">
+              <label className="font-bold text-foreground flex items-center gap-1.5">
+                <ClipboardPaste className="size-4 text-emerald-500" />
+                3. Dán Nội Dung Đề Thi Vào Đây (để AI trích lọc):
+                <span className="text-[11px] text-muted-foreground font-normal">(Không bắt buộc nhưng giúp AI hiểu đề thi tốt hơn)</span>
+              </label>
+              <textarea
+                value={pastedContent}
+                onChange={(e) => setPastedContent(e.target.value)}
+                placeholder={`Copy & Paste toàn bộ nội dung đề thi vào đây (câu hỏi + đáp án + đoạn văn...).
+
+Ví dụ:
+1. 다음 중 맞는 것을 고르십시오.
+① 저는 학생입니다  ② 저는 선생님입니다
+정답: ①
+
+AI sẽ đọc toàn bộ nội dung này và tạo ra bộ đề thi mới đa dạng hơn!`}
+                className="w-full min-h-[120px] rounded-xl border border-border bg-background px-3 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 resize-y transition-all"
+              />
+              {pastedContent.trim().length > 0 && (
+                <p className="text-[11px] text-emerald-500 font-medium">
+                  ✅ {pastedContent.trim().length.toLocaleString()} ký tự nội dung — AI sẽ trích lọc và tạo đề mới từ đây!
+                </p>
+              )}
             </div>
 
             {/* Submit Buttons */}

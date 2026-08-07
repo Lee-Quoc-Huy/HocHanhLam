@@ -99,8 +99,9 @@ export function useLibrary() {
     examLevel: string;
     paperType: "full_exam" | "audio_attachment" | "reading_passage" | "answer_key";
     title?: string;
+    pastedContent?: string;
   }) => {
-    const { file, examCategory, examLevel, paperType, title } = input;
+    const { file, examCategory, examLevel, paperType, title, pastedContent } = input;
     const ext = file.name.split(".").pop()?.toLowerCase() || "";
     const formattedSize =
       file.size > 1024 * 1024
@@ -108,7 +109,21 @@ export function useLibrary() {
         : `${Math.round(file.size / 1024)} KB`;
 
     let fileUrl: string | null = null;
-    let contentText = `Tệp đề thi ${file.name} thuộc kỳ thi ${examCategory} (${examLevel}).`;
+
+    // If user pasted exam text content, use it directly as content_text for AI extraction.
+    // Otherwise fall back to a generic placeholder.
+    let contentText = pastedContent && pastedContent.trim().length > 0
+      ? pastedContent.trim()
+      : `Đề thi ${file.name} — Kỳ thi: ${examCategory} (${examLevel}). Loại: ${paperType}.`;
+
+    // Auto-read .txt / .md files so content_text is populated even without paste
+    if (!pastedContent && (ext === "txt" || ext === "md")) {
+      try {
+        contentText = await file.text();
+      } catch {
+        // keep placeholder
+      }
+    }
 
     try {
       const formData = new FormData();
