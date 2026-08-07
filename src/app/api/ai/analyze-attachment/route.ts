@@ -6,10 +6,10 @@ export const maxDuration = 60;
 
 // ── Vision models via OpenRouter (Engine 2 Fallback) ──────────────────────────
 const VISION_MODELS = [
+  "google/gemini-2.5-flash:free",                        // Fast Gemini 2.5 Flash Vision
+  "google/gemini-2.0-flash-exp:free",                    // Gemini 2.0 Flash Vision
   "google/gemma-4-31b-it:free",                        // Gemma 4 31B Vision
-  "nvidia/nemotron-nano-12b-v2-vl:free",               // NVIDIA Vision-Language model
-  "google/gemma-4-26b-a4b-it:free",                    // Gemma 4 26B Vision
-  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", // NVIDIA Omni reasoning
+  "nvidia/nemotron-nano-12b-v2-vl:free",               // NVIDIA Vision-Language
   "openrouter/free",                                   // OpenRouter auto-router
 ] as const;
 
@@ -23,67 +23,66 @@ const requestSchema = z.object({
 });
 
 // ── Vocabulary-focused prompt ─────────────────────────────────────────────────
-const VOCABULARY_SYSTEM_PROMPT = (langLabel: string) =>
-  `Bạn là một trợ lý AI thông minh chuyên trích xuất TỪ VỰNG từ ảnh chụp tài liệu học ngoại ngữ (${langLabel}).
+const VOCABULARY_SYSTEM_PROMPT = (langCode: "en" | "ko" | "zh", langLabel: string) =>
+  `Bạn là một chuyên gia OCR AI đỉnh cao chuyên trích xuất TỪ VỰNG từ ảnh chụp tài liệu học ${langLabel}.
 
-Nhiệm vụ của bạn:
-1. Đọc và TỰ ĐỘNG SỬA LỖI CHÍNH TẢ / LỖI OCR (nếu chữ trong ảnh bị nhòe, sai nét hay lỗi đọc ký tự), chuyển về từ gốc đúng chuẩn từ điển.
-2. TỰ ĐỘNG PHÂN LOẠI CHỦ ĐỀ (collection) chính xác cho từng từ vựng (ví dụ: "Du lịch & Sân bay", "Giao tiếp công sở", "Ẩm thực & Gọi món", "TOPIK II", "HSK 4", "IELTS Academic"...).
-3. Chỉ trích xuất TỪ VỰNG. Không trích xuất ngữ pháp.
+YÊU CẦU QUAN TRỌNG:
+1. Đọc chính xác 100% các từ vựng xuất hiện trong ảnh. Tự động sửa lỗi nhòe nét/lỗi OCR để đưa về dạng từ chuẩn từ điển.
+2. Ngôn ngữ của các từ vựng được trích xuất là ${langLabel}. Tất cả các mục trong mảng vocabulary PHẢI có thuộc tính "language": "${langCode}".
+   - Với Tiếng Hàn (ko): "word" phải là chữ Hán-Hàn (Hangul), "ipa" là phiên âm/cách đọc, "vietnamese" là nghĩa tiếng Việt chuẩn.
+   - Với Tiếng Trung (zh): "word" phải là Chữ Hán (Hanzi), "ipa" là Pinyin kèm dấu thanh điệu, "vietnamese" là nghĩa tiếng Việt chuẩn.
+   - Với Tiếng Anh (en): "word" là từ tiếng Anh, "ipa" là phiên âm IPA chuẩn, "vietnamese" là nghĩa tiếng Việt chuẩn.
+3. TỰ ĐỘNG PHÂN LOẠI CHỦ ĐỀ (collection) thích hợp (ví dụ: "Giao tiếp cơ bản", "Du lịch & Ẩm thực", "Công sở & Kinh tế", "TOPIK I/II", "HSK 1-6", "IELTS/TOEIC"...).
+4. CHỈ TRÍCH XUẤT TỪ VỰNG. Không trích xuất cấu trúc ngữ pháp.
 
 Trả về 1 khối JSON DUY NHẤT (không thêm markdown code block, không thêm text ngoài JSON):
 {
-  "summary": "Tóm tắt ngắn gọn (1-2 câu tiếng Việt) về danh sách từ vựng trong ảnh",
+  "summary": "Tóm tắt ngắn gọn 1 câu bằng tiếng Việt về danh sách từ vựng đọc được",
   "vocabulary": [
     {
-      "language": "en",
-      "word": "Từ vựng (đã sửa chuẩn chính tả)",
-      "ipa": "Phiên âm IPA hoặc Pinyin chuẩn",
+      "language": "${langCode}",
+      "word": "Từ gốc chuẩn",
+      "ipa": "Phiên âm IPA / Pinyin / Pronunciation",
       "vietnamese": "Nghĩa tiếng Việt chuẩn xác",
-      "english_meaning": "Giải nghĩa tiếng Anh ngắn",
+      "english_meaning": "Giải nghĩa ngắn bằng tiếng Anh (nếu có)",
       "part_of_speech": "noun|verb|adjective|adverb|phrase|idiom",
-      "example": "Câu ví dụ minh họa",
-      "example_translation": "Dịch nghĩa câu ví dụ",
+      "example": "Câu ví dụ minh họa bằng ${langLabel}",
+      "example_translation": "Dịch nghĩa câu ví dụ sang tiếng Việt",
       "difficulty": "beginner|intermediate|advanced|master",
       "collection": "Tên chủ đề phân loại tự động"
     }
   ],
   "grammar": []
-}
-
-language phải là "en", "ko", hoặc "zh".
-difficulty phải là "beginner", "intermediate", "advanced", hoặc "master".
-QUAN TRỌNG: "grammar" luôn là mảng rỗng [] vì bạn chỉ trích xuất từ vựng.`;
+}`;
 
 // ── Grammar-focused prompt ────────────────────────────────────────────────────
-const GRAMMAR_SYSTEM_PROMPT = (langLabel: string) =>
-  `Bạn là một trợ lý AI thông minh chuyên phân tích NGỮ PHÁP từ ảnh chụp tài liệu học ngoại ngữ (${langLabel}).
+const GRAMMAR_SYSTEM_PROMPT = (langCode: "en" | "ko" | "zh", langLabel: string) =>
+  `Bạn là một chuyên gia AI đỉnh cao chuyên phân tích NGỮ PHÁP từ ảnh chụp tài liệu học ${langLabel}.
 
-Nhiệm vụ của bạn:
-1. Đọc và TỰ ĐỘNG SỬA LỖI CHÍNH TẢ / LỖI OCR nếu chữ trong ảnh bị nhòe hoặc sai.
-2. Xác định các CẤU TRÚC NGỮ PHÁP, mẫu câu, công thức có trong ảnh.
-3. Chỉ trích xuất NGỮ PHÁP. Không trích xuất từ vựng đơn lẻ.
+YÊU CẦU QUAN TRỌNG:
+1. Nhận diện chính xác 100% các CẤU TRÚC NGỮ PHÁP, công thức, mẫu câu có trong ảnh. Tự động sửa lỗi OCR nếu chữ bị mờ.
+2. Ngôn ngữ của cấu trúc là ${langLabel}. Tất cả các mục trong mảng grammar PHẢI có thuộc tính "language": "${langCode}".
+   - Với Tiếng Hàn (ko): "title" là mẫu ngữ pháp Hán-Hàn (ví dụ: "V + -아/어/여야 하다", "-기 때문에"), "explanation" giải thích công thức & cách dùng bằng tiếng Việt.
+   - Với Tiếng Trung (zh): "title" là cấu trúc tiếng Trung (ví dụ: "除了……以外", "越……越……"), "explanation" giải thích bằng tiếng Việt.
+   - Với Tiếng Anh (en): "title" là tên cấu trúc (ví dụ: "Present Perfect Tense", "Prefer A to B"), "explanation" giải thích bằng tiếng Việt.
+3. CHỈ TRÍCH XUẤT NGỮ PHÁP. Không trích xuất từ vựng đơn lẻ.
 
 Trả về 1 khối JSON DUY NHẤT (không thêm markdown code block, không thêm text ngoài JSON):
 {
-  "summary": "Tóm tắt ngắn gọn (1-2 câu tiếng Việt) về các cấu trúc ngữ pháp trong ảnh",
+  "summary": "Tóm tắt ngắn gọn 1 câu bằng tiếng Việt về các cấu trúc ngữ pháp đọc được",
   "vocabulary": [],
   "grammar": [
     {
-      "language": "en",
-      "title": "Tên cấu trúc ngữ pháp (ví dụ: Present Perfect Tense)",
-      "meaning": "Tóm tắt ý nghĩa/công dụng bằng tiếng Việt",
-      "explanation": "Công thức & cách dùng chi tiết (tiếng Việt)",
-      "examples": [{ "example": "Câu ví dụ", "translation": "Dịch nghĩa" }],
-      "category": "Danh mục ngữ pháp (Tenses / Conditionals / Modals / ...)",
+      "language": "${langCode}",
+      "title": "Tên/Công thức cấu trúc ngữ pháp",
+      "meaning": "Tóm tắt ý nghĩa bằng tiếng Việt",
+      "explanation": "Công thức & cách dùng chi tiết bằng tiếng Việt",
+      "examples": [{ "example": "Câu ví dụ bằng ${langLabel}", "translation": "Dịch nghĩa tiếng Việt" }],
+      "category": "Danh mục ngữ pháp (Thì / Câu điều kiện / Mẫu câu / ...)",
       "difficulty": "beginner|intermediate|advanced|master"
     }
   ]
-}
-
-language phải là "en", "ko", hoặc "zh".
-difficulty phải là "beginner", "intermediate", "advanced", hoặc "master".
-QUAN TRỌNG: "vocabulary" luôn là mảng rỗng [] vì bạn chỉ trích xuất ngữ pháp.`;
+}`;
 
 /**
  * Call OpenRouter with vision-capable free models (Engine 2).
@@ -207,8 +206,8 @@ export async function POST(request: Request) {
 
   // Use focused system prompt based on what the caller needs
   const systemPrompt = focus === "grammar"
-    ? GRAMMAR_SYSTEM_PROMPT(langLabel)
-    : VOCABULARY_SYSTEM_PROMPT(langLabel);
+    ? GRAMMAR_SYSTEM_PROMPT(targetLanguage, langLabel)
+    : VOCABULARY_SYSTEM_PROMPT(targetLanguage, langLabel);
 
   const userText = text?.trim()
     ? text

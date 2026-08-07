@@ -1,8 +1,6 @@
-"use client";
-
 import { useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ImageUp, Loader2, X, Sparkles, Camera, Clipboard, UploadCloud } from "lucide-react";
+import { ImageUp, Loader2, X, Sparkles, Camera, UploadCloud, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { aiCenterService } from "@/features/ai-center/api/ai-center-service";
@@ -17,31 +15,30 @@ interface ImageExtractModalProps {
 }
 
 /**
- * Split a potentially tall document image into horizontal slices (strips)
- * so that large lists with 50-100+ words can be processed in smaller chunks.
- * Each chunk runs within 4-5s, preventing Vercel serverless 10s timeouts while
- * preserving high resolution for crisp text OCR.
+ * Optimized image pre-processing. Normal document photos are processed directly
+ * in 1 single high-res fast request (~1.5-3s). Only extremely long documents
+ * are split to ensure high resolution without server timeouts.
  */
 async function createSlicesFromImage(imageSrc: string): Promise<string[]> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
-      const TARGET_WIDTH = 1200;
-      const scale = TARGET_WIDTH / img.width;
-      const scaledWidth = TARGET_WIDTH;
-      const scaledHeight = img.height * scale;
+      const TARGET_WIDTH = 1400;
+      const scale = Math.min(1.5, TARGET_WIDTH / img.width);
+      const scaledWidth = Math.round(img.width * scale);
+      const scaledHeight = Math.round(img.height * scale);
 
-      const SLICE_HEIGHT = 700;
-      const OVERLAP = 70; // 70px vertical overlap to catch boundary rows
+      const SLICE_HEIGHT = 1600;
+      const OVERLAP = 100;
 
-      if (scaledHeight <= SLICE_HEIGHT * 1.3) {
+      if (scaledHeight <= SLICE_HEIGHT * 1.25) {
         const canvas = document.createElement("canvas");
         canvas.width = scaledWidth;
         canvas.height = scaledHeight;
         const ctx = canvas.getContext("2d");
         if (ctx) {
           ctx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
-          resolve([canvas.toDataURL("image/jpeg", 0.75)]);
+          resolve([canvas.toDataURL("image/jpeg", 0.85)]);
           return;
         }
       }
@@ -71,7 +68,7 @@ async function createSlicesFromImage(imageSrc: string): Promise<string[]> {
             scaledWidth,
             sliceH
           );
-          slices.push(canvas.toDataURL("image/jpeg", 0.75));
+          slices.push(canvas.toDataURL("image/jpeg", 0.82));
         }
 
         currentY += SLICE_HEIGHT - OVERLAP;
@@ -89,6 +86,7 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [rawFileSrc, setRawFileSrc] = useState<string | null>(null);
+  const [targetLanguage, setTargetLanguage] = useState<"en" | "ko" | "zh">("en");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [progressStatus, setProgressStatus] = useState<string>("");
@@ -97,7 +95,7 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
   const title = focus === "vocabulary" ? "Đọc Từ Vựng Từ Ảnh (AI)" : "Đọc Ngữ Pháp Từ Ảnh (AI)";
   const description =
     focus === "vocabulary"
-      ? "Chụp camera, chọn ảnh tệp hoặc dán (Ctrl+V) bảng từ vựng... AI tự động đọc và cắt ảnh 100+ từ."
+      ? "Chụp camera, chọn ảnh tệp hoặc dán (Ctrl+V) bảng từ vựng... AI tự động trích xuất chuẩn xác."
       : "Chụp camera, chọn ảnh tệp hoặc dán (Ctrl+V) công thức ngữ pháp... AI tự động phân tích chi tiết.";
 
   // Paste image from Clipboard (Ctrl+V) listener
@@ -142,7 +140,7 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
 
       const img = new Image();
       img.onload = () => {
-        const MAX_DIM = 1200;
+        const MAX_DIM = 1400;
         const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
         const canvas = document.createElement("canvas");
         canvas.width = Math.round(img.width * scale);
@@ -150,7 +148,7 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
         const ctx = canvas.getContext("2d");
         if (ctx) {
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          setPreview(canvas.toDataURL("image/jpeg", 0.70));
+          setPreview(canvas.toDataURL("image/jpeg", 0.80));
         } else {
           setPreview(dataUrl);
         }
@@ -174,7 +172,7 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
 
     setIsAnalyzing(true);
     setResult(null);
-    setProgressStatus("Đang chuẩn bị phân tích ảnh...");
+    setProgressStatus("Đang quét ảnh & trích xuất...");
 
     try {
       const slices = await createSlicesFromImage(sourceImage);
@@ -187,15 +185,15 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
 
       for (let i = 0; i < totalSlices; i++) {
         if (totalSlices > 1) {
-          setProgressStatus(`Đang đọc phân đoạn ${i + 1}/${totalSlices} (${Math.round(((i + 1) / totalSlices) * 100)}%)...`);
+          setProgressStatus(`Đang đọc phân đoạn ${i + 1}/${totalSlices}...`);
         } else {
-          setProgressStatus("Đang đọc và trích xuất dữ liệu từ ảnh...");
+          setProgressStatus("AI đang phân tích & đọc dữ liệu từ ảnh...");
         }
 
         try {
           const data = await aiCenterService.analyzeAttachment({
             imageDataUrl: slices[i],
-            targetLanguage: "en",
+            targetLanguage,
             focus,
           });
 
@@ -247,7 +245,7 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
       const mergedFlashcards = Array.from(flashcardMap.values());
 
       const mergedResult: ExtractionData = {
-        summary: summaryText || `Đã đọc thành công ${mergedVocab.length} từ vựng và ${mergedGrammar.length} ngữ pháp.`,
+        summary: summaryText || `Đã đọc thành công dữ liệu từ ảnh.`,
         vocabulary: mergedVocab,
         grammar: mergedGrammar,
         flashcards: mergedFlashcards,
@@ -257,7 +255,9 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
       if (!hasCandidates) {
         toast.info("Không tìm thấy từ vựng hoặc ngữ pháp rõ ràng trong ảnh này.");
       } else {
-        toast.success(`Đã quét thành công ${mergedVocab.length} từ vựng từ ${totalSlices} phần ảnh!`);
+        const count = focus === "grammar" ? mergedGrammar.length : mergedVocab.length;
+        const label = focus === "grammar" ? "cấu trúc ngữ pháp" : "từ vựng";
+        toast.success(`AI đã đọc thành công ${count} ${label} từ ảnh!`);
       }
 
       setResult(mergedResult);
@@ -274,7 +274,7 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs animate-in fade-in" />
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-surface-raised p-5 shadow-2xl animate-in zoom-in-95 fade-in max-h-[85vh] overflow-y-auto">
-          <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="mb-3 flex items-start justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/20 to-transparent text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                 <Sparkles className="size-4" />
@@ -289,6 +289,34 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
                 <X className="size-4" />
               </button>
             </Dialog.Close>
+          </div>
+
+          {/* Target Language Selection Bar */}
+          <div className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/40 p-1.5">
+            <span className="text-xs font-semibold text-muted-foreground pl-1.5 flex items-center gap-1.5">
+              <Globe className="size-3.5 text-emerald-600 dark:text-emerald-400" /> Ngôn ngữ trong ảnh:
+            </span>
+            <div className="flex items-center gap-1">
+              {[
+                { id: "en", label: "Tiếng Anh", flag: "🇬🇧" },
+                { id: "ko", label: "Tiếng Hàn", flag: "🇰🇷" },
+                { id: "zh", label: "Tiếng Trung", flag: "🇨🇳" },
+              ].map((lang) => (
+                <button
+                  key={lang.id}
+                  type="button"
+                  onClick={() => setTargetLanguage(lang.id as any)}
+                  className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${
+                    targetLanguage === lang.id
+                      ? "bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-500"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <span>{lang.flag}</span>
+                  <span>{lang.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Standard File Input */}
@@ -381,7 +409,7 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
                   type="button"
                   onClick={handleAnalyze}
                   disabled={isAnalyzing}
-                  className="w-full gap-2 bg-emerald-600 text-white hover:bg-emerald-700 font-semibold"
+                  className="w-full gap-2 bg-emerald-600 text-white hover:bg-emerald-700 font-semibold h-11"
                 >
                   {isAnalyzing ? (
                     <>
@@ -390,13 +418,13 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
                     </>
                   ) : (
                     <>
-                      <Sparkles className="size-4" /> Phân Tích Với AI (Hỗ trợ ảnh 100+ từ)
+                      <Sparkles className="size-4" /> Đọc & Trích Xuất Bằng AI
                     </>
                   )}
                 </Button>
               )}
 
-              {result && <ExtractionConfirmCard data={result} targetLanguage="en" focus={focus} />}
+              {result && <ExtractionConfirmCard data={result} targetLanguage={targetLanguage} focus={focus} />}
 
               {result && (
                 <Button type="button" variant="outline" onClick={reset} className="w-full mt-2">
@@ -410,3 +438,4 @@ export function ImageExtractModal({ open, onClose, focus }: ImageExtractModalPro
     </Dialog.Root>
   );
 }
+
