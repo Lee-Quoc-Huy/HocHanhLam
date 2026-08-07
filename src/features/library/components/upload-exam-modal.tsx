@@ -24,6 +24,7 @@ export type PaperCategoryType =
   | "full_exam"
   | "reading_answer"
   | "listening_answer"
+  | "combo_answer"
   | "writing_answer"
   | "audio_attachment";
 
@@ -208,8 +209,9 @@ export function UploadExamModal({ isOpen, onClose, onUploadExam }: UploadExamMod
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {[
                   { id: "full_exam", label: "1. Đề thi (PDF / Text)", desc: "File đề bài thi thật", icon: FileSpreadsheet, color: "text-purple-500" },
-                  { id: "reading_answer", label: "2. Đáp án Đọc", desc: "Lời giải & đáp án bài đọc", icon: BookOpen, color: "text-emerald-500" },
-                  { id: "listening_answer", label: "3. Đáp án Nghe", desc: "Transcript & đáp án bài nghe", icon: Headphones, color: "text-blue-500" },
+                  { id: "reading_answer", label: "2. Đáp án Đọc riêng", desc: "Lời giải & đáp án bài đọc", icon: BookOpen, color: "text-emerald-500" },
+                  { id: "listening_answer", label: "3. Đáp án Nghe riêng", desc: "Transcript & đáp án bài nghe", icon: Headphones, color: "text-blue-500" },
+                  { id: "combo_answer", label: "2&3. Đáp án Đọc + Nghe Gộp Chung", desc: "File chứa cả đáp án Đọc & Nghe", icon: CheckCircle2, color: "text-teal-500" },
                   { id: "writing_answer", label: "4. Đáp án Viết (nếu có)", desc: "Bài viết mẫu & hướng dẫn", icon: PenTool, color: "text-amber-500" },
                   { id: "audio_attachment", label: "5. File nghe (Audio/Youtube)", desc: "File MP3 hoặc Link Youtube bài nghe", icon: Music, color: "text-rose-500" },
                 ].map((pt) => {

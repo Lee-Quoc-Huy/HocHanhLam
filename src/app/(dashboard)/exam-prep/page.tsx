@@ -1318,10 +1318,11 @@ export default function ExamPrepPage() {
       );
       const targetList = matchingOrAll.length > 0 ? matchingOrAll : activeLibraryItems;
 
-      // Group active items into 5 categories
+      // Group active items into categories (including combined reading + listening answer files)
       const group1_exam = targetList.filter((i: any) => i.tags?.includes("FULL_EXAM") || i.exam_paper_type === "full_exam" || i.item_type === "exam_paper");
-      const group2_reading = targetList.filter((i: any) => i.tags?.includes("READING_ANSWER") || i.exam_paper_type === "reading_answer");
-      const group3_listening = targetList.filter((i: any) => i.tags?.includes("LISTENING_ANSWER") || i.exam_paper_type === "listening_answer");
+      const group2_reading = targetList.filter((i: any) => i.tags?.includes("READING_ANSWER") || i.tags?.includes("COMBO_ANSWER") || i.exam_paper_type === "reading_answer" || i.exam_paper_type === "combo_answer");
+      const group3_listening = targetList.filter((i: any) => i.tags?.includes("LISTENING_ANSWER") || i.tags?.includes("COMBO_ANSWER") || i.exam_paper_type === "listening_answer" || i.exam_paper_type === "combo_answer");
+      const group2_3_combo = targetList.filter((i: any) => i.tags?.includes("COMBO_ANSWER") || i.exam_paper_type === "combo_answer");
       const group4_writing = targetList.filter((i: any) => i.tags?.includes("WRITING_ANSWER") || i.exam_paper_type === "writing_answer");
       const group5_audio = targetList.filter((i: any) => i.tags?.includes("AUDIO_ATTACHMENT") || i.exam_paper_type === "audio_attachment" || i.item_type === "audio" || i.file_url?.includes("youtube") || i.file_url?.includes("youtu.be"));
 
@@ -1329,13 +1330,20 @@ export default function ExamPrepPage() {
         .map((f: any) => f.file_url)
         .filter(Boolean) as string[];
 
-      // Format structured prompt context for AI with 5 categories
-      let libraryContext = `PHÂN LOẠI 5 NHÓM TÀI LIỆU THƯ VIỆN CHO KỲ THI ${exam} (${level}):\n\n`;
+      // Format structured prompt context for AI with categories
+      let libraryContext = `PHÂN LOẠI CÁC NHÓM TÀI LIỆU THƯ VIỆN CHO KỲ THI ${exam} (${level}):\n\n`;
 
       libraryContext += `=== 1. ĐỀ THI (Exam Papers - ${group1_exam.length} tệp) ===\n`;
       group1_exam.slice(0, 5).forEach((item: any, idx: number) => {
         libraryContext += `[Đề ${idx + 1}] ${item.title} | File: ${item.file_url || "Không có URL"}\nNội dung/Text: ${(item.content_text || "").slice(0, 1000)}\n\n`;
       });
+
+      if (group2_3_combo.length > 0) {
+        libraryContext += `=== 2&3. ĐÁP ÁN ĐỌC + NGHE GỘP CHUNG (Combined Reading & Listening Answer Keys - ${group2_3_combo.length} tệp) ===\nChú ý: Tệp này chứa CẢ ĐÁP ÁN ĐỌC VÀ TRANSCRIPT/ĐÁP ÁN NGHE GỘP CHUNG. AI đọc và trích đáp án cho cả 2 phần!\n`;
+        group2_3_combo.slice(0, 5).forEach((item: any, idx: number) => {
+          libraryContext += `[Đáp án Gộp ${idx + 1}] ${item.title}\nNội dung: ${(item.content_text || "").slice(0, 1500)}\n\n`;
+        });
+      }
 
       libraryContext += `=== 2. ĐÁP ÁN ĐỌC (Reading Answer Keys - ${group2_reading.length} tệp) ===\n`;
       group2_reading.slice(0, 5).forEach((item: any, idx: number) => {

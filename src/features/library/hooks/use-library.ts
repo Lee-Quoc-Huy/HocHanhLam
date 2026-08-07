@@ -122,7 +122,7 @@ export function useLibrary() {
     file?: File;
     examCategory: "TOPIK" | "TOEIC" | "IELTS" | "HSK";
     examLevel: string;
-    paperType: "full_exam" | "reading_answer" | "listening_answer" | "writing_answer" | "audio_attachment";
+    paperType: "full_exam" | "reading_answer" | "listening_answer" | "combo_answer" | "writing_answer" | "audio_attachment";
     title?: string;
     pastedContent?: string;
     youtubeUrl?: string;

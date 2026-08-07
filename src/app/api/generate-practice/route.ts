@@ -320,9 +320,9 @@ ${typeInstructions[section.type]}
 
 ${audioGuidance}
 
-TÀI LIỆU THƯ VIỆN (Đọc kỹ để trích xuất câu hỏi có sẵn):
+TÀI LIỆU THƯ VIỆN (Đọc kỹ để trích xuất câu hỏi & đáp án. Lưu ý: Tệp đáp án có thể tách riêng Đọc/Nghe HOẶC GỘP CHUNG Đọc + Nghe trong cùng 1 file, hãy đọc kỹ nội dung để lấy đúng đáp án cho phần này):
 ---
-${libraryContext.slice(0, 6000)}
+${libraryContext.slice(0, 7000)}
 ---
 
 YÊU CẦU BẮT BUỘC: Tạo ĐÚNG ${section.count} câu. Không hơn, không kém.
