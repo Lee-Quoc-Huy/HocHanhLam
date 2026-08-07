@@ -1,48 +1,51 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════════════╗
- * ║         LINGUAVERSE AI — HIGH-PERFORMANCE DUAL-ENGINE AI ROUTING         ║
+ * ║         LINGUAVERSE AI — 9 DEDICATED AI ENGINE MODEL ROUTING             ║
  * ╠══════════════════════════════════════════════════════════════════════════╣
- * ║  ENGINE 1: GOOGLE AI STUDIO DIRECT (Tốc độ tối đa, 0.5-1.5s latency)   ║
- * ║   • gemini-3.5-flash  → Multimodal Vision, Chat Tutor, Fast JSON        ║
- * ║   • gemini-2.5-pro    → Deep Reasoning, Complex Exam & Grammar          ║
- * ║   • gemini-2.5-flash  → High stability fallback                         ║
+ * ║  GOOGLE AI STUDIO (3 Dedicated Models):                                  ║
+ * ║   • 1. gemini-2.5-pro    → Ôn Thi Primary (Strongest Reasoning/IQ)      ║
+ * ║   • 2. gemini-2.0-flash  → Ôn Thi Secondary (High Capacity & Speed)       ║
+ * ║   • 3. gemini-2.5-flash  → Đọc Ảnh AI OCR (Smartest Vision Intelligence) ║
  * ╠══════════════════════════════════════════════════════════════════════════╣
- * ║  ENGINE 2: OPENROUTER GATEWAY (Dự phòng tự động khi Google quá tải)     ║
- * ║   • openrouter/free                      → Auto-router free models      ║
- * ║   • google/gemma-4-31b-it:free           → Vision & High accuracy       ║
- * ║   • nvidia/nemotron-3-ultra-550b-a55b:free → Large parameter reasoning    ║
- * ║   • poolside/laguna-s-2.1:free             → Deep grammar explain        ║
- * ║   • meta-llama/llama-3.3-70b-instruct:free → Conversation fallback       ║
+ * ║  OPENROUTER GATEWAY (6 Dedicated Models in AI Tutor):                    ║
+ * ║   • 4. meta-llama/llama-3.3-70b-instruct:free   → Fluency & Conversation  ║
+ * ║   • 5. nvidia/nemotron-3-ultra-550b-a55b:free   → Deep Reasoning Tutor    ║
+ * ║   • 6. google/gemma-4-31b-it:free               → Multilingual Intelligence║
+ * ║   • 7. qwen/qwen-2.5-72b-instruct:free          → KO & ZH Language Master ║
+ * ║   • 8. mistralai/mistral-small-24b-instruct-2501:free → Fast Dialogue    ║
+ * ║   • 9. openrouter/free                         → Uptime Auto-Balancer    ║
  * ╚══════════════════════════════════════════════════════════════════════════╝
  */
 
-// ── Google AI Studio Direct Models (Engine 1 - Top Priority) ─────────────────
+// ── 3 Google AI Studio Direct Models ─────────────────────────────────────────
 export const GOOGLE_AI_STUDIO_MODELS = {
-  /** Primary – Gemini 3.5 Flash (Thế hệ mới nhất, tốc độ & vision cực mạnh) */
-  primary: "gemini-3.5-flash",
-  /** Secondary – Gemini 2.5 Pro (Trí tuệ cao nhất cho suy luận & sinh đề) */
-  secondary: "gemini-2.5-pro",
-  /** Tertiary – Gemini 2.5 Flash (Backup ổn định) */
-  tertiary: "gemini-2.5-flash",
+  /** 1. Ôn Thi Strongest AI – Gemini 2.5 Pro (Trí tuệ cao nhất cho suy luận & đề thi) */
+  exam_primary: "gemini-2.5-pro",
+  /** 2. Ôn Thi Secondary AI – Gemini 2.0 Flash (Fast & High Capacity Exam Gen) */
+  exam_secondary: "gemini-2.0-flash",
+  /** 3. Đọc Ảnh AI (Vision OCR) – Gemini 2.5 Flash (Thông minh nhất về Vision OCR) */
+  vision_smartest: "gemini-2.5-flash",
+  vision_backup: "gemini-2.0-flash",
 } as const;
 
-// ── OpenRouter Gateway Models (Engine 2 - Automatic Fallback) ────────────────
-export const OPENROUTER_MODELS = {
-  /** Auto Free Router: Tự động chọn model miễn phí tốt nhất đang rảnh */
-  auto_free:       "openrouter/free",
-  /** Gemma 4 31B Vision & Reasoning */
-  gemma_31b:       "google/gemma-4-31b-it:free",
-  /** Nvidia Nemotron 550B: Chat tutor & Exam generation nặng */
-  nemotron_ultra:  "nvidia/nemotron-3-ultra-550b-a55b:free",
-  /** Poolside Laguna: Giải thích ngữ pháp sâu */
-  laguna:          "poolside/laguna-s-2.1:free",
-  /** Llama 3.3 70B: Conversation fallback */
-  llama_33:        "meta-llama/llama-3.3-70b-instruct:free",
-  /** Cohere Code: JSON fast generation */
-  cohere_code:     "cohere/north-mini-code:free",
-  /** GPT-OSS: Fast micro-tasks */
-  gpt_oss:         "openai/gpt-oss-20b:free",
+// ── 6 OpenRouter Models Dedicated to AI Tutor ────────────────────────────────
+export const OPENROUTER_TUTOR_MODELS = {
+  /** 4. AI Tutor Model 1 – Llama 3.3 70B (Conversation & Fluency) */
+  llama_70b: "meta-llama/llama-3.3-70b-instruct:free",
+  /** 5. AI Tutor Model 2 – Nemotron 550B (Deep Tutoring & Grammar) */
+  nemotron_550b: "nvidia/nemotron-3-ultra-550b-a55b:free",
+  /** 6. AI Tutor Model 3 – Gemma 4 31B (Multilingual Intelligence) */
+  gemma_31b: "google/gemma-4-31b-it:free",
+  /** 7. AI Tutor Model 4 – Qwen 2.5 72B (Master Tiếng Hàn KO & Tiếng Trung ZH) */
+  qwen_72b: "qwen/qwen-2.5-72b-instruct:free",
+  /** 8. AI Tutor Model 5 – Mistral Small 24B (Fast Natural Dialogue) */
+  mistral_24b: "mistralai/mistral-small-24b-instruct-2501:free",
+  /** 9. AI Tutor Model 6 – OpenRouter Auto Free (Auto-balancer Uptime) */
+  auto_free: "openrouter/free",
 } as const;
+
+// Backward compatibility alias
+export const OPENROUTER_MODELS = OPENROUTER_TUTOR_MODELS;
 
 // ── Task Types ────────────────────────────────────────────────────────────────
 export type AiTaskType =
@@ -57,65 +60,68 @@ export type AiTaskType =
 
 export interface AiModelRoute {
   task: AiTaskType;
-  provider: "google" | "openrouter" | "nvidia" | "meta" | "cohere" | "poolside";
+  provider: "google" | "openrouter";
   model: string;
   fallbackModels: string[];
   maxOutputTokens: number;
   preferDirect: boolean;
 }
 
-// ── Routing Table: Tối ưu hoá năng lực AI cho từng nhiệm vụ ──────────────────
+// ── Routing Table: 9 AI Models System Topology ───────────────────────────────
 export const AI_MODEL_ROUTES: Record<AiTaskType, AiModelRoute> = {
 
-  // ── AI Tutor Chat ──────────────────────────────────────────────────────────
+  // ── AI Tutor Chat: Runs across 6 OpenRouter Models ─────────────────────────
   chat_tutor: {
     task: "chat_tutor",
-    provider: "google",
-    model: OPENROUTER_MODELS.auto_free,
+    provider: "openrouter",
+    model: OPENROUTER_TUTOR_MODELS.llama_70b,
     fallbackModels: [
-      OPENROUTER_MODELS.nemotron_ultra,
-      OPENROUTER_MODELS.llama_33,
-      OPENROUTER_MODELS.gemma_31b,
+      OPENROUTER_TUTOR_MODELS.qwen_72b,
+      OPENROUTER_TUTOR_MODELS.nemotron_550b,
+      OPENROUTER_TUTOR_MODELS.gemma_31b,
+      OPENROUTER_TUTOR_MODELS.mistral_24b,
+      OPENROUTER_TUTOR_MODELS.auto_free,
     ],
     maxOutputTokens: 2048,
-    preferDirect: true, // Google Direct Gemini 3.5 Flash first
+    preferDirect: false,
   },
 
-  // ── Giải Thích Ngữ Pháp & Suy Luận Sâu (Reasoning) ─────────────────────────
+  // ── Deep Reasoning (AI Tutor Grammar Assistant) ───────────────────────────
   reasoning: {
     task: "reasoning",
-    provider: "google",
-    model: OPENROUTER_MODELS.laguna,
+    provider: "openrouter",
+    model: OPENROUTER_TUTOR_MODELS.nemotron_550b,
     fallbackModels: [
-      OPENROUTER_MODELS.auto_free,
-      OPENROUTER_MODELS.nemotron_ultra,
-      OPENROUTER_MODELS.llama_33,
+      OPENROUTER_TUTOR_MODELS.qwen_72b,
+      OPENROUTER_TUTOR_MODELS.llama_70b,
+      OPENROUTER_TUTOR_MODELS.gemma_31b,
+      OPENROUTER_TUTOR_MODELS.auto_free,
     ],
     maxOutputTokens: 4096,
-    preferDirect: true, // Gemini 2.5 Pro / 3.5 Flash Direct first
+    preferDirect: false,
   },
 
-  // ── Fast Completion (Micro-tasks, Tag Hints) ──────────────────────────────
+  // ── Fast Completion (Flashcard hints) ─────────────────────────────────────
   fast_completion: {
     task: "fast_completion",
-    provider: "google",
-    model: OPENROUTER_MODELS.auto_free,
+    provider: "openrouter",
+    model: OPENROUTER_TUTOR_MODELS.mistral_24b,
     fallbackModels: [
-      OPENROUTER_MODELS.cohere_code,
-      OPENROUTER_MODELS.gpt_oss,
+      OPENROUTER_TUTOR_MODELS.auto_free,
     ],
     maxOutputTokens: 1024,
-    preferDirect: true,
+    preferDirect: false,
   },
 
-  // ── OCR & Vision Processing ────────────────────────────────────────────────
+  // ── OCR & Vision Processing: Dedicated Google AI Studio Vision Model ────────
   vision_ocr: {
     task: "vision_ocr",
     provider: "google",
-    model: OPENROUTER_MODELS.gemma_31b,
+    model: GOOGLE_AI_STUDIO_MODELS.vision_smartest,
     fallbackModels: [
-      "nvidia/nemotron-nano-12b-v2-vl:free",
-      OPENROUTER_MODELS.auto_free,
+      GOOGLE_AI_STUDIO_MODELS.vision_backup,
+      OPENROUTER_TUTOR_MODELS.gemma_31b,
+      OPENROUTER_TUTOR_MODELS.auto_free,
     ],
     maxOutputTokens: 4096,
     preferDirect: true,
@@ -125,21 +131,21 @@ export const AI_MODEL_ROUTES: Record<AiTaskType, AiModelRoute> = {
   embedding: {
     task: "embedding",
     provider: "openrouter",
-    model: process.env.AI_MODEL_EMBEDDING ?? "poolside/laguna-s-2.1:free",
+    model: OPENROUTER_TUTOR_MODELS.auto_free,
     fallbackModels: [],
     maxOutputTokens: 0,
     preferDirect: false,
   },
 
-  // ── Sinh Đề Thi Thật (Exam Generation) ────────────────────────────────────
+  // ── Ôn Thi (Exam Generation): Dedicated 2 Strongest Google AI Studio Models ──
   exam_generation: {
     task: "exam_generation",
     provider: "google",
-    model: OPENROUTER_MODELS.nemotron_ultra,
+    model: GOOGLE_AI_STUDIO_MODELS.exam_primary,
     fallbackModels: [
-      OPENROUTER_MODELS.auto_free,
-      OPENROUTER_MODELS.gemma_31b,
-      OPENROUTER_MODELS.laguna,
+      GOOGLE_AI_STUDIO_MODELS.exam_secondary,
+      OPENROUTER_TUTOR_MODELS.nemotron_550b,
+      OPENROUTER_TUTOR_MODELS.qwen_72b,
     ],
     maxOutputTokens: 4096,
     preferDirect: true,
@@ -148,27 +154,25 @@ export const AI_MODEL_ROUTES: Record<AiTaskType, AiModelRoute> = {
   // ── Game Engine ────────────────────────────────────────────────────────────
   game_engine: {
     task: "game_engine",
-    provider: "google",
-    model: OPENROUTER_MODELS.auto_free,
+    provider: "openrouter",
+    model: OPENROUTER_TUTOR_MODELS.mistral_24b,
     fallbackModels: [
-      OPENROUTER_MODELS.cohere_code,
-      OPENROUTER_MODELS.gpt_oss,
+      OPENROUTER_TUTOR_MODELS.auto_free,
     ],
     maxOutputTokens: 2048,
-    preferDirect: true,
+    preferDirect: false,
   },
 
   // ── Sinh Flashcard Tự Động ─────────────────────────────────────────────────
   flashcard_gen: {
     task: "flashcard_gen",
-    provider: "google",
-    model: OPENROUTER_MODELS.auto_free,
+    provider: "openrouter",
+    model: OPENROUTER_TUTOR_MODELS.gemma_31b,
     fallbackModels: [
-      OPENROUTER_MODELS.cohere_code,
-      OPENROUTER_MODELS.gemma_31b,
+      OPENROUTER_TUTOR_MODELS.auto_free,
     ],
     maxOutputTokens: 2048,
-    preferDirect: true,
+    preferDirect: false,
   },
 };
 
@@ -176,32 +180,33 @@ export const OPENROUTER_CONFIG = {
   baseUrl: process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
   apiKeyEnv: "OPENROUTER_API_KEY",
   siteHeaders: {
-    "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+    "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "https://linguaverse.ai",
     "X-Title": "LinguaVerse AI",
   },
 } as const;
 
 /**
- * Call Google AI Studio Direct API with multi-model fallback chain:
- * Gemini 3.5 Flash → Gemini 2.5 Pro → Gemini 2.5 Flash.
+ * Call Google AI Studio Direct API with multi-model fallback chain.
+ * Tries specified model list or defaults to primary -> secondary -> vision.
  */
 export async function callGoogleAIDirect(
   prompt: string,
   options: {
     maxOutputTokens?: number;
     temperature?: number;
+    modelsToTry?: string[];
   } = {}
 ): Promise<{ text: string; model: string } | null> {
   const apiKey = process.env.GOOGLE_AI_STUDIO_API_KEY || process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
 
-  const modelsToTry = [
-    GOOGLE_AI_STUDIO_MODELS.primary,   // gemini-3.5-flash
-    GOOGLE_AI_STUDIO_MODELS.secondary, // gemini-2.5-pro
-    GOOGLE_AI_STUDIO_MODELS.tertiary,  // gemini-2.5-flash
+  const models = options.modelsToTry ?? [
+    GOOGLE_AI_STUDIO_MODELS.exam_primary,
+    GOOGLE_AI_STUDIO_MODELS.exam_secondary,
+    GOOGLE_AI_STUDIO_MODELS.vision_smartest,
   ];
 
-  for (const modelId of modelsToTry) {
+  for (const modelId of models) {
     try {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`,
@@ -232,3 +237,4 @@ export async function callGoogleAIDirect(
 
   return null;
 }
+

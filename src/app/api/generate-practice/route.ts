@@ -354,11 +354,15 @@ BẮT BUỘC TRẢ VỀ JSON THUẦN TÚY (không markdown, không giải thích
 
 // ─── Generate One Section ─────────────────────────────────────────────────────
 async function generateSection(prompt: string): Promise<Question[]> {
-  // Primary: Gemini 2.5 Pro
+  // Primary: Dedicated 2 strongest Google AI Studio Models (Gemini 2.5 Pro & Gemini 2.0 Flash)
   try {
     const directResult = await callGoogleAIDirect(prompt, {
       maxOutputTokens: 8192,
       temperature: 0.75,
+      modelsToTry: [
+        GOOGLE_AI_STUDIO_MODELS.exam_primary,
+        GOOGLE_AI_STUDIO_MODELS.exam_secondary,
+      ],
     });
     if (directResult?.text) {
       const extracted = extractQuestionsFromJson(directResult.text);
