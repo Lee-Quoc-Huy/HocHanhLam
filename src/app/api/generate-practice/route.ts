@@ -461,25 +461,50 @@ function buildPrompt(
   fileUrls: string[]
 ): string {
   const lang = exam === "TOPIK" ? "Tiếng Hàn" : exam === "HSK" ? "Tiếng Trung" : "Tiếng Anh";
-  const context = source === "library" && fileUrls.length > 0
-    ? `Trộn từ thư viện: ${fileUrls.slice(0, 3).join(", ")}.`
-    : "Sáng tạo bộ đề thi mới chuẩn quốc tế.";
+  const seed = Math.floor(Math.random() * 10000);
 
-  return `Tạo đúng ${count} câu hỏi thi ${exam} (${level}). Ngôn ngữ câu hỏi: ${lang}.
-Chỉ trả về JSON thuần túy theo cấu trúc:
+  let sourceGuidance = "";
+  if (source === "library") {
+    sourceGuidance = fileUrls.length > 0
+      ? `TRÍCH LỌC VÀ TRỘN ĐỀ THƯ VIỆN (Seed: ${seed}): Dựa trên các tài liệu thư viện (${fileUrls.slice(0, 3).join(", ")}), hãy trích xuất từ vựng & cấu trúc cốt lõi rồi tái cấu trúc thành các dạng câu hỏi hoàn toàn mới (thay đổi bối cảnh, đảo đáp án, tạo bài đọc tương đương).`
+      : `BỘ ĐỀ TRỘN THƯ VIỆN MỚI (Seed: ${seed}): Trích lọc kiến thức chuẩn từ kho đề để tổng hợp bộ câu hỏi trộn mới lạ.`;
+  } else {
+    sourceGuidance = `AI SÁNG TẠO ĐỘC ĐÁO & ĐA DẠNG (Seed: ${seed}): Hãy sáng tạo bộ đề thi mới 100%, trộn lẫn nhiều chủ đề (giao tiếp, văn hóa, kinh tế, đời sống, khoa học) thuộc cấp độ ${level}. Không lặp lại các mẫu câu đơn điệu cũ.`;
+  }
+
+  const examFormatGuide = `
+DẠNG BÀI CHUẨN KỲ THI QUỐC TẾ (${exam} - ${level}):
+- TOPIK: Đọc hiểu đoạn văn ngắn/dài, điền từ/ngữ pháp vào (  ), nhìn bài báo/biểu đồ chọn ý đúng, sắp xếp câu (가-나-다-라), chọn chủ đề/tâm trạng nhân vật.
+- TOEIC: Part 5 (Incomplete Sentences), Part 6 (Text Completion), Part 7 (Email/Notice/Article/Chart Reading Comprehension).
+- IELTS: Multiple Choice, True/False/Not Given, Matching Headings, Sentence & Summary Completion.
+- HSK: Đọc chọn tranh, câu đúng/sai (✔/✘), chọn từ điền chỗ trống, đọc đoạn văn ngắn & trả lời trắc nghiệm.
+`;
+
+  return `Bạn là Giám khảo Soạn đề thi quốc tế ${exam} (${level}).
+${sourceGuidance}
+${examFormatGuide}
+Yêu cầu: Tạo đúng ${count} câu hỏi đa dạng kỹ năng (Đọc, Nghe, Từ vựng, Ngữ pháp).
+
+BẮT BUỘC TRẢ VỀ JSON THUẦN TÚY (Không chứa markdown, không thừa ký tự):
 {
   "questions": [
     {
       "id": "q1",
-      "type": "multiple-choice",
-      "prompt": "Câu hỏi bằng ${lang}",
-      "choices": [{"id": "a", "text": "..."}],
+      "type": "multiple-choice" | "reading-comprehension" | "fill-blank" | "sentence-order",
+      "prompt": "Nội dung câu hỏi bằng ${lang} (Ví dụ: Đọc đoạn văn/biểu đồ sau và chọn đáp án đúng)",
+      "passage": "Đoạn văn ngắn/bài báo/hội thoại bằng ${lang} (nếu là dạng bài đọc hiểu, nếu không để rỗng hoặc omit)",
+      "choices": [
+        {"id": "a", "text": "Phương án A bằng ${lang}"},
+        {"id": "b", "text": "Phương án B bằng ${lang}"},
+        {"id": "c", "text": "Phương án C bằng ${lang}"},
+        {"id": "d", "text": "Phương án D bằng ${lang}"}
+      ],
       "answer": "a",
-      "explanation": "Giải thích ngắn bằng tiếng Việt"
+      "explanation": "Lời giải chi tiết bằng Tiếng Việt giải thích rõ vì sao đáp án đúng, dịch nghĩa từ chìa khóa và điểm ngữ pháp quan trọng."
     }
   ]
 }
-Quy tắc: JSON thuần túy, ngắn gọn, không markdown.`;
+BẮT BUỘC: Mọi câu hỏi trắc nghiệm và đọc hiểu ĐỀU PHẢI CÓ ĐỦ 4 PHƯƠNG ÁN 'choices' (a, b, c, d). Phần 'answer' ghi rõ id đáp án ('a', 'b', 'c', hoặc 'd').`;
 }
 
 // ─── Route Handler ─────────────────────────────────────────────────────────────

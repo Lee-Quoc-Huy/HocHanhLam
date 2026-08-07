@@ -26,6 +26,11 @@ import {
   Clock,
   AlertTriangle,
   FolderKanban,
+  Eye,
+  Check,
+  X,
+  HelpCircle,
+  ArrowLeft,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -448,7 +453,7 @@ function ExamSelector({
 
   return (
     <div className="space-y-6">
-      {/* Mode Selector Tabs (Ôn tập vs Thi Thật) */}
+      {/* Mode Selector Tabs (Chế Độ Ôn Tập vs Chế Độ Thi Thật) */}
       <div className="flex rounded-2xl bg-muted/60 p-1.5 border border-border">
         <button
           type="button"
@@ -460,7 +465,7 @@ function ExamSelector({
           }`}
         >
           <BookOpen className="size-4" />
-          📘 Chế Độ Ôn Tập (Tùy Chọn Số Câu)
+          📘 Chế Độ Ôn Tập
         </button>
         <button
           type="button"
@@ -472,7 +477,7 @@ function ExamSelector({
           }`}
         >
           <ShieldCheck className="size-4" />
-          🏆 Chế Độ Thi Thật (Chuẩn Đếm Giờ)
+          🏆 Chế Độ Thi Thật
         </button>
       </div>
 
@@ -639,7 +644,7 @@ function ActiveExamSession({
   questions: Question[];
   mode: PracticeMode;
   realMinutes: number;
-  onFinish: (score: number, isTimeout?: boolean) => void;
+  onFinish: (score: number, userAnswers: Record<number, string>, isTimeout?: boolean) => void;
 }) {
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -675,7 +680,7 @@ function ActiveExamSession({
         correct += 1;
       }
     });
-    onFinish(correct, true);
+    onFinish(correct, answers, true);
   };
 
   const handleSelectAnswer = (ans: string) => {
@@ -693,7 +698,7 @@ function ActiveExamSession({
       }
     });
     setSubmitted(true);
-    onFinish(correct, false);
+    onFinish(correct, answers, false);
   };
 
   const q = questions[current];
@@ -704,6 +709,17 @@ function ActiveExamSession({
   const seconds = timeLeft % 60;
   const formattedTime = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
   const isLowTime = timeLeft < 300 && mode === "real_exam";
+
+  // Fallback choices for multiple-choice questions if choices array is omitted by AI
+  const displayChoices =
+    q.choices && q.choices.length > 0
+      ? q.choices
+      : [
+          { id: "a", text: "Phương án A" },
+          { id: "b", text: "Phương án B" },
+          { id: "c", text: "Phương án C" },
+          { id: "d", text: "Phương án D" },
+        ];
 
   return (
     <AnimatePresence mode="wait">
@@ -760,8 +776,8 @@ function ActiveExamSession({
 
         {/* Reading Passage if available */}
         {q.passage && (
-          <div className="mb-5 rounded-2xl border border-border bg-muted/40 p-4 text-xs sm:text-sm leading-relaxed font-serif text-foreground/90 max-h-56 overflow-y-auto">
-            <span className="block mb-1 text-[11px] font-bold text-primary uppercase font-sans">📄 Đoạn văn bài đọc:</span>
+          <div className="mb-5 rounded-2xl border border-border bg-muted/40 p-4 text-xs sm:text-sm leading-relaxed font-serif text-foreground/90 max-h-64 overflow-y-auto">
+            <span className="block mb-1 text-[11px] font-bold text-primary uppercase font-sans">📄 Đoạn văn bài đọc hiểu / Đề bài:</span>
             {q.passage}
           </div>
         )}
@@ -783,12 +799,12 @@ function ActiveExamSession({
           </button>
         )}
 
-        {/* Multiple Choice Options */}
-        {q.type === "multiple-choice" && q.choices && (
+        {/* Multiple Choice Options (Supports multiple-choice & reading-comprehension) */}
+        {(q.type === "multiple-choice" || q.type === "reading-comprehension") && (
           <div className="space-y-2.5">
-            {q.choices.map((c) => {
-              const isSelected = currentAnswer === c.id;
-              const isAnswerChoice = c.id === q.answer;
+            {displayChoices.map((c) => {
+              const isSelected = currentAnswer.toLowerCase() === c.id.toLowerCase();
+              const isAnswerChoice = c.id.toLowerCase() === q.answer.toLowerCase();
               let cls =
                 "flex w-full items-center gap-3 rounded-2xl border px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs sm:text-sm text-left transition-all font-medium ";
               if (!submitted) {
@@ -887,6 +903,151 @@ function ActiveExamSession({
   );
 }
 
+// ─── Exam Review Component (Xem Lại Kết Quả & Lời Giải Chi Tiết) ─────────────
+function ExamReviewList({
+  questions,
+  userAnswers,
+  onBack,
+}: {
+  questions: Question[];
+  userAnswers: Record<number, string>;
+  onBack: () => void;
+}) {
+  return (
+    <div className="space-y-6 mt-6">
+      <div className="flex items-center justify-between border-b border-border pb-4">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={onBack} className="rounded-xl h-9 text-xs sm:text-sm gap-2">
+            <ArrowLeft className="size-4" /> Quay Lại Bảng Điểm
+          </Button>
+          <h2 className="text-base sm:text-xl font-extrabold text-foreground">
+            👁️ Xem Lại Chi Tiết Bài Thi & Lời Giải AI
+          </h2>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        {questions.map((q, idx) => {
+          const userAns = (userAnswers[idx] || "").trim().toLowerCase();
+          const correctAns = q.answer.trim().toLowerCase();
+          const isCorrect = userAns === correctAns || (q.type === "speaking-prompt" && userAns.length > 3);
+
+          const displayChoices =
+            q.choices && q.choices.length > 0
+              ? q.choices
+              : [
+                  { id: "a", text: "Phương án A" },
+                  { id: "b", text: "Phương án B" },
+                  { id: "c", text: "Phương án C" },
+                  { id: "d", text: "Phương án D" },
+                ];
+
+          return (
+            <div
+              key={q.id || idx}
+              className={`rounded-3xl border p-5 sm:p-7 space-y-4 bg-surface shadow-xs transition-all ${
+                isCorrect ? "border-emerald-500/40 bg-emerald-500/5" : "border-rose-500/40 bg-rose-500/5"
+              }`}
+            >
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="font-extrabold text-sm sm:text-base text-foreground">
+                    Câu {idx + 1}:
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-3 py-0.5 text-xs font-bold ${
+                      isCorrect
+                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                        : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+                    }`}
+                  >
+                    {isCorrect ? <Check className="size-3.5" /> : <X className="size-3.5" />}
+                    {isCorrect ? "Đúng" : "Sai"}
+                  </span>
+                </div>
+
+                <span className="text-[11px] text-muted-foreground font-medium uppercase">
+                  {q.type}
+                </span>
+              </div>
+
+              {q.passage && (
+                <div className="rounded-2xl border border-border bg-muted/40 p-4 text-xs sm:text-sm leading-relaxed font-serif text-foreground/90 max-h-60 overflow-y-auto">
+                  <span className="block mb-1 text-[11px] font-bold text-primary font-sans">📄 Đoạn văn bài đọc:</span>
+                  {q.passage}
+                </div>
+              )}
+
+              <p className="text-xs sm:text-sm font-bold text-foreground leading-relaxed">{q.prompt}</p>
+
+              {/* Options Breakdown */}
+              {(q.type === "multiple-choice" || q.type === "reading-comprehension") && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  {displayChoices.map((c) => {
+                    const isUserChoice = userAns === c.id.toLowerCase();
+                    const isRightChoice = correctAns === c.id.toLowerCase();
+
+                    let optionCls = "flex items-center gap-2.5 rounded-2xl border p-3 text-xs font-medium ";
+                    if (isRightChoice) {
+                      optionCls += "border-emerald-500 bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold ring-2 ring-emerald-500/30";
+                    } else if (isUserChoice && !isRightChoice) {
+                      optionCls += "border-rose-500 bg-rose-500/20 text-rose-800 dark:text-rose-300 font-bold line-through";
+                    } else {
+                      optionCls += "border-border bg-background/60 text-muted-foreground opacity-70";
+                    }
+
+                    return (
+                      <div key={c.id} className={optionCls}>
+                        <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-current text-[11px] font-bold uppercase">
+                          {c.id}
+                        </span>
+                        <span>{c.text}</span>
+                        {isRightChoice && <Check className="ml-auto size-4 text-emerald-600 shrink-0" />}
+                        {isUserChoice && !isRightChoice && <X className="ml-auto size-4 text-rose-600 shrink-0" />}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Free text answers */}
+              {q.type !== "multiple-choice" && q.type !== "reading-comprehension" && (
+                <div className="space-y-2 text-xs">
+                  <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3">
+                    <span className="font-bold text-rose-600">Câu trả lời của bạn: </span>
+                    <span>{userAns || "(Chưa trả lời)"}</span>
+                  </div>
+                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
+                    <span className="font-bold text-emerald-600">Đáp án chuẩn: </span>
+                    <span>{q.answer}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Explanation Box */}
+              <div className="rounded-2xl border border-purple-500/30 bg-purple-500/10 p-4 text-xs space-y-1.5">
+                <div className="flex items-center gap-2 font-bold text-purple-700 dark:text-purple-300">
+                  <HelpCircle className="size-4 shrink-0" />
+                  <span>💡 Lời Giải Chi Tiết & Từ Vựng Chìa Khóa AI:</span>
+                </div>
+                <p className="text-purple-950 dark:text-purple-200 leading-relaxed">
+                  {q.explanation || `Đáp án chính xác là [${q.answer.toUpperCase()}]. Hãy ôn tập từ vựng & cấu trúc tương ứng trong bài học.`}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex justify-center pt-4">
+        <Button onClick={onBack} className="bg-primary text-white font-bold rounded-xl h-10 text-xs sm:text-sm px-6">
+          Quay Lại Bảng Kết Quả
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Result Modal Component ────────────────────────────────────────────────────
 function RealExamResultModal({
   score,
@@ -896,6 +1057,7 @@ function RealExamResultModal({
   mode,
   onRetry,
   onRefresh,
+  onOpenReview,
 }: {
   score: number;
   total: number;
@@ -904,6 +1066,7 @@ function RealExamResultModal({
   mode: PracticeMode;
   onRetry: () => void;
   onRefresh: () => void;
+  onOpenReview: () => void;
 }) {
   const pct = Math.round((score / total) * 100);
   const cfg = EXAM_CONFIG[exam];
@@ -968,7 +1131,12 @@ function RealExamResultModal({
         />
       </div>
 
-      <div className="flex justify-center gap-3 pt-2">
+      {/* Action Buttons */}
+      <div className="flex flex-wrap justify-center gap-3 pt-2">
+        <Button onClick={onOpenReview} className="gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-xl h-10 text-xs sm:text-sm shadow-md hover:opacity-95">
+          <Eye className="size-4" />
+          Xem Lại Kết Quả & Lời Giải Chi Tiết
+        </Button>
         <Button variant="outline" onClick={onRetry} className="font-bold rounded-xl h-10 text-xs sm:text-sm">
           Làm Lại Đề Này
         </Button>
@@ -992,8 +1160,10 @@ export default function ExamPrepPage() {
   const [practiceQuestionCount, setPracticeQuestionCount] = useState<number>(10);
 
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [score, setScore] = useState<number | null>(null);
+  const [isReviewing, setIsReviewing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingSource, setLoadingSource] = useState<"ai" | "library" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -1006,7 +1176,9 @@ export default function ExamPrepPage() {
     setLoadingSource(source);
     setError(null);
     setScore(null);
+    setIsReviewing(false);
     setQuestions([]);
+    setUserAnswers({});
 
     const targetCount =
       mode === "real_exam" ? currentLevelObj.realQuestions : practiceQuestionCount;
@@ -1047,19 +1219,23 @@ export default function ExamPrepPage() {
     }
   };
 
-  const handleFinish = (finalScore: number) => {
+  const handleFinish = (finalScore: number, answers: Record<number, string>) => {
     setScore(finalScore);
-    setQuestions([]);
+    setUserAnswers(answers);
   };
 
   const handleRetry = () => {
     setScore(null);
+    setIsReviewing(false);
+    setUserAnswers({});
     startPractice("ai");
   };
 
   const handleRefresh = () => {
     setScore(null);
+    setIsReviewing(false);
     setQuestions([]);
+    setUserAnswers({});
   };
 
   return (
@@ -1175,8 +1351,8 @@ export default function ExamPrepPage() {
         />
       )}
 
-      {/* Hiển Thị Kết Quả */}
-      {score !== null && (
+      {/* Hiển Thị Bảng Kết Quả Điểm Số */}
+      {score !== null && !isReviewing && (
         <RealExamResultModal
           score={score}
           total={questions.length || 10}
@@ -1185,6 +1361,16 @@ export default function ExamPrepPage() {
           mode={mode}
           onRetry={handleRetry}
           onRefresh={handleRefresh}
+          onOpenReview={() => setIsReviewing(true)}
+        />
+      )}
+
+      {/* Hiển Thị Xem Lại Chi Tiết Kết Quả & Lời Giải AI */}
+      {score !== null && isReviewing && (
+        <ExamReviewList
+          questions={questions}
+          userAnswers={userAnswers}
+          onBack={() => setIsReviewing(false)}
         />
       )}
     </div>
