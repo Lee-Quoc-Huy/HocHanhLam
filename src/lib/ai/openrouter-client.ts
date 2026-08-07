@@ -1,6 +1,11 @@
 import "server-only";
 
-import { AI_MODEL_ROUTES, OPENROUTER_CONFIG, type AiTaskType } from "@/config/ai-models";
+import {
+  AI_MODEL_ROUTES,
+  OPENROUTER_CONFIG,
+  callGoogleAIDirect,
+  type AiTaskType,
+} from "@/config/ai-models";
 
 export type ChatContentPart =
   | { type: "text"; text: string }
@@ -31,7 +36,7 @@ async function tryModel(
   model: string,
   params: CompletionParams,
   apiKey: string,
-  maxTokens: number,
+  maxTokens: number
 ): Promise<CompletionResult | null> {
   try {
     const response = await fetch(`${OPENROUTER_CONFIG.baseUrl}/chat/completions`, {
@@ -53,7 +58,6 @@ async function tryModel(
     if (!response.ok) return null;
 
     const data = await response.json();
-    // OpenRouter may return an error object with status 200
     if (data.error) return null;
 
     const content: string = data.choices?.[0]?.message?.content ?? "";
@@ -67,14 +71,43 @@ async function tryModel(
 
 export async function createChatCompletion(params: CompletionParams): Promise<CompletionResult> {
   const route = AI_MODEL_ROUTES[params.task];
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error("OPENROUTER_API_KEY is not configured.");
 
-  // Build the full ordered list of models to try: primary → fallbackModels → fallbackModel
+  // Engine 1: Try Google AI Direct (Gemini 3.5 Flash / 2.5 Pro) first if available
+  const googleApiKey = process.env.GOOGLE_AI_STUDIO_API_KEY || process.env.GEMINI_API_KEY;
+  if (route?.preferDirect && googleApiKey) {
+    try {
+      const userPrompt = params.messages
+        .map((m) => {
+          const body = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
+          return `${m.role.toUpperCase()}: ${body}`;
+        })
+        .join("\n\n");
+
+      const googleResult = await callGoogleAIDirect(userPrompt, {
+        temperature: params.temperature,
+        maxOutputTokens: route.maxOutputTokens,
+      });
+
+      if (googleResult?.text) {
+        return {
+          content: googleResult.text,
+          model: googleResult.model,
+        };
+      }
+    } catch {
+      // Fall through to Engine 2 (OpenRouter)
+    }
+  }
+
+  // Engine 2: OpenRouter Gateway Fallback Chain
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENROUTER_API_KEY is not configured.");
+  }
+
   const modelsToTry: string[] = [
     params.modelOverride ?? route.model,
     ...(route.fallbackModels ?? []),
-    ...(route.fallbackModel ? [route.fallbackModel] : []),
   ];
 
   let lastError = "";
@@ -82,7 +115,7 @@ export async function createChatCompletion(params: CompletionParams): Promise<Co
     const result = await tryModel(model, params, apiKey, route.maxOutputTokens);
     if (result) {
       if (model !== modelsToTry[0]) {
-        console.info(`[AI] Primary model unavailable. Using fallback: ${model}`);
+        console.info(`[AI Dual Engine] Primary model unavailable. Used fallback: ${model}`);
       }
       return result;
     }
@@ -90,10 +123,9 @@ export async function createChatCompletion(params: CompletionParams): Promise<Co
   }
 
   throw new Error(
-    `All AI models failed for task "${params.task}". Last tried: ${lastError}. Check OPENROUTER_API_KEY and model availability.`,
+    `All AI models failed for task "${params.task}". Last tried: ${lastError}. Check API keys.`
   );
 }
-
 
 /**
  * Creates a Server-Sent Events stream for real-time AI token generation.

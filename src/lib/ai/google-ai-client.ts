@@ -131,7 +131,7 @@ export async function generateFromPrompt(params: {
 /** Splits a "data:image/jpeg;base64,AAAA..." URL into mime type + raw base64. */
 export function parseImageDataUrl(dataUrl: string): GoogleAiImagePart {
   const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) {
+  if (!match || !match[1] || !match[2]) {
     throw new Error("Định dạng ảnh không hợp lệ.");
   }
   return { mimeType: match[1], base64Data: match[2] };

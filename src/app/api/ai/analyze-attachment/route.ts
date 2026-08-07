@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { generateFromImage, parseImageDataUrl } from "@/lib/ai/google-ai-client";
 
 export const maxDuration = 60;
 
-// ── Vision models via OpenRouter (free, separate from Google AI Studio) ───────
-// Uses OpenRouter free router and specific free vision models with automatic fallback.
+// ── Vision models via OpenRouter (Engine 2 Fallback) ──────────────────────────
 const VISION_MODELS = [
-  "openrouter/free",                                   // OpenRouter auto-router (free)
-  "nvidia/nemotron-nano-12b-v2-vl:free",               // NVIDIA Vision-Language model
   "google/gemma-4-31b-it:free",                        // Gemma 4 31B Vision
+  "nvidia/nemotron-nano-12b-v2-vl:free",               // NVIDIA Vision-Language model
   "google/gemma-4-26b-a4b-it:free",                    // Gemma 4 26B Vision
   "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", // NVIDIA Omni reasoning
+  "openrouter/free",                                   // OpenRouter auto-router
 ] as const;
 
 const requestSchema = z.object({
@@ -63,8 +63,7 @@ language phải là "en", "ko", hoặc "zh".
 difficulty phải là "beginner", "intermediate", "advanced", hoặc "master".`;
 
 /**
- * Call OpenRouter with vision-capable free models.
- * Tries each model in order until one succeeds and returns a valid response.
+ * Call OpenRouter with vision-capable free models (Engine 2).
  */
 async function analyzeWithOpenRouter(params: {
   systemPrompt: string;
@@ -81,7 +80,6 @@ async function analyzeWithOpenRouter(params: {
   const baseUrl =
     process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1";
 
-  // Build the user message content
   const userContent: Record<string, unknown>[] = [
     { type: "text", text: params.userText },
   ];
@@ -128,7 +126,6 @@ async function analyzeWithOpenRouter(params: {
 
       const data = await response.json();
 
-      // Check if OpenRouter returned an error payload inside 200 OK
       if (data?.error) {
         const errMsg = data.error.message || JSON.stringify(data.error);
         console.warn(`[analyze-attachment] ${model} → OpenRouter error payload: ${errMsg}`);
@@ -138,7 +135,6 @@ async function analyzeWithOpenRouter(params: {
 
       const text: string = data?.choices?.[0]?.message?.content ?? "";
 
-      // Check if the response contains model overload / rate limit notice text
       const isOverloadedOrError =
         !text.trim() ||
         text.toLowerCase().includes("overloaded") ||
@@ -154,7 +150,7 @@ async function analyzeWithOpenRouter(params: {
       }
 
       if (model !== VISION_MODELS[0]) {
-        console.info(`[analyze-attachment] Used fallback model: ${model}`);
+        console.info(`[analyze-attachment] Used fallback vision model: ${model}`);
       }
       return text;
     } catch (err) {
@@ -186,15 +182,48 @@ export async function POST(request: Request) {
         ? "tiếng Hàn"
         : "tiếng Trung";
 
-  try {
-    const responseText = await analyzeWithOpenRouter({
-      systemPrompt: EXTRACTION_SYSTEM_PROMPT(langLabel),
-      userText: text?.trim()
-        ? text
-        : "Hãy phân tích ảnh này, sửa lỗi chính tả nếu có và tự lọc chủ đề.",
-      imageDataUrl,
-    });
+  const systemPrompt = EXTRACTION_SYSTEM_PROMPT(langLabel);
+  const userText = text?.trim()
+    ? text
+    : "Hãy phân tích ảnh này, sửa lỗi chính tả nếu có và tự lọc chủ đề.";
 
+  let responseText = "";
+
+  // Engine 1: Try Google AI Direct (Gemini 3.5 Flash / 2.5 Flash) first for maximum speed
+  if (process.env.GOOGLE_AI_STUDIO_API_KEY || process.env.GEMINI_API_KEY) {
+    try {
+      responseText = await generateFromImage({
+        systemInstruction: systemPrompt,
+        userText: userText,
+        image: imageDataUrl ? parseImageDataUrl(imageDataUrl) : undefined,
+        temperature: 0.3,
+      });
+    } catch (err) {
+      console.warn("[analyze-attachment] Engine 1 (Google Direct) failed, falling back to Engine 2 (OpenRouter):", err);
+    }
+  }
+
+  // Engine 2: Fallback to OpenRouter Vision Chain if Engine 1 produced no result
+  if (!responseText) {
+    try {
+      responseText = await analyzeWithOpenRouter({
+        systemPrompt,
+        userText,
+        imageDataUrl,
+      });
+    } catch (err) {
+      console.error("Analyze attachment error (Engine 2):", err);
+      return NextResponse.json(
+        {
+          error:
+            err instanceof Error ? err.message : "Không thể phân tích tệp đính kèm.",
+        },
+        { status: 502 }
+      );
+    }
+  }
+
+  try {
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return NextResponse.json(
@@ -211,13 +240,9 @@ export async function POST(request: Request) {
       flashcards: [],
     });
   } catch (err) {
-    console.error("Analyze attachment error:", err);
     return NextResponse.json(
-      {
-        error:
-          err instanceof Error ? err.message : "Không thể phân tích tệp đính kèm.",
-      },
-      { status: 502 }
+      { error: "Không thể đọc dữ liệu từ phản hồi của AI. Thử lại sau." },
+      { status: 500 }
     );
   }
 }
