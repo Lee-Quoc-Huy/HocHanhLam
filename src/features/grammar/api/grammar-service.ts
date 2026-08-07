@@ -1,13 +1,18 @@
-import { createClient } from "@/lib/supabase/client";
+import { queryNeon } from "@/lib/neon/client";
 import type {
   GrammarItem,
   CreateGrammarInput,
   UpdateGrammarInput,
 } from "../types";
 
-const LOCAL_STORAGE_KEY = "linguaverse_grammar_items";
+/**
+ * Grammar data layer — Neon DB là nguồn dữ liệu duy nhất.
+ *
+ * Supabase và localStorage không còn được dùng cho grammar nữa.
+ * Tất cả đọc/ghi đều thông qua Neon PostgreSQL serverless.
+ */
 
-// Default initial dataset with rich sample grammar structures for EN, KO, and ZH
+// Dữ liệu mẫu ban đầu (chỉ hiển thị khi Neon chưa có dữ liệu)
 export const SAMPLE_GRAMMAR: GrammarItem[] = [
   {
     id: "sample-en-g1",
@@ -34,12 +39,14 @@ export const SAMPLE_GRAMMAR: GrammarItem[] = [
       {
         incorrect: "I am used to get up early.",
         correct: "I am used to getting up early.",
-        explanation: "Sau 'be used to' luôn dùng động từ thêm -ing hoặc danh từ, không dùng động từ nguyên mẫu.",
+        explanation:
+          "Sau 'be used to' luôn dùng động từ thêm -ing hoặc danh từ, không dùng động từ nguyên mẫu.",
       },
       {
         incorrect: "I use to play football when I was young.",
         correct: "I used to play football when I was young.",
-        explanation: "Chỉ thói quen quá khứ phải có chữ 'd' (used to), không dùng 'use to' ở khẳng định.",
+        explanation:
+          "Chỉ thói quen quá khứ phải có chữ 'd' (used to), không dùng 'use to' ở khẳng định.",
       },
     ],
     related_grammar: ["Would for past habits", "Present Continuous for habits"],
@@ -53,7 +60,7 @@ export const SAMPLE_GRAMMAR: GrammarItem[] = [
   {
     id: "sample-ko-g1",
     language: "ko",
-    title: "N+‌은/는 커녕",
+    title: "N+\u200b은/는 커녕",
     meaning: "Chẳng những không... mà còn / Đừng nói tới A, ngay cả B cũng không",
     explanation:
       "Dùng khi diễn tả thực tế không đạt được điều mong muốn A, mà ngay cả điều cơ bản hơn B cũng không thể thực hiện được. Thường đi kèm với đuôi phủ định ở vế sau (안, 못, 없 đó).",
@@ -64,14 +71,16 @@ export const SAMPLE_GRAMMAR: GrammarItem[] = [
       },
       {
         example: "밥은 커녕 물 한 잔도 못 마셨어요.",
-        translation: "Đừng nói tới ăn cơm, ngay cả một cốc nước tôi cũng chưa được uống.",
+        translation:
+          "Đừng nói tới ăn cơm, ngay cả một cốc nước tôi cũng chưa được uống.",
       },
     ],
     common_mistakes: [
       {
         incorrect: "밥은 커녕 밥을 먹었어요.",
         correct: "밥은 커녕 물도 못 마셨어요.",
-        explanation: "Vế sau '은/는 커녕' luôn luôn phải là câu phủ định (못/안/없다).",
+        explanation:
+          "Vế sau '은/는 커녕' luôn luôn phải là câu phủ định (못/안/없다).",
       },
     ],
     related_grammar: ["V+기는 커녕", "N-은/는 ngụ ý nhấn mạnh phủ định"],
@@ -103,7 +112,8 @@ export const SAMPLE_GRAMMAR: GrammarItem[] = [
       {
         incorrect: "越学非常简单。",
         correct: "越学越简单。",
-        explanation: "Cấu trúc phải đi cặp '越 A 越 B', không thay '越' thứ hai bằng '很' hay '非常'.",
+        explanation:
+          "Cấu trúc phải đi cặp '越 A 越 B', không thay '越' thứ hai bằng '很' hay '非常'.",
       },
     ],
     related_grammar: ["越来越...", "一...就..."],
@@ -117,115 +127,93 @@ export const SAMPLE_GRAMMAR: GrammarItem[] = [
 ];
 
 class GrammarService {
-  private getLocalItems(): GrammarItem[] {
-    if (typeof window === "undefined") return [];
-    try {
-      const data = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (!data) return [];
-      return JSON.parse(data);
-    } catch {
-      return [];
-    }
-  }
-
-  private setLocalItems(items: GrammarItem[]) {
-    if (typeof window === "undefined") return;
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items));
-    } catch (e) {
-      console.error("Failed to persist grammar to localStorage:", e);
-    }
-  }
-
   async fetchGrammar(): Promise<GrammarItem[]> {
-    const supabase = createClient();
-    try {
-      const { data, error } = await supabase
-        .from("grammar")
-        .select("*")
-        .order("created_at", { ascending: false });
+    const rows = await queryNeon<any>(
+      `SELECT * FROM grammar ORDER BY created_at DESC`
+    );
 
-      if (error || !data) {
-        return this.getLocalItems();
-      }
-
-      const items = (data as unknown) as GrammarItem[];
-      this.setLocalItems(items);
-      return items;
-    } catch {
-      return this.getLocalItems();
-    }
+    // Parse JSONB fields từ Neon (trả về string hoặc object tuỳ driver)
+    return rows.map(this.parseRow);
   }
 
   async createGrammar(input: CreateGrammarInput): Promise<GrammarItem> {
-    const newItem: GrammarItem = {
-      ...input,
-      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `grammar-${Date.now()}`,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+    const rows = await queryNeon<any>(
+      `INSERT INTO grammar (
+        user_id, language, title, meaning, explanation, examples,
+        common_mistakes, related_grammar, difficulty, is_favorite,
+        category, ai_explanation
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6::jsonb,
+        $7::jsonb, $8, $9, $10,
+        $11, $12
+      ) RETURNING *`,
+      [
+        input.user_id ?? null,
+        input.language ?? "en",
+        input.title ?? "",
+        input.meaning ?? "",
+        input.explanation ?? "",
+        JSON.stringify(input.examples ?? []),
+        JSON.stringify(input.common_mistakes ?? []),
+        input.related_grammar ?? [],
+        input.difficulty ?? "intermediate",
+        input.is_favorite ?? false,
+        input.category ?? "General",
+        input.ai_explanation ?? "",
+      ]
+    );
 
-    const supabase = createClient();
-    try {
-      const { data, error } = await supabase
-        .from("grammar")
-        .insert([(newItem as unknown) as any])
-        .select()
-        .single();
-
-      if (!error && data) {
-        newItem.id = data.id;
-      }
-    } catch {
-      // Offline fallback
+    if (!rows[0]) {
+      throw new Error("Không thể lưu ngữ pháp mới vào Neon DB.");
     }
-
-    const items = [newItem, ...this.getLocalItems()];
-    this.setLocalItems(items);
-
-    return newItem;
+    return this.parseRow(rows[0]);
   }
 
-  async updateGrammar(id: string, updates: UpdateGrammarInput): Promise<GrammarItem> {
-    const localItems = this.getLocalItems();
-    const existing = localItems.find((item) => item.id === id);
-
-    if (!existing) {
-      throw new Error(`Grammar item with id ${id} not found.`);
+  async updateGrammar(
+    id: string,
+    updates: UpdateGrammarInput
+  ): Promise<GrammarItem> {
+    const fields = Object.keys(updates).filter((k) => k !== "id");
+    if (fields.length === 0) {
+      const existing = await queryNeon<any>(
+        `SELECT * FROM grammar WHERE id = $1`,
+        [id]
+      );
+      return this.parseRow(existing[0]);
     }
 
-    const updatedItem: GrammarItem = {
-      ...existing,
-      ...updates,
-      updated_at: new Date().toISOString(),
-    };
+    // JSONB fields cần cast
+    const jsonbFields = new Set(["examples", "common_mistakes"]);
 
-    const supabase = createClient();
-    try {
-      await supabase
-        .from("grammar")
-        .update((updates as unknown) as any)
-        .eq("id", id);
-    } catch {
-      // Offline fallback
+    const setClauses = fields
+      .map((field, idx) =>
+        jsonbFields.has(field)
+          ? `${field} = $${idx + 1}::jsonb`
+          : `${field} = $${idx + 1}`
+      )
+      .join(", ");
+
+    const values = fields.map((f) => {
+      const val = (updates as any)[f];
+      return jsonbFields.has(f) ? JSON.stringify(val) : val;
+    });
+    values.push(new Date().toISOString()); // updated_at
+    values.push(id); // WHERE id
+
+    const rows = await queryNeon<any>(
+      `UPDATE grammar SET ${setClauses}, updated_at = $${fields.length + 1}
+       WHERE id = $${fields.length + 2} RETURNING *`,
+      values
+    );
+
+    if (!rows[0]) {
+      throw new Error(`Không tìm thấy ngữ pháp id=${id} để cập nhật.`);
     }
-
-    const updatedItems = localItems.map((item) => (item.id === id ? updatedItem : item));
-    this.setLocalItems(updatedItems);
-
-    return updatedItem;
+    return this.parseRow(rows[0]);
   }
 
   async deleteGrammar(id: string): Promise<boolean> {
-    const supabase = createClient();
-    try {
-      await supabase.from("grammar").delete().eq("id", id);
-    } catch {
-      // Ignore
-    }
-
-    const items = this.getLocalItems().filter((item) => item.id !== id);
-    this.setLocalItems(items);
+    await queryNeon(`DELETE FROM grammar WHERE id = $1`, [id]);
     return true;
   }
 
@@ -236,47 +224,49 @@ class GrammarService {
   }
 
   async requestAiExplanation(item: GrammarItem): Promise<string> {
-    try {
-      const res = await fetch("/api/ai/grammar-explain", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: item.title,
-          language: item.language,
-          meaning: item.meaning,
-          explanation: item.explanation,
-          examples: item.examples,
-        }),
-      });
+    const res = await fetch("/api/ai/grammar-explain", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: item.title,
+        language: item.language,
+        meaning: item.meaning,
+        explanation: item.explanation,
+        examples: item.examples,
+      }),
+    });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to generate AI explanation");
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to generate AI explanation");
 
-      const explanationMarkdown = data.explanation;
-      // Cache explanation on item
-      await this.updateGrammar(item.id, { ai_explanation: explanationMarkdown });
-      return explanationMarkdown;
-    } catch (err) {
-      throw err;
-    }
+    const explanationMarkdown = data.explanation;
+    // Lưu AI explanation vào Neon
+    await this.updateGrammar(item.id, { ai_explanation: explanationMarkdown });
+    return explanationMarkdown;
   }
 
+  /**
+   * Realtime không được hỗ trợ trực tiếp trên Neon.
+   * Trả về unsubscribe no-op để giữ tương thích với code cũ.
+   */
   subscribeToRealtime(onRealtimeUpdate: (items: GrammarItem[]) => void) {
-    const supabase = createClient();
-    const channel = supabase
-      .channel("public:grammar")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "grammar" },
-        async () => {
-          const freshData = await this.fetchGrammar();
-          onRealtimeUpdate(freshData);
-        }
-      )
-      .subscribe();
+    return () => {};
+  }
 
-    return () => {
-      supabase.removeChannel(channel);
+  /** Parse JSONB fields từ Neon response */
+  private parseRow(row: any): GrammarItem {
+    if (!row) return row;
+    return {
+      ...row,
+      examples:
+        typeof row.examples === "string"
+          ? JSON.parse(row.examples)
+          : row.examples ?? [],
+      common_mistakes:
+        typeof row.common_mistakes === "string"
+          ? JSON.parse(row.common_mistakes)
+          : row.common_mistakes ?? [],
+      related_grammar: row.related_grammar ?? [],
     };
   }
 }

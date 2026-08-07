@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/client";
+import { queryNeon } from "@/lib/neon/client";
 import type {
   VocabularyItem,
   CreateVocabularyInput,
@@ -6,82 +6,94 @@ import type {
 } from "../types";
 
 /**
- * Vocabulary data layer — Supabase is the single source of truth.
+ * Vocabulary data layer — Neon DB là nguồn dữ liệu duy nhất.
  *
- * Historically this service fell back to `localStorage` whenever Supabase
- * returned zero rows or an error, and every write silently mirrored into
- * localStorage regardless of whether the Supabase call actually succeeded.
- * That meant each browser/device kept its own private copy: deleting a word
- * on mobile only ever touched that phone's local cache, so it kept
- * reappearing on desktop. Supabase already has the `vocabulary` table with
- * an open RLS policy and realtime enabled (see
- * supabase/migrations/00000000000002_vocabulary_module.sql) — so all reads
- * and writes now go straight through it, and every device fetches the same
- * rows and receives realtime updates when another device changes them.
- *
- * A brand-new account simply starts with zero words — no sample/demo data
- * is auto-inserted. Anything shown in the vocabulary list is data the
- * person actually created themselves.
+ * Supabase không còn được dùng cho vocabulary nữa.
+ * Tất cả đọc/ghi đều thông qua Neon PostgreSQL serverless.
  */
 
 class VocabularyService {
   async fetchVocabulary(): Promise<VocabularyItem[]> {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("vocabulary")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      throw new Error(`Không thể tải danh sách từ vựng: ${error.message}`);
-    }
-
-    // A genuinely empty account just shows an empty list now — this used to
-    // auto-insert a starter set of sample words the first time, which meant
-    // "existing" vocabulary would appear that the person never actually added.
-    return (data ?? []) as VocabularyItem[];
+    const rows = await queryNeon<VocabularyItem>(
+      `SELECT * FROM vocabulary ORDER BY created_at DESC`
+    );
+    return rows;
   }
 
   async createWord(input: CreateVocabularyInput): Promise<VocabularyItem> {
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const rows = await queryNeon<VocabularyItem>(
+      `INSERT INTO vocabulary (
+        user_id, language, word, ipa, vietnamese, english_meaning,
+        part_of_speech, example, example_translation, audio_url, image_url,
+        synonyms, antonyms, frequency, difficulty, is_favorite, collection
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6,
+        $7, $8, $9, $10, $11,
+        $12, $13, $14, $15, $16, $17
+      ) RETURNING *`,
+      [
+        input.user_id ?? null,
+        input.language ?? "en",
+        input.word ?? "",
+        input.ipa ?? "",
+        input.vietnamese ?? "",
+        input.english_meaning ?? "",
+        input.part_of_speech ?? "noun",
+        input.example ?? "",
+        input.example_translation ?? "",
+        input.audio_url ?? "",
+        input.image_url ?? "",
+        input.synonyms ?? [],
+        input.antonyms ?? [],
+        input.frequency ?? 3,
+        input.difficulty ?? "intermediate",
+        input.is_favorite ?? false,
+        input.collection ?? "General",
+      ]
+    );
 
-    const { data, error } = await supabase
-      .from("vocabulary")
-      .insert([{ ...input, user_id: input.user_id ?? user?.id ?? null }])
-      .select()
-      .single();
-
-    if (error || !data) {
-      throw new Error(`Không thể lưu từ vựng mới: ${error?.message ?? "lỗi không xác định"}`);
+    if (!rows[0]) {
+      throw new Error("Không thể lưu từ vựng mới vào Neon DB.");
     }
-    return data as VocabularyItem;
+    return rows[0];
   }
 
-  async updateWord(id: string, updates: UpdateVocabularyInput): Promise<VocabularyItem> {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("vocabulary")
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error || !data) {
-      throw new Error(`Không thể cập nhật từ vựng: ${error?.message ?? "lỗi không xác định"}`);
+  async updateWord(
+    id: string,
+    updates: UpdateVocabularyInput
+  ): Promise<VocabularyItem> {
+    // Build dynamic SET clause
+    const fields = Object.keys(updates).filter((k) => k !== "id");
+    if (fields.length === 0) {
+      const existing = await queryNeon<VocabularyItem>(
+        `SELECT * FROM vocabulary WHERE id = $1`,
+        [id]
+      );
+      if (!existing[0]) throw new Error(`Không tìm thấy từ vựng id=${id}.`);
+      return existing[0];
     }
-    return data as VocabularyItem;
+
+    const setClauses = fields
+      .map((field, idx) => `${field} = $${idx + 1}`)
+      .join(", ");
+    const values = fields.map((f) => (updates as any)[f]);
+    values.push(new Date().toISOString()); // updated_at
+    values.push(id); // WHERE id
+
+    const rows = await queryNeon<VocabularyItem>(
+      `UPDATE vocabulary SET ${setClauses}, updated_at = $${fields.length + 1}
+       WHERE id = $${fields.length + 2} RETURNING *`,
+      values
+    );
+
+    if (!rows[0]) {
+      throw new Error(`Không tìm thấy từ vựng id=${id} để cập nhật.`);
+    }
+    return rows[0];
   }
 
   async deleteWord(id: string): Promise<boolean> {
-    const supabase = createClient();
-    const { error } = await supabase.from("vocabulary").delete().eq("id", id);
-
-    if (error) {
-      throw new Error(`Không thể xoá từ vựng: ${error.message}`);
-    }
+    await queryNeon(`DELETE FROM vocabulary WHERE id = $1`, [id]);
     return true;
   }
 
@@ -91,27 +103,14 @@ class VocabularyService {
     return newStatus;
   }
 
+  /**
+   * Realtime không được hỗ trợ trực tiếp trên Neon.
+   * Trả về một unsubscribe no-op để giữ tương thích với code cũ.
+   */
   subscribeToRealtime(onRealtimeUpdate: (items: VocabularyItem[]) => void) {
-    const supabase = createClient();
-    const channel = supabase
-      .channel("public:vocabulary")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "vocabulary" },
-        async () => {
-          try {
-            const freshData = await this.fetchVocabulary();
-            onRealtimeUpdate(freshData);
-          } catch {
-            // Realtime refresh failed silently — next successful fetch will resync.
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Neon không có realtime subscription như Supabase.
+    // Polling hoặc refetch sau mỗi mutation thay thế.
+    return () => {};
   }
 }
 
