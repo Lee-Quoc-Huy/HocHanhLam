@@ -4,8 +4,8 @@
  * Model IDs come from the central routing config (@/config/ai-models) so
  * they are always in sync with the rest of the app.
  *
- * Auto-retry: tries PRIMARY (Gemini 2.5 Flash) first, falls back to
- * SECONDARY (Gemini 2.0 Flash) on any error / empty response.
+ * Auto-retry: tries PRIMARY (Gemini 2.0 Flash) first, falls back to
+ * SECONDARY (Gemini 2.0 Flash Lite) then TERTIARY (Gemini 1.5 Flash 002).
  *
  * Requires GOOGLE_AI_STUDIO_API_KEY in the environment.
  * Get a free key at https://aistudio.google.com/apikey
@@ -16,8 +16,9 @@ import { GOOGLE_AI_STUDIO_MODELS } from "@/config/ai-models";
 const GOOGLE_AI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
 const MODELS_TO_TRY = [
-  GOOGLE_AI_STUDIO_MODELS.primary,   // gemini-2.5-flash
-  GOOGLE_AI_STUDIO_MODELS.secondary, // gemini-2.5-flash-lite
+  GOOGLE_AI_STUDIO_MODELS.primary,    // gemini-2.0-flash
+  GOOGLE_AI_STUDIO_MODELS.secondary,  // gemini-2.0-flash-lite
+  GOOGLE_AI_STUDIO_MODELS.tertiary,   // gemini-1.5-flash-002
 ] as const;
 
 export interface GoogleAiImagePart {
@@ -27,7 +28,7 @@ export interface GoogleAiImagePart {
 
 /**
  * Call Google AI Studio with optional image attachment.
- * Tries PRIMARY model first; falls back to SECONDARY on any error.
+ * Tries PRIMARY → SECONDARY → TERTIARY models on any error.
  */
 export async function generateFromImage(params: {
   systemInstruction: string;
@@ -61,7 +62,8 @@ export async function generateFromImage(params: {
     },
   });
 
-  // Try each model in order: PRIMARY → SECONDARY
+  // Try each model in order: PRIMARY → SECONDARY → TERTIARY
+  const errors: string[] = [];
   for (const model of MODELS_TO_TRY) {
     try {
       const response = await fetch(
@@ -74,7 +76,10 @@ export async function generateFromImage(params: {
       );
 
       if (!response.ok) {
-        console.warn(`[google-ai-client] ${model} → HTTP ${response.status}, trying next...`);
+        const errBody = await response.text().catch(() => "");
+        const reason = `HTTP ${response.status}${errBody ? `: ${errBody.slice(0, 200)}` : ""}`;
+        console.warn(`[google-ai-client] ${model} → ${reason}, trying next...`);
+        errors.push(`${model}: ${reason}`);
         continue;
       }
 
@@ -84,6 +89,7 @@ export async function generateFromImage(params: {
 
       if (!text) {
         console.warn(`[google-ai-client] ${model} → empty content, trying next...`);
+        errors.push(`${model}: empty response`);
         continue;
       }
 
@@ -92,12 +98,16 @@ export async function generateFromImage(params: {
       }
       return text;
     } catch (err) {
-      console.warn(`[google-ai-client] ${model} → threw error:`, err);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[google-ai-client] ${model} → threw error:`, msg);
+      errors.push(`${model}: ${msg}`);
     }
   }
 
   throw new Error(
-    `Google AI Studio: cả ${MODELS_TO_TRY.join(" và ")} đều không phản hồi. Kiểm tra API key hoặc thử lại sau.`
+    `Google AI Studio: không có model nào phản hồi thành công.\n` +
+    `Chi tiết:\n${errors.map((e, i) => `  ${i + 1}. ${e}`).join("\n")}\n\n` +
+    `Vui lòng kiểm tra API key tại https://aistudio.google.com/apikey`
   );
 }
 

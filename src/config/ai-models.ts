@@ -16,12 +16,14 @@
  * ╚══════════════════════════════════════════════════════════════════════════╝
  */
 
-// ── 2 Google AI Studio Direct Models (Chọn từ bảng Quota tài khoản thực tế) ──
+// ── Google AI Studio Direct Models (Chọn từ bảng Quota tài khoản thực tế) ──
 export const GOOGLE_AI_STUDIO_MODELS = {
-  /** Primary – Gemini 2.5 Flash (Tốc độ & Thông minh nhất cho Thi thật/Tutor) */
+  /** Primary – Gemini 2.5 Flash (Multimodal Vision + Reasoning mạnh nhất) */
   primary: "gemini-2.5-flash",
-  /** Secondary – Gemini 2.5 Flash Lite (Hạn ngạch 500 RPD/ngày siêu rộng) */
+  /** Secondary – Gemini 2.5 Flash Lite (Nhanh, nhẹ, quota riêng) */
   secondary: "gemini-2.5-flash-lite",
+  /** Tertiary – Gemini 3.5 Flash (Backup mới nhất nếu 2.5 bị rate limit) */
+  tertiary: "gemini-3.5-flash",
 } as const;
 
 // ── 6 OpenRouter Models (Phân công theo nhiệm vụ) ────────────────────────────
