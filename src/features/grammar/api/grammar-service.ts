@@ -1,5 +1,4 @@
-import { queryNeon, isNeonConfigured } from "@/lib/neon/client";
-import { createClient } from "@/lib/supabase/client";
+import { queryNeon } from "@/lib/neon/client";
 import type {
   GrammarItem,
   CreateGrammarInput,
@@ -7,11 +6,39 @@ import type {
 } from "../types";
 
 /**
- * Grammar data layer — Hỗ trợ kết hợp Neon DB và Supabase fallback.
- *
- * - Nếu NEON_DATABASE_URL được cấu hình: Dùng Neon DB làm nguồn dữ liệu chính.
- * - Nếu chưa có NEON_DATABASE_URL: Tự động dùng Supabase để trang web không bị lỗi.
+ * Grammar data layer — 100% Độc lập trên Neon DB.
+ * Supabase KHÔNG còn liên quan hay bị ảnh hưởng bởi Ngữ pháp nữa.
  */
+
+let tableChecked = false;
+
+async function ensureTableExists() {
+  if (tableChecked) return;
+  try {
+    await queryNeon(`
+      CREATE TABLE IF NOT EXISTS grammar (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID,
+        language TEXT NOT NULL DEFAULT 'en',
+        title TEXT NOT NULL,
+        meaning TEXT NOT NULL DEFAULT '',
+        explanation TEXT NOT NULL DEFAULT '',
+        examples JSONB NOT NULL DEFAULT '[]'::jsonb,
+        common_mistakes JSONB NOT NULL DEFAULT '[]'::jsonb,
+        related_grammar TEXT[] NOT NULL DEFAULT '{}',
+        difficulty TEXT NOT NULL DEFAULT 'intermediate',
+        is_favorite BOOLEAN NOT NULL DEFAULT false,
+        category TEXT NOT NULL DEFAULT 'General',
+        ai_explanation TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    tableChecked = true;
+  } catch (err) {
+    console.error("[GrammarService] Lỗi tạo bảng Neon:", err);
+  }
+}
 
 export const SAMPLE_GRAMMAR: GrammarItem[] = [
   {
@@ -128,167 +155,98 @@ export const SAMPLE_GRAMMAR: GrammarItem[] = [
 
 class GrammarService {
   async fetchGrammar(): Promise<GrammarItem[]> {
-    if (isNeonConfigured()) {
-      try {
-        const rows = await queryNeon<any>(
-          `SELECT * FROM grammar ORDER BY created_at DESC`
-        );
-        if (rows && rows.length > 0) {
-          return rows.map(this.parseRow);
-        }
-      } catch (err) {
-        console.warn("[GrammarService] Neon fetch failed, trying Supabase fallback:", err);
-      }
+    await ensureTableExists();
+    const rows = await queryNeon<any>(
+      `SELECT * FROM grammar ORDER BY created_at DESC`
+    );
+
+    if (rows && rows.length > 0) {
+      return rows.map(this.parseRow);
     }
-
-    // Supabase fallback
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("grammar")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (!error && data && data.length > 0) {
-        return data as unknown as GrammarItem[];
-      }
-    } catch {}
 
     return SAMPLE_GRAMMAR;
   }
 
   async createGrammar(input: CreateGrammarInput): Promise<GrammarItem> {
-    if (isNeonConfigured()) {
-      try {
-        const rows = await queryNeon<any>(
-          `INSERT INTO grammar (
-            user_id, language, title, meaning, explanation, examples,
-            common_mistakes, related_grammar, difficulty, is_favorite,
-            category, ai_explanation
-          ) VALUES (
-            $1, $2, $3, $4, $5, $6::jsonb,
-            $7::jsonb, $8, $9, $10,
-            $11, $12
-          ) RETURNING *`,
-          [
-            input.user_id ?? null,
-            input.language ?? "en",
-            input.title ?? "",
-            input.meaning ?? "",
-            input.explanation ?? "",
-            JSON.stringify(input.examples ?? []),
-            JSON.stringify(input.common_mistakes ?? []),
-            input.related_grammar ?? [],
-            input.difficulty ?? "intermediate",
-            input.is_favorite ?? false,
-            input.category ?? "General",
-            input.ai_explanation ?? "",
-          ]
-        );
+    await ensureTableExists();
+    const rows = await queryNeon<any>(
+      `INSERT INTO grammar (
+        user_id, language, title, meaning, explanation, examples,
+        common_mistakes, related_grammar, difficulty, is_favorite,
+        category, ai_explanation
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6::jsonb,
+        $7::jsonb, $8, $9, $10,
+        $11, $12
+      ) RETURNING *`,
+      [
+        input.user_id ?? null,
+        input.language ?? "en",
+        input.title ?? "",
+        input.meaning ?? "",
+        input.explanation ?? "",
+        JSON.stringify(input.examples ?? []),
+        JSON.stringify(input.common_mistakes ?? []),
+        input.related_grammar ?? [],
+        input.difficulty ?? "intermediate",
+        input.is_favorite ?? false,
+        input.category ?? "General",
+        input.ai_explanation ?? "",
+      ]
+    );
 
-        if (rows[0]) return this.parseRow(rows[0]);
-      } catch (err) {
-        console.warn("[GrammarService] Neon create failed, trying Supabase fallback:", err);
-      }
+    if (!rows[0]) {
+      throw new Error("Không thể lưu ngữ pháp mới vào Neon DB.");
     }
-
-    // Supabase fallback
-    const newItem: GrammarItem = {
-      ...input,
-      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `grammar-${Date.now()}`,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    const supabase = createClient();
-    try {
-      const { data, error } = await supabase
-        .from("grammar")
-        .insert([(newItem as unknown) as any])
-        .select()
-        .single();
-
-      if (!error && data) {
-        return data as unknown as GrammarItem;
-      }
-    } catch {}
-
-    return newItem;
+    return this.parseRow(rows[0]);
   }
 
   async updateGrammar(
     id: string,
     updates: UpdateGrammarInput
   ): Promise<GrammarItem> {
-    if (isNeonConfigured()) {
-      try {
-        const fields = Object.keys(updates).filter((k) => k !== "id");
-        if (fields.length === 0) {
-          const existing = await queryNeon<any>(
-            `SELECT * FROM grammar WHERE id = $1`,
-            [id]
-          );
-          if (existing[0]) return this.parseRow(existing[0]);
-        } else {
-          const jsonbFields = new Set(["examples", "common_mistakes"]);
-          const setClauses = fields
-            .map((field, idx) =>
-              jsonbFields.has(field)
-                ? `${field} = $${idx + 1}::jsonb`
-                : `${field} = $${idx + 1}`
-            )
-            .join(", ");
-
-          const values = fields.map((f) => {
-            const val = (updates as any)[f];
-            return jsonbFields.has(f) ? JSON.stringify(val) : val;
-          });
-          values.push(new Date().toISOString());
-          values.push(id);
-
-          const rows = await queryNeon<any>(
-            `UPDATE grammar SET ${setClauses}, updated_at = $${fields.length + 1}
-             WHERE id = $${fields.length + 2} RETURNING *`,
-            values
-          );
-
-          if (rows[0]) return this.parseRow(rows[0]);
-        }
-      } catch (err) {
-        console.warn("[GrammarService] Neon update failed, trying Supabase fallback:", err);
-      }
+    await ensureTableExists();
+    const fields = Object.keys(updates).filter((k) => k !== "id");
+    if (fields.length === 0) {
+      const existing = await queryNeon<any>(
+        `SELECT * FROM grammar WHERE id = $1`,
+        [id]
+      );
+      if (!existing[0]) throw new Error(`Không tìm thấy ngữ pháp id=${id}.`);
+      return this.parseRow(existing[0]);
     }
 
-    // Supabase fallback
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("grammar")
-      .update((updates as unknown) as any)
-      .eq("id", id)
-      .select()
-      .single();
+    const jsonbFields = new Set(["examples", "common_mistakes"]);
+    const setClauses = fields
+      .map((field, idx) =>
+        jsonbFields.has(field)
+          ? `${field} = $${idx + 1}::jsonb`
+          : `${field} = $${idx + 1}`
+      )
+      .join(", ");
 
-    if (error || !data) {
-      throw new Error(`Không thể cập nhật ngữ pháp: ${error?.message ?? "lỗi không xác định"}`);
+    const values = fields.map((f) => {
+      const val = (updates as any)[f];
+      return jsonbFields.has(f) ? JSON.stringify(val) : val;
+    });
+    values.push(new Date().toISOString());
+    values.push(id);
+
+    const rows = await queryNeon<any>(
+      `UPDATE grammar SET ${setClauses}, updated_at = $${fields.length + 1}
+       WHERE id = $${fields.length + 2} RETURNING *`,
+      values
+    );
+
+    if (!rows[0]) {
+      throw new Error(`Không tìm thấy ngữ pháp id=${id} để cập nhật.`);
     }
-    return data as unknown as GrammarItem;
+    return this.parseRow(rows[0]);
   }
 
   async deleteGrammar(id: string): Promise<boolean> {
-    if (isNeonConfigured()) {
-      try {
-        await queryNeon(`DELETE FROM grammar WHERE id = $1`, [id]);
-        return true;
-      } catch (err) {
-        console.warn("[GrammarService] Neon delete failed, trying Supabase fallback:", err);
-      }
-    }
-
-    // Supabase fallback
-    const supabase = createClient();
-    try {
-      await supabase.from("grammar").delete().eq("id", id);
-    } catch {}
+    await ensureTableExists();
+    await queryNeon(`DELETE FROM grammar WHERE id = $1`, [id]);
     return true;
   }
 
@@ -320,24 +278,6 @@ class GrammarService {
   }
 
   subscribeToRealtime(onRealtimeUpdate: (items: GrammarItem[]) => void) {
-    if (!isNeonConfigured()) {
-      const supabase = createClient();
-      const channel = supabase
-        .channel("public:grammar")
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "grammar" },
-          async () => {
-            const freshData = await this.fetchGrammar();
-            onRealtimeUpdate(freshData);
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
     return () => {};
   }
 
