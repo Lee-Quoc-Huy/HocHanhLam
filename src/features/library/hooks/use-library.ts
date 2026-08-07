@@ -5,6 +5,47 @@ import { useLibraryStore, selectFilteredLibraryItems } from "../store/library-st
 import { libraryService } from "../api/library-service";
 import { LibraryItemType } from "../types";
 
+// Helper: Upload file to Cloudflare R2 via Presigned Direct URL (supports files up to 500MB, bypassing Vercel 4.5MB limit)
+async function uploadFileToR2(file: File): Promise<string> {
+  try {
+    const urlRes = await fetch("/api/library/upload-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        filename: file.name,
+        contentType: file.type || "application/octet-stream",
+      }),
+    });
+
+    if (urlRes.ok) {
+      const { uploadUrl, fileUrl } = await urlRes.json();
+      if (uploadUrl && fileUrl) {
+        const uploadRes = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": file.type || "application/octet-stream",
+          },
+          body: file,
+        });
+
+        if (uploadRes.ok) {
+          return fileUrl;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Presigned upload failed, attempting direct upload fallback:", e);
+  }
+
+  // Fallback endpoint for smaller files
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch("/api/library/upload", { method: "POST", body: formData });
+  const result = await res.json().catch(() => ({ error: "Server response parse error" }));
+  if (!res.ok) throw new Error(result.error || "Tải tệp lên Cloudflare R2 thất bại.");
+  return result.url;
+}
+
 export function useLibrary() {
   const store = useLibraryStore();
 
@@ -27,17 +68,12 @@ export function useLibrary() {
     };
   }, []);
 
-  // Upload handler — uploads the real file to Cloudflare R2 first, then
-  // saves the returned public URL. Previously this used
-  // `URL.createObjectURL(file)`, a blob URL that only lives in the current
-  // browser tab's memory and vanishes on reload — nothing was actually
-  // stored anywhere, so files never showed up on other devices.
   const handleUploadFiles = async (files: FileList | File[]) => {
     for (const file of Array.from(files)) {
       const ext = file.name.split(".").pop()?.toLowerCase() || "";
 
       let itemType: LibraryItemType = "document";
-      if (["mp3", "wav", "m4a", "ogg"].includes(ext)) itemType = "audio";
+      if (["mp3", "wav", "m4a", "ogg", "aac", "flac"].includes(ext)) itemType = "audio";
       else if (["mp4", "webm", "mkv", "avi"].includes(ext)) itemType = "video";
       else if (["png", "jpg", "jpeg", "webp", "gif"].includes(ext)) itemType = "image";
       else if (ext === "md" || ext === "txt") itemType = "note";
@@ -50,10 +86,6 @@ export function useLibrary() {
           contentText = `Nội dung tệp ${file.name}`;
         }
       } else if (itemType === "document") {
-        // Binary document formats (PDF, DOCX, PPTX...) can't be read with
-        // .text() without garbling into raw bytes — only .txt/.md map to
-        // "note" and get real text extraction above; everything else here
-        // just gets a placeholder note pointing at the stored file.
         contentText = `Tệp ${file.name} đã được lưu trữ. Xem/tải về qua đường dẫn tệp đính kèm.`;
       }
 
@@ -64,16 +96,9 @@ export function useLibrary() {
 
       let fileUrl: string | null = null;
       try {
-        const formData = new FormData();
-        formData.append("file", file);
-        const res = await fetch("/api/library/upload", { method: "POST", body: formData });
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.error || "Tải tệp lên Cloudflare R2 thất bại.");
-        fileUrl = result.url;
+        fileUrl = await uploadFileToR2(file);
       } catch (err) {
         console.error("Lỗi tải tệp lên Cloudflare R2:", err);
-        // Vẫn tạo bản ghi ghi chú (không có file) để người dùng biết tệp bị lỗi,
-        // thay vì âm thầm giả vờ thành công như trước đây.
         contentText = `⚠️ Không thể tải "${file.name}" lên bộ nhớ đám mây. ${
           err instanceof Error ? err.message : ""
         }`;
@@ -110,13 +135,10 @@ export function useLibrary() {
 
     let fileUrl: string | null = null;
 
-    // If user pasted exam text content, use it directly as content_text for AI extraction.
-    // Otherwise fall back to a generic placeholder.
     let contentText = pastedContent && pastedContent.trim().length > 0
       ? pastedContent.trim()
       : `Đề thi ${file.name} — Kỳ thi: ${examCategory} (${examLevel}). Loại: ${paperType}.`;
 
-    // Auto-read .txt / .md files so content_text is populated even without paste
     if (!pastedContent && (ext === "txt" || ext === "md")) {
       try {
         contentText = await file.text();
@@ -126,12 +148,7 @@ export function useLibrary() {
     }
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/library/upload", { method: "POST", body: formData });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Tải tệp đề thi lên Cloudflare R2 thất bại.");
-      fileUrl = result.url;
+      fileUrl = await uploadFileToR2(file);
     } catch (err) {
       console.error("Lỗi tải đề thi lên R2:", err);
       contentText = `⚠️ Không thể tải "${file.name}" lên bộ nhớ đám mây. ${
