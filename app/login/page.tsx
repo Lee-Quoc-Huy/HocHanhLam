@@ -4,11 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { usernameToEmail } from '@/lib/auth/username';
 
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -17,17 +18,20 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
 
-    if (!email || !password) {
-      setError('Nhập đủ email và mật khẩu nhé.');
+    if (!username.trim() || !password) {
+      setError('Nhập đủ tên đăng nhập và mật khẩu nhé.');
       return;
     }
 
     setLoading(true);
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: usernameToEmail(username),
+      password,
+    });
     setLoading(false);
 
     if (signInError) {
-      setError('Email hoặc mật khẩu không đúng. Thử lại nhé.');
+      setError('Tên đăng nhập hoặc mật khẩu không đúng. Thử lại nhé.');
       return;
     }
     router.push('/dashboard');
@@ -47,14 +51,13 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label className="text-[12.5px] font-semibold text-inkdim block mb-1.5">Email</label>
+            <label className="text-[12.5px] font-semibold text-inkdim block mb-1.5">Tên đăng nhập</label>
             <input
               className="field"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="ban@email.com"
-              autoComplete="email"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="vd: quochuy2025"
+              autoComplete="username"
             />
           </div>
           <div>

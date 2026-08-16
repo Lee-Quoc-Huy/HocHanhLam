@@ -4,43 +4,45 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { usernameToEmail, validateUsername } from '@/lib/auth/username';
 
 export default function RegisterPage() {
   const router = useRouter();
   const supabase = createClient();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setInfo(null);
 
-    if (!name.trim() || !email.trim() || password.length < 6) {
-      setError('Điền đủ tên, email và mật khẩu tối thiểu 6 ký tự.');
-      return;
-    }
+    const usernameError = validateUsername(username);
+    if (usernameError) { setError(usernameError); return; }
+    if (password.length < 6) { setError('Mật khẩu tối thiểu 6 ký tự.'); return; }
 
     setLoading(true);
+    const cleanUsername = username.trim();
     const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
+      email: usernameToEmail(cleanUsername),
       password,
-      options: { data: { display_name: name.trim() } },
+      options: { data: { username: cleanUsername, display_name: cleanUsername } },
     });
     setLoading(false);
 
     if (signUpError) {
-      setError(signUpError.message === 'User already registered' ? 'Email này đã có tài khoản.' : 'Không tạo được tài khoản, thử lại sau.');
+      setError(
+        signUpError.message.toLowerCase().includes('already registered')
+          ? 'Tên đăng nhập này đã có người dùng, thử tên khác nhé.'
+          : 'Không tạo được tài khoản, thử lại sau.'
+      );
       return;
     }
 
-    // Nếu project Supabase bật xác nhận email, session sẽ chưa có ngay.
     if (!data.session) {
-      setInfo('Tạo tài khoản thành công! Kiểm tra email để xác nhận rồi quay lại đăng nhập.');
+      // Xảy ra khi Supabase project vẫn đang bật "Confirm email".
+      setError('Tài khoản đã tạo nhưng chưa đăng nhập được — hãy tắt "Confirm email" trong Supabase Dashboard (Authentication → Providers → Email) rồi thử đăng nhập lại.');
       return;
     }
 
@@ -61,12 +63,15 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label className="text-[12.5px] font-semibold text-inkdim block mb-1.5">Tên hiển thị</label>
-            <input className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nguyễn Văn A" />
-          </div>
-          <div>
-            <label className="text-[12.5px] font-semibold text-inkdim block mb-1.5">Email</label>
-            <input className="field" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ban@email.com" autoComplete="email" />
+            <label className="text-[12.5px] font-semibold text-inkdim block mb-1.5">Tên đăng nhập</label>
+            <input
+              className="field"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="vd: quochuy2025"
+              autoComplete="username"
+            />
+            <p className="text-[11px] text-inkfaint mt-1.5">Chữ cái, số, dấu gạch dưới — không dấu, 3-20 ký tự.</p>
           </div>
           <div>
             <label className="text-[12.5px] font-semibold text-inkdim block mb-1.5">Mật khẩu</label>
@@ -74,7 +79,6 @@ export default function RegisterPage() {
           </div>
 
           {error && <p className="text-[13px] text-terracotta">{error}</p>}
-          {info && <p className="text-[13px] text-sage">{info}</p>}
 
           <button type="submit" disabled={loading} className="btn-primary text-white font-semibold text-[14.5px] rounded-full py-3 mt-1 disabled:opacity-60">
             {loading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}

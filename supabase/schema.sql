@@ -10,6 +10,7 @@ create extension if not exists "uuid-ossp";
 -- ---------------------------------------------------------
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
+  username text unique,                              -- tên đăng nhập hiển thị (đăng nhập bằng email giả quy đổi từ tên này, xem lib/auth/username.ts)
   display_name text not null default 'Học viên',
   selected_languages text[] not null default '{}',   -- vd: {en,kr}
   onboarded boolean not null default false,
@@ -24,8 +25,12 @@ language plpgsql
 security definer set search_path = public
 as $$
 begin
-  insert into public.profiles (id, display_name)
-  values (new.id, coalesce(new.raw_user_meta_data ->> 'display_name', split_part(new.email, '@', 1)));
+  insert into public.profiles (id, username, display_name)
+  values (
+    new.id,
+    new.raw_user_meta_data ->> 'username',
+    coalesce(new.raw_user_meta_data ->> 'display_name', new.raw_user_meta_data ->> 'username', split_part(new.email, '@', 1))
+  );
   return new;
 end;
 $$;

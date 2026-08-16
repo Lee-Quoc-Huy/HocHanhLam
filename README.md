@@ -17,7 +17,19 @@ Neon chỉ giữ nội dung admin nạp sẵn, giống nhau cho mọi người d
 
 ## Auth & Onboarding
 
-- Đăng ký/đăng nhập bằng Supabase Auth (email + mật khẩu).
+- Đăng ký/đăng nhập bằng **tên đăng nhập + mật khẩu** (không dùng email thật). Supabase Auth về bản chất chỉ hỗ
+  trợ email/mật khẩu, nên code quy đổi tên đăng nhập thành 1 email "giả" duy nhất
+  (`<username>@users.hochanhlam.local`, xem `lib/auth/username.ts`) — người dùng không hề thấy khái niệm
+  email này. Tên đăng nhập thật được lưu riêng ở cột `profiles.username`.
+- ⚠️ **Bắt buộc phải tắt xác nhận email** trong Supabase Dashboard, nếu không người dùng sẽ bị kẹt lại sau khi
+  đăng ký (vì hộp thư giả không có thật để nhận mail xác nhận):
+  **Authentication → Providers → Email → tắt "Confirm email"** (project mới tạo nên tắt luôn từ đầu; nếu
+  project đã tạo trước đó, vào tắt lại rồi thử đăng ký lại tài khoản test).
+- Vì không có email thật, tính năng **"Quên mật khẩu"** không thể hoạt động qua email theo cách thông thường —
+  với quy mô 2-4 người test, cách đơn giản nhất là admin (bạn) vào Supabase Dashboard → Authentication → Users
+  → chọn user → "Reset password" thủ công khi cần.
+- Nếu project Supabase đã chạy `schema.sql` cũ (chưa có cột `username`), chạy thêm
+  `supabase/migration_add_username.sql` trong SQL Editor để bổ sung, không mất dữ liệu cũ.
 - Middleware (`middleware.ts`) tự refresh session, chặn truy cập khi chưa đăng nhập, và **bắt buộc onboarding**
   (`profiles.onboarded = false`) trước khi vào bất kỳ trang nào khác.
 - Trang `/onboarding`: người dùng chọn 1+ ngôn ngữ muốn học → lưu vào `profiles.selected_languages` +
@@ -81,6 +93,8 @@ neon/schema.sql                         — chạy trong Neon SQL Editor (có se
 ## Cài đặt & deploy (GitHub + Vercel)
 
 1. **Tạo project Supabase** → vào SQL Editor, chạy `supabase/schema.sql`.
+   - Vào **Authentication → Providers → Email → tắt "Confirm email"** (bắt buộc, xem mục Auth & Onboarding ở trên).
+   - Nếu project đã tạo từ trước và đã chạy schema cũ, chạy thêm `supabase/migration_add_username.sql`.
 2. **Tạo project Neon** → chạy `neon/schema.sql` (đã kèm sẵn seed data mẫu để test được ngay).
 3. **Lấy API key miễn phí**: [Google AI Studio](https://aistudio.google.com/apikey),
    [Groq Console](https://console.groq.com/keys), [OpenRouter](https://openrouter.ai/keys).
