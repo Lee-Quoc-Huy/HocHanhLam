@@ -34,10 +34,18 @@ export default function RegisterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: cleanUsername, password }),
       });
-      const data = await res.json();
+
+      const raw = await res.text();
+      let data: { ok?: boolean; error?: string; detail?: string };
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        setError(`Server trả về phản hồi không hợp lệ (mã ${res.status}). Kiểm tra log trên Vercel → Deployments → Functions.`);
+        return;
+      }
 
       if (!res.ok) {
-        setError(data.detail ? `${data.error} (Chi tiết: ${data.detail})` : data.error);
+        setError(data.detail ? `${data.error} (Chi tiết: ${data.detail})` : data.error || 'Không tạo được tài khoản.');
         return;
       }
 
