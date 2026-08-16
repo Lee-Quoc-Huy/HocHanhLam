@@ -11,6 +11,7 @@ export default function RegisterPage() {
   const supabase = createClient();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -21,37 +22,39 @@ export default function RegisterPage() {
     const usernameError = validateUsername(username);
     if (usernameError) { setError(usernameError); return; }
     if (password.length < 6) { setError('Mật khẩu tối thiểu 6 ký tự.'); return; }
+    if (password !== confirmPassword) { setError('Mật khẩu xác nhận không khớp.'); return; }
 
     setLoading(true);
     const cleanUsername = username.trim();
-    try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: usernameToEmail(cleanUsername),
-        password,
-        options: { data: { username: cleanUsername, display_name: cleanUsername } },
-      });
 
-      if (signUpError) {
-        const friendly = signUpError.message.toLowerCase().includes('already registered')
-          ? 'Tên đăng nhập này đã có người dùng, thử tên khác nhé.'
-          : 'Không tạo được tài khoản, thử lại sau.';
-        // Hiện tạm chi tiết lỗi gốc để dễ debug ở giai đoạn test — có thể bỏ dòng
-        // này đi sau khi mọi thứ chạy ổn định, tránh lộ chi tiết kỹ thuật cho người dùng cuối.
-        setError(`${friendly} (Chi tiết: ${signUpError.message})`);
+    try {
+      // 1) Tạo tài khoản qua API server (dùng quyền admin) — không gửi email nào cả.
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: cleanUsername, password }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.detail ? `${data.error} (Chi tiết: ${data.detail})` : data.error);
         return;
       }
 
-      if (!data.session) {
-        // Xảy ra khi Supabase project vẫn đang bật "Confirm email".
-        setError('Tài khoản đã tạo nhưng chưa đăng nhập được — hãy tắt "Confirm email" trong Supabase Dashboard (Authentication → Providers → Email) rồi thử đăng nhập lại.');
+      // 2) Tài khoản đã tạo xong, giờ đăng nhập luôn để lấy session.
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: usernameToEmail(cleanUsername),
+        password,
+      });
+      if (signInError) {
+        setError('Tạo tài khoản thành công nhưng đăng nhập tự động thất bại — thử đăng nhập thủ công nhé.');
         return;
       }
 
       router.push('/onboarding');
       router.refresh();
     } catch (err) {
-      // Lỗi mạng / CORS / URL Supabase sai — không phải Supabase trả lỗi có cấu trúc.
-      setError(`Không kết nối được tới Supabase. (Chi tiết: ${err instanceof Error ? err.message : String(err)})`);
+      setError(`Không kết nối được máy chủ. (Chi tiết: ${err instanceof Error ? err.message : String(err)})`);
     } finally {
       setLoading(false);
     }
@@ -83,6 +86,10 @@ export default function RegisterPage() {
           <div>
             <label className="text-[12.5px] font-semibold text-inkdim block mb-1.5">Mật khẩu</label>
             <input className="field" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Tối thiểu 6 ký tự" autoComplete="new-password" />
+          </div>
+          <div>
+            <label className="text-[12.5px] font-semibold text-inkdim block mb-1.5">Xác nhận mật khẩu</label>
+            <input className="field" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Nhập lại mật khẩu" autoComplete="new-password" />
           </div>
 
           {error && <p className="text-[13px] text-terracotta">{error}</p>}
