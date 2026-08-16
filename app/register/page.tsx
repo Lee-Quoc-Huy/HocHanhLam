@@ -24,30 +24,37 @@ export default function RegisterPage() {
 
     setLoading(true);
     const cleanUsername = username.trim();
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: usernameToEmail(cleanUsername),
-      password,
-      options: { data: { username: cleanUsername, display_name: cleanUsername } },
-    });
-    setLoading(false);
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: usernameToEmail(cleanUsername),
+        password,
+        options: { data: { username: cleanUsername, display_name: cleanUsername } },
+      });
 
-    if (signUpError) {
-      setError(
-        signUpError.message.toLowerCase().includes('already registered')
+      if (signUpError) {
+        const friendly = signUpError.message.toLowerCase().includes('already registered')
           ? 'Tên đăng nhập này đã có người dùng, thử tên khác nhé.'
-          : 'Không tạo được tài khoản, thử lại sau.'
-      );
-      return;
-    }
+          : 'Không tạo được tài khoản, thử lại sau.';
+        // Hiện tạm chi tiết lỗi gốc để dễ debug ở giai đoạn test — có thể bỏ dòng
+        // này đi sau khi mọi thứ chạy ổn định, tránh lộ chi tiết kỹ thuật cho người dùng cuối.
+        setError(`${friendly} (Chi tiết: ${signUpError.message})`);
+        return;
+      }
 
-    if (!data.session) {
-      // Xảy ra khi Supabase project vẫn đang bật "Confirm email".
-      setError('Tài khoản đã tạo nhưng chưa đăng nhập được — hãy tắt "Confirm email" trong Supabase Dashboard (Authentication → Providers → Email) rồi thử đăng nhập lại.');
-      return;
-    }
+      if (!data.session) {
+        // Xảy ra khi Supabase project vẫn đang bật "Confirm email".
+        setError('Tài khoản đã tạo nhưng chưa đăng nhập được — hãy tắt "Confirm email" trong Supabase Dashboard (Authentication → Providers → Email) rồi thử đăng nhập lại.');
+        return;
+      }
 
-    router.push('/onboarding');
-    router.refresh();
+      router.push('/onboarding');
+      router.refresh();
+    } catch (err) {
+      // Lỗi mạng / CORS / URL Supabase sai — không phải Supabase trả lỗi có cấu trúc.
+      setError(`Không kết nối được tới Supabase. (Chi tiết: ${err instanceof Error ? err.message : String(err)})`);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
