@@ -13,9 +13,28 @@ const LANGS = [
 export default function OnboardingPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function toggle(code: string) {
     setSelected((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
+  }
+
+  async function handleSubmit(formData: FormData) {
+    setPending(true);
+    setError(null);
+    try {
+      const result = await saveOnboarding(formData);
+      // Nếu saveOnboarding thành công, nó tự redirect ở phía server (ném
+      // NEXT_REDIRECT) nên dòng dưới đây sẽ không chạy tới trong trường hợp đó.
+      if (result?.error) setError(result.error);
+    } catch (err) {
+      // Trường hợp redirect() thành công, Next.js "throw" 1 lỗi đặc biệt để
+      // điều hướng — nó sẽ tự được framework xử lý, không rơi vào đây.
+      // Nếu rơi vào đây thật, đó là lỗi mạng/kết nối thật sự.
+      setError(`Không kết nối được máy chủ. (Chi tiết: ${err instanceof Error ? err.message : String(err)})`);
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -28,13 +47,8 @@ export default function OnboardingPage() {
           Bạn có thể thêm ngôn ngữ khác sau này trong phần hồ sơ.
         </p>
 
-        <form
-          action={async (formData) => {
-            setPending(true);
-            await saveOnboarding(formData);
-          }}
-        >
-          <div className="grid grid-cols-2 gap-4 mb-8">
+        <form action={handleSubmit}>
+          <div className="grid grid-cols-2 gap-4 mb-6">
             {LANGS.map((l) => {
               const active = selected.includes(l.code);
               return (
@@ -63,6 +77,12 @@ export default function OnboardingPage() {
               );
             })}
           </div>
+
+          {error && (
+            <div className="glass-strong rounded-2xl px-4 py-3 mb-5 text-[13px] text-terracotta leading-relaxed">
+              {error}
+            </div>
+          )}
 
           <button
             type="submit"
