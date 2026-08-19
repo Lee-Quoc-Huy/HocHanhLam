@@ -149,3 +149,19 @@ create policy "quiz_insert_own" on public.quiz_attempts for insert with check (a
 
 create policy "chat_select_own" on public.chat_messages for select using (auth.uid() = user_id);
 create policy "chat_insert_own" on public.chat_messages for insert with check (auth.uid() = user_id);
+
+-- =========================================================
+-- GRANT — một số project Supabase không tự áp dụng quyền bảng mặc định cho
+-- vai trò "authenticated". RLS ở trên quyết định THẤY DÒNG NÀO, còn GRANT ở
+-- đây quyết định CÓ ĐƯỢC ĐỤNG VÀO BẢNG hay không — thiếu bước này sẽ gặp
+-- lỗi "permission denied for table ..." dù RLS đã đúng.
+-- =========================================================
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.profiles to authenticated;
+grant select, insert, update, delete on public.user_progress to authenticated;
+grant select, insert, update, delete on public.user_vocab to authenticated;
+grant select, insert, update, delete on public.user_grammar to authenticated;
+grant select, insert, update, delete on public.quiz_attempts to authenticated;
+grant select, insert, update, delete on public.chat_messages to authenticated;
+alter default privileges in schema public
+  grant select, insert, update, delete on tables to authenticated;

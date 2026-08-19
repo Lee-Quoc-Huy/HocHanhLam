@@ -32,6 +32,17 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
+
+  // QUAN TRỌNG: route API (/api/**) KHÔNG được áp dụng logic redirect trang
+  // ở dưới. Mỗi API route đã tự kiểm tra đăng nhập riêng qua getCurrentUser()
+  // và trả về JSON 401 khi cần — nếu để middleware redirect luôn, một fetch()
+  // gọi API lúc chưa đăng nhập (vd /api/auth/register khi đang ở trang đăng
+  // ký) sẽ bị chuyển hướng ngầm sang trang /login (trả về HTML) thay vì chạy
+  // API, khiến phía client nhận về phản hồi rỗng/không phải JSON rất khó hiểu.
+  if (path.startsWith('/api/')) {
+    return response;
+  }
+
   const isPublic = PUBLIC_PATHS.some((p) => path.startsWith(p));
 
   // Chưa đăng nhập mà vào trang cần bảo vệ -> đá về /login

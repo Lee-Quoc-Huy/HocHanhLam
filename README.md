@@ -34,6 +34,10 @@ Neon chỉ giữ nội dung admin nạp sẵn, giống nhau cho mọi người d
   password" thủ công khi cần.
 - Nếu project Supabase đã chạy `schema.sql` cũ (chưa có cột `username`), chạy thêm
   `supabase/migration_add_username.sql` trong SQL Editor để bổ sung, không mất dữ liệu cũ.
+- Nếu gặp lỗi **"permission denied for table ..."** dù đăng nhập đúng — đây là lỗi **GRANT** (quyền đụng vào
+  bảng), khác với **RLS** (quyền thấy dòng nào). Chạy `supabase/migration_fix_grants.sql` để cấp quyền tường
+  minh cho vai trò `authenticated`. Một số project Supabase không tự áp dụng quyền bảng mặc định, dù `schema.sql`
+  gốc đã có RLS đúng.
 - Middleware (`middleware.ts`) tự refresh session, chặn truy cập khi chưa đăng nhập, và **bắt buộc onboarding**
   (`profiles.onboarded = false`) trước khi vào bất kỳ trang nào khác.
 - Trang `/onboarding`: người dùng chọn 1+ ngôn ngữ muốn học → lưu vào `profiles.selected_languages` +
